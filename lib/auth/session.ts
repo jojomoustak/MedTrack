@@ -35,7 +35,35 @@ import { getDb } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import { hashSessionToken } from "@/lib/auth/adr003-adapter";
 import { AuthenticationError } from "@/lib/errors/app-error";
+import { getSessionCookie } from "better-auth/cookies";
 
+/**
+ * Found via a REAL live-site smoke test (2026-08-22): on the deployed
+ * HTTPS Vercel site, EVERY authentication method (email/password AND
+ * Google) appeared broken end-to-end — a fully successful sign-in still
+ * bounced back to `/welcome`. Root cause traced to
+ * `node_modules/better-auth/dist/cookies/index.mjs`'s `createCookieGetter`:
+ * when `BETTER_AUTH_URL` starts with `https://` (true in every real
+ * deployment, never true for plain local `pnpm dev`), Better Auth
+ * transparently sets the session cookie as `__Secure-better-auth.session_token`
+ * instead of the unprefixed `better-auth.session_token` — a previous
+ * version of this module hardcoded the unprefixed name, so it silently
+ * never matched on HTTPS, and only "worked" against local HTTP dev, which
+ * is exactly why this went unnoticed until a live deployed-site check.
+ *
+ * Fixed by delegating to Better Auth's own public `getSessionCookie`
+ * (`better-auth/cookies` — a real, documented subpath export, not a deep
+ * internal-only import; verified via `node_modules/better-auth/package.json`'s
+ * `exports` map) rather than reimplementing the prefix logic: it checks
+ * BOTH the `__Secure-` and unprefixed forms unconditionally
+ * (`parsedCookie.get('__Secure-'+name) ?? parsedCookie.get(name)`), so it
+ * is correct under local HTTP dev and deployed HTTPS alike without this
+ * app needing to know which environment it's in. `cookiePrefix`/
+ * `cookieName` aren't overridden — our `lib/auth/config.ts` never sets
+ * `advanced.cookiePrefix`/`advanced.cookies`, so Better Auth's defaults
+ * (`"better-auth"` / `"session_token"`) are exactly what it actually used
+ * to set the cookie, and are `getSessionCookie`'s own defaults too.
+ */
 export interface SessionContext {
   accountId: string;
   profileId: string;
@@ -43,19 +71,19 @@ export interface SessionContext {
   sessionExpiresAt: Date;
 }
 
-const SESSION_COOKIE_NAME = "better-auth.session_token";
-
 /**
  * Extracts the raw session token from a `Cookie` request header. Better
  * Auth appends `.<signature>` to the cookie value; only the token portion
  * before the first `.` is ever hashed/looked up (matches Better Auth's
- * own cookie format).
+ * own cookie format). Wraps the header string in a `Headers` object
+ * purely to match `getSessionCookie`'s `Request | Headers` parameter type
+ * — this function's own signature (a raw cookie-header string) is kept
+ * stable since nothing else about the caller side needs to change.
  */
 export function extractSessionToken(cookieHeader: string | null): string | null {
   if (!cookieHeader) return null;
-  const match = new RegExp(`(?:^|;\\s*)${SESSION_COOKIE_NAME}=([^;]+)`).exec(cookieHeader);
-  if (!match) return null;
-  const raw = decodeURIComponent(match[1]);
+  const raw = getSessionCookie(new Headers({ cookie: cookieHeader }));
+  if (!raw) return null;
   return raw.split(".")[0] || null;
 }
 
