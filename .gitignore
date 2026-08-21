@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the documented, secret-free template — this one must be
+# tracked so every required var is discoverable (lib/config/env.ts).
+!.env.example
 
 # vercel
 .vercel
