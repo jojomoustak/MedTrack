@@ -43,6 +43,13 @@
       "when": 1787319439478,
       "tag": "0005_google_sign_in",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787343867257,
+      "tag": "0006_account_verification_nullable_account_id",
+      "breakpoints": true
     }
   ]
 }

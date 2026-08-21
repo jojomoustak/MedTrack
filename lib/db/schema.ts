@@ -675,9 +675,32 @@ export const accountVerification = pgTable(
   "account_verification",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    accountId: uuid("account_id")
-      .notNull()
-      .references(() => account.id),
+    // --- Correction found via a REAL Google OAuth click-through (2026-08-21) ---
+    // Originally `.notNull()`, which is correct for password-reset/
+    // email-verification (an account always exists there) but wrong for
+    // Better Auth's OAuth *initiation* write: `generateGenericState`
+    // (`node_modules/better-auth/dist/state.mjs`) calls
+    // `internalAdapter.createVerificationValue({ identifier, value,
+    // expiresAt })` to persist PKCE/state data the moment a user clicks
+    // "Sign in with Google" — genuinely BEFORE any account is known (it's
+    // what the callback later resolves an account FROM, not the other
+    // way around). Confirmed by reading the pinned Better Auth version's
+    // source, not assumed: that call has no `userId`/`accountId`
+    // equivalent anywhere in its payload. A live click-through 500'd with
+    // `null value in column "account_id"` until this was made nullable.
+    accountId: uuid("account_id").references(() => account.id),
+    // No longer CHECK-constrained to a fixed 2-value enum — same
+    // discovery. `purpose` is mapped (`lib/auth/config.ts`) onto Better
+    // Auth's generic `identifier` field, whose REAL values (confirmed by
+    // reading the pinned version's source) are never the literal strings
+    // `'email_verify'`/`'password_reset'`: password-reset uses
+    // `reset-password:<token>` (`api/routes/password.mjs`) and OAuth
+    // state uses a bare random 32-char string (`oauth2/state.mjs`) — the
+    // original CHECK was written against an idealized shape, never
+    // verified against real Better Auth output, and would have rejected
+    // the real password-reset flow too the first time that feature was
+    // ever built and exercised (never yet exercised in this app, which is
+    // exactly why this went unnoticed until a live OAuth round-trip).
     purpose: text("purpose").notNull(),
     tokenHash: text("token_hash").notNull(),
     expiresAt: timestamptz("expires_at").notNull(),
@@ -693,6 +716,11 @@ export const accountVerification = pgTable(
   },
   (t) => [
     uniqueIndex("uq_account_verification_token_hash").on(t.tokenHash),
-    check("chk_verification_purpose", sql`${t.purpose} IN ('email_verify','password_reset')`),
+    // Better Auth's `findVerificationValue` (`db/internal-adapter.mjs`)
+    // queries by `identifier` (our `purpose`) alone, sorted by
+    // `createdAt` desc, `limit 1` — confirmed by reading the pinned
+    // version's source. `uq_account_verification_token_hash` above
+    // doesn't serve that query at all; this index does.
+    index("ix_account_verification_identifier").on(t.purpose, t.createdAt.desc()),
   ],
 );
