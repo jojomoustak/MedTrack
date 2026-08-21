@@ -127,7 +127,7 @@ describe.skipIf(!connectionString)("Better Auth's real internal adapter creates 
     const [credentialRow] = await readDb
       .select()
       .from(schema.accountCredential)
-      .where(eq(schema.accountCredential.accountId, createdUser.id));
+      .where(eq(schema.accountCredential.loginAccountId, createdUser.id));
     expect(credentialRow.credentialType).toBe("google");
     expect(credentialRow.providerAccountId).toBe(googleSub);
     expect(credentialRow.oauthAccessToken).toBeNull();

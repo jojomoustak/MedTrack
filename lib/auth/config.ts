@@ -227,7 +227,18 @@ function buildAuth() {
     account: {
       modelName: "accountCredential",
       fields: {
-        userId: "accountId",
+        // NOT "accountId" — found via a REAL repeat-Google-sign-in
+        // click-through (2026-08-22): that string literal-collides with
+        // Better Auth's OWN separate canonical `accountId` field on this
+        // same model (the OAuth provider's account id/sub, mapped below
+        // to `providerAccountId`) — `getDefaultFieldName`
+        // (`@better-auth/core`) resolves a "is this string a literal
+        // canonical field key" check BEFORE "is this a mapped fieldName",
+        // so "accountId" silently resolved to the WRONG field inside
+        // Better Auth's internal join-fallback (only reachable once a
+        // matching row exists, i.e. only on a REPEAT sign-in — never on
+        // the first). See `lib/db/schema.ts`'s `accountCredential.loginAccountId` comment for the full trace.
+        userId: "loginAccountId",
         providerId: "credentialType",
         password: "passwordHash",
         issuer: "providerIssuer",

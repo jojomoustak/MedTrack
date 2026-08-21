@@ -585,7 +585,35 @@ export const accountCredential = pgTable(
   "account_credential",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    accountId: uuid("account_id")
+    // TS property deliberately NOT named `accountId` (the DB column is
+    // still literally `account_id`, unchanged — this is a pure
+    // application-layer rename, no migration). Found via a REAL
+    // repeat-Google-sign-in click-through (2026-08-22): naming this
+    // property/field-mapping value "accountId" collided with Better
+    // Auth's OWN, genuinely different canonical field ALSO called
+    // `accountId` on its "account" model (the OAuth provider's account
+    // id/sub — what we map to `providerAccountId` below). Better Auth's
+    // internal `getDefaultFieldName` (`@better-auth/core/db/adapter/
+    // get-default-field-name.mjs`) resolves a mapped field name by first
+    // checking "is this string ALSO a literal canonical field key on this
+    // model" BEFORE checking "is this the fieldName some other field was
+    // mapped to" — so our own "accountId" mapping (intended for Better
+    // Auth's canonical `userId`) was silently misresolved as Better
+    // Auth's unrelated canonical `accountId` field instead. This only
+    // actually executes inside `handleFallbackJoin`
+    // (`@better-auth/core/db/adapter/factory.mjs`) — Better Auth's
+    // internal join fallback used by `findAccountOwnerByKey`/
+    // `findUserByEmail(...,{includeAccounts:true})`/`findSession(s)` —
+    // and that fallback is only reached once a matching row actually
+    // exists to join against, which structurally cannot happen on a
+    // FIRST sign-in (no prior credential row yet) but always happens on
+    // a REPEAT one — exactly matching "first sign-in worked, second
+    // 500'd with 'unable to query your database'". Renamed to
+    // `loginAccountId` (and `lib/auth/config.ts`'s `userId: "accountId"`
+    // mapping updated to match) so the mapped string can never again
+    // literal-collide with any of Better Auth's own canonical field
+    // names on this model.
+    loginAccountId: uuid("account_id")
       .notNull()
       .references(() => account.id),
     // Default/CHECK value 'credential' (not the originally-drafted
@@ -647,7 +675,7 @@ export const accountCredential = pgTable(
     oauthRefreshTokenExpiresAt: timestamptz("oauth_refresh_token_expires_at"),
   },
   (t) => [
-    uniqueIndex("uq_account_credential_type").on(t.accountId, t.credentialType),
+    uniqueIndex("uq_account_credential_type").on(t.loginAccountId, t.credentialType),
     // One Google identity can only ever be linked to one MedTracking account (A.2).
     uniqueIndex("uq_account_credential_provider_identity")
       .on(t.credentialType, t.providerAccountId)

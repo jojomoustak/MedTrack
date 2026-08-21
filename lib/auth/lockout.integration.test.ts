@@ -49,12 +49,12 @@ describe.skipIf(!connectionString)("password-credential lockout is scoped to cre
     const passwordHash = (await hashPassword("correct-horse-battery-staple")).encoded;
     const [passwordCredential] = await db
       .insert(schema.accountCredential)
-      .values({ accountId, credentialType: "password", passwordHash })
+      .values({ loginAccountId: accountId, credentialType: "password", passwordHash })
       .returning();
     const [googleCredential] = await db
       .insert(schema.accountCredential)
       .values({
-        accountId,
+        loginAccountId: accountId,
         credentialType: "google",
         providerAccountId: `google-sub-${accountId}`,
         linkedAt: new Date().toISOString(),
