@@ -1,0 +1,12 @@
+-- Found via a REAL Google OAuth click-through (2026-08-21): Better Auth's
+-- core `user` model always includes a nullable `image` field. Our
+-- `account` (`loginAccount`) table never had a column for it, so any
+-- create() call that actually SETS `image` (Google's OAuth profile
+-- always does; email/password sign-up never sends one) made the Drizzle
+-- adapter throw `BetterAuthError('The field "image" does not exist in
+-- the "loginAccount" Drizzle schema...')` — a plain (non-APIError) error,
+-- swallowed by Better Auth's OAuth callback handler and surfaced only as
+-- the opaque `unable_to_create_user`. See `lib/db/schema.ts`'s
+-- `account.avatarUrl` comment and `lib/auth/config.ts`'s
+-- `user.fields.image` mapping.
+ALTER TABLE "account" ADD COLUMN "avatar_url" text;

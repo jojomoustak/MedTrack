@@ -57,6 +57,19 @@ export const account = pgTable(
     email: citext("email").notNull(),
     emailVerifiedAt: timestamptz("email_verified_at"),
     displayName: text("display_name"),
+    // Found via a REAL Google OAuth click-through (2026-08-21): a
+    // brand-new Google sign-up 500'd with `[Better Auth]:
+    // unable_to_create_user`, which turned out to wrap a swallowed
+    // `BetterAuthError` ('The field "image" does not exist in the
+    // "loginAccount" Drizzle schema...') — Better Auth's core `user`
+    // model always includes a nullable `image` field
+    // (`@better-auth/core/db/schema/user.mjs`), and Google's OAuth
+    // profile always populates it (the account's avatar/`picture` claim),
+    // so every Google sign-up tries to write it. Email/password sign-up
+    // never sends this field, which is exactly why this went unnoticed
+    // until a live Google round-trip. Mapped via `user.fields.image` in
+    // `lib/auth/config.ts` — same pattern as `displayName`/`name` above.
+    avatarUrl: text("avatar_url"),
     status: text("status").notNull().default("active"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),

@@ -152,6 +152,15 @@ function buildAuth() {
       modelName: "loginAccount",
       fields: {
         name: "displayName",
+        // Found via a REAL Google OAuth click-through (2026-08-21):
+        // Better Auth's core `user` model always includes a nullable
+        // `image` field, and Google's OAuth profile always populates it
+        // (email/password sign-up never sends one, which is why this went
+        // unexercised until a live round-trip) — mapped to a genuinely
+        // new column (`lib/db/schema.ts`'s `account.avatarUrl`) rather
+        // than left unmapped, since an unmapped core field still gets
+        // written by the adapter and errors if no column exists for it.
+        image: "avatarUrl",
         // `emailVerified` (boolean) <-> `email_verified_at` (timestamptz)
         // conversion is handled by `emailVerifiedTimestampPlugin` below,
         // which fully overrides this field's schema (type + fieldName +
