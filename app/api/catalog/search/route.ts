@@ -17,7 +17,16 @@ import { isRateLimited } from "@/lib/catalog/server/rate-limit";
 
 export const runtime = "nodejs";
 
-const provider = new PostgresCatalogProvider();
+// Lazily constructed on first use, not at module scope: `PostgresCatalogProvider`'s
+// default constructor arg calls `getDb()`, which reads env config (`lib/config/env.ts`).
+// A module-scope `new PostgresCatalogProvider()` runs that at import time — including
+// during Next.js's build-time page-data-collection step — breaking the "build succeeds
+// independent of live infra" guarantee `lib/db/client.ts` is explicitly designed around
+// (this is exactly what broke the Vercel build once a build-time env check tripped on it).
+let providerSingleton: PostgresCatalogProvider | undefined;
+function getProvider(): PostgresCatalogProvider {
+  return (providerSingleton ??= new PostgresCatalogProvider());
+}
 
 export async function GET(request: Request) {
   try {
@@ -34,7 +43,7 @@ export async function GET(request: Request) {
       offset: url.searchParams.get("offset") ?? undefined,
     });
 
-    const results = await provider.search(query.q, { limit: query.limit, offset: query.offset });
+    const results = await getProvider().search(query.q, { limit: query.limit, offset: query.offset });
     return NextResponse.json({ results, query: query.q, limit: query.limit, offset: query.offset });
   } catch (err) {
     return toSafeErrorResponse(err, { route: "catalog.search" });
