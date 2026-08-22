@@ -58,6 +58,7 @@ describe.skipIf(!connectionString)("Better Auth's real internal adapter creates 
     process.env.IP_HASH_PEPPER ??= "test-only-pepper-not-for-production-use-32chars";
     process.env.GOOGLE_CLIENT_ID ??= "test-client-id.apps.googleusercontent.com";
     process.env.GOOGLE_CLIENT_SECRET ??= "test-client-secret";
+    process.env.ACCOUNT_ID_HASH_PEPPER ??= "test-only-pepper-not-for-production-use-32chars";
 
     pool = new Pool({ connectionString });
     readDb = drizzle(pool, { schema });

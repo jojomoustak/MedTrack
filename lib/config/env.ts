@@ -74,6 +74,21 @@ const envSchema = z.object({
   // application type) — see the addendum's A.8 setup checklist.
   GOOGLE_CLIENT_ID: nonEmpty("GOOGLE_CLIENT_ID"),
   GOOGLE_CLIENT_SECRET: nonEmpty("GOOGLE_CLIENT_SECRET"),
+
+  // HMAC pepper for `deleted_profile_registry`/`account_deletion_audit`'s
+  // `account_id_hash` (CLAUDE.md rule 9 hard-delete workflow, Phase 2 §4)
+  // = HMAC-SHA256(accountId, pepper) — same non-reversibility discipline as
+  // `IP_HASH_PEPPER` (a bare hash of a low-entropy value is brute-forceable;
+  // an account id is a random UUID so this is extra caution, not a fix for
+  // a demonstrated weakness, but kept consistent with the project's one
+  // established pattern rather than inventing a second). A DEDICATED
+  // pepper, not IP_HASH_PEPPER reused, to avoid mixing two different HMAC
+  // purposes under one key — flagged for `security-privacy-reviewer` to
+  // confirm as the right call, not assumed.
+  ACCOUNT_ID_HASH_PEPPER: nonEmpty("ACCOUNT_ID_HASH_PEPPER").refine(
+    (v) => v.length >= 32,
+    "ACCOUNT_ID_HASH_PEPPER must be at least 32 characters",
+  ),
 });
 
 export type Env = z.infer<typeof envSchema>;

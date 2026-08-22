@@ -12,6 +12,8 @@ const REQUIRED_KEYS = [
   // ADR-003 addendum (2026-08-21), A.9 — Google Sign-In.
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
+  // Account deletion (CLAUDE.md rule 9, Phase 2 §4).
+  "ACCOUNT_ID_HASH_PEPPER",
 ] as const;
 
 const VALID_ENV: Record<(typeof REQUIRED_KEYS)[number], string> = {
@@ -23,6 +25,7 @@ const VALID_ENV: Record<(typeof REQUIRED_KEYS)[number], string> = {
   IP_HASH_PEPPER: "b".repeat(32),
   GOOGLE_CLIENT_ID: "test-client-id.apps.googleusercontent.com",
   GOOGLE_CLIENT_SECRET: "test-client-secret",
+  ACCOUNT_ID_HASH_PEPPER: "c".repeat(32),
 };
 
 let savedEnv: NodeJS.ProcessEnv;
