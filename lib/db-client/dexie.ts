@@ -20,6 +20,7 @@ import type { OutboxEntry } from "@/lib/domain/outbox";
 import type { PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { CatalogProduct } from "@/lib/domain/catalog";
+import type { UnresolvedScanRecord } from "@/lib/domain/repositories";
 import { notifyOutboxWrite } from "@/lib/sync/client/outbox-signal";
 
 export interface LocalMedicationSchedule {
@@ -79,6 +80,9 @@ export interface LocalCatalogProductCache extends CatalogProduct {
   cachedAt: string;
 }
 
+/** Dexie's on-disk shape for `UnresolvedScanRecord` (`lib/domain/repositories.ts`) — no extra storage metadata needed, unlike `LocalCatalogProductCache`, since every field here is already client-local by definition. */
+export type LocalUnresolvedScan = UnresolvedScanRecord;
+
 export class MedTrackingDexie extends Dexie {
   outbox!: EntityTable<OutboxEntry, "clientMutationId">;
   userPreferences!: EntityTable<UserPreferencesRecord, "accountId">;
@@ -90,6 +94,7 @@ export class MedTrackingDexie extends Dexie {
   favorite!: EntityTable<LocalFavorite, "id">;
   recentlyUsedEvent!: EntityTable<LocalRecentlyUsedEvent, "id">;
   catalogProductCache!: EntityTable<LocalCatalogProductCache, "id">;
+  unresolvedScan!: EntityTable<LocalUnresolvedScan, "id">;
 
   constructor(name = "medtracking") {
     super(name);
@@ -105,6 +110,7 @@ export class MedTrackingDexie extends Dexie {
       favorite: "id, profileId, userMedicationId, syncState",
       recentlyUsedEvent: "id, profileId, userMedicationId, occurredAt",
       catalogProductCache: "id, gtin, name, cachedAt",
+      unresolvedScan: "id, profileId, gtin, resolvedAt",
     });
 
     // Single choke point for "a new outbox entry was durably written" —

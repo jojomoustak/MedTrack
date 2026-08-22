@@ -89,6 +89,37 @@ export interface UserMedicationRepository {
  */
 export interface CatalogCacheRepository {
   get(id: string): Promise<CatalogProduct | null>;
+  /** GTIN exact-match against the local cache — the scan flow's local-cache-first lookup (Phase 1 §7) before ever touching the network. `gtin` is expected pre-normalized (14-digit, `lib/domain/gs1.ts`). */
+  getByGtin(gtin: string): Promise<CatalogProduct | null>;
   /** Upserts every result from a completed search/lookup into the cache, so it's available offline afterward. */
   cacheAll(products: readonly CatalogProduct[]): Promise<void>;
+}
+
+/**
+ * Durable local record of a scan that couldn't be identified while
+ * offline (Phase 1 §7 / Phase 3 §4's "Add medication (scan, uncached
+ * product)" offline behavior) — never synced, no server entity yet (no
+ * `Package`/inventory schema exists; `MedicationPackageId` in
+ * `lib/domain/ids.ts` is reserved for a future phase). `resolvedAt` is set
+ * locally once a later online lookup or the user's own manual entry
+ * accounts for it.
+ */
+export interface UnresolvedScanRecord {
+  id: string;
+  profileId: string;
+  gtin: string;
+  rawValue: string;
+  format: string;
+  parsedExpiry: string | null;
+  parsedBatch: string | null;
+  parsedSerial: string | null;
+  scannedAt: string;
+  resolvedAt: string | null;
+}
+
+export type SaveUnresolvedScanInput = Omit<UnresolvedScanRecord, "scannedAt" | "resolvedAt">;
+
+export interface UnresolvedScanRepository {
+  save(input: SaveUnresolvedScanInput): Promise<void>;
+  listPending(profileId: string): Promise<UnresolvedScanRecord[]>;
 }

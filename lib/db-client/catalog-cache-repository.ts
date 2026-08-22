@@ -25,6 +25,12 @@ export class DexieCatalogCacheRepository implements CatalogCacheRepository {
     return stripCacheMetadata(record);
   }
 
+  async getByGtin(gtin: string): Promise<CatalogProduct | null> {
+    const record = await this.db.catalogProductCache.where("gtin").equals(gtin).first();
+    if (!record) return null;
+    return stripCacheMetadata(record);
+  }
+
   async cacheAll(products: readonly CatalogProduct[]): Promise<void> {
     if (products.length === 0) return;
     const cachedAt = new Date().toISOString();

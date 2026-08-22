@@ -35,3 +35,21 @@ export async function searchCatalog(
   }
   return response.json() as Promise<CatalogSearchResponse>;
 }
+
+export interface CatalogLookupResponse {
+  product: CatalogProduct | null;
+  gtin: string;
+}
+
+/** GET /api/catalog/lookup?gtin= — the scan flow's server-side fallback once the local cache misses (`lib/catalog/client/lookup-gtin.ts`). `gtin` must already be normalized (14-digit, `lib/domain/gs1.ts`). */
+export async function lookupCatalogByGtin(gtin: string, fetchImpl: typeof fetch = fetch): Promise<CatalogLookupResponse> {
+  const params = new URLSearchParams({ gtin });
+  const response = await fetchImpl(`/api/catalog/lookup?${params.toString()}`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new CatalogApiError(`Catalog lookup failed with status ${response.status}`, response.status);
+  }
+  return response.json() as Promise<CatalogLookupResponse>;
+}
