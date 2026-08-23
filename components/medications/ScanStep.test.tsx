@@ -205,6 +205,84 @@ describe("ScanStep — catalog lookup outcomes", () => {
   });
 });
 
+describe("ScanStep — 'not found' official-source search links", () => {
+  it("online + not-found: offers real EOF/EMA links and a copy-to-clipboard for the parsed GTIN, never a pre-filled/fabricated deep link", async () => {
+    __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
+    const platform = fakePlatform({
+      scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "5201234567890", format: "EAN_13" }),
+    });
+    const cache = fakeCache();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ product: null, gtin: "05201234567890" }) }) as unknown as typeof fetch;
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+
+    const eofLink = await screen.findByRole("link", { name: /ΕΟΦ/i });
+    expect(eofLink.getAttribute("href")).toBe("https://services.eof.gr/human-search/home.xhtml");
+    const emaLink = screen.getByRole("link", { name: /EMA/i });
+    expect(emaLink.getAttribute("href")).toBe("https://www.ema.europa.eu/en/medicines");
+    // Neither link carries the barcode as a query string or fragment — this app doesn't
+    // claim a pre-filled deep link works when neither site documents that contract.
+    expect(eofLink.getAttribute("href")).not.toContain("05201234567890");
+    expect(emaLink.getAttribute("href")).not.toContain("05201234567890");
+
+    expect(screen.getByText("05201234567890")).toBeTruthy();
+    screen.getByRole("button", { name: /Αντιγραφή/i }).click();
+    expect(writeText).toHaveBeenCalledWith("05201234567890");
+  });
+
+  it("offline + not-found: does NOT show official-source links (there's no point sending someone offline to an external site)", async () => {
+    __setNetworkMonitorForTests(fakeNetworkMonitor("offline"));
+    const platform = fakePlatform({
+      scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "5201234567890", format: "EAN_13" }),
+    });
+    const cache = fakeCache();
+    const unresolvedScanRepository = fakeUnresolvedScanRepository();
+
+    render(
+      <ScanStep
+        profileId="profile-1"
+        platform={platform}
+        cacheRepository={cache}
+        unresolvedScanRepository={unresolvedScanRepository}
+        onConfirmCandidate={vi.fn()}
+        onFallbackToManual={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText(/εκτός σύνδεσης/i)).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /ΕΟΦ/i })).toBeNull();
+  });
+
+  it("empty raw value (degenerate edge case): no official-source links shown, nothing to search with", async () => {
+    __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
+    const platform = fakePlatform({
+      scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "", format: "UNKNOWN" }),
+    });
+    const cache = fakeCache();
+
+    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+
+    expect(await screen.findByText(/δεν μπορέσαμε να αναγνωρίσουμε αυτόματα/i)).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /ΕΟΦ/i })).toBeNull();
+  });
+
+  it("CODE_128 with no GTIN but a real raw value: still offers the links, using the raw scanned string as the search term", async () => {
+    __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
+    const platform = fakePlatform({
+      scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "not-a-gtin", format: "CODE_128" }),
+    });
+    const cache = fakeCache();
+
+    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+
+    expect(await screen.findByRole("link", { name: /ΕΟΦ/i })).toBeTruthy();
+    expect(screen.getByText("not-a-gtin")).toBeTruthy();
+  });
+});
+
 describe("ScanStep — a rejected scanBarcode() promise that isn't MobilePlatformUnavailableError", () => {
   it("shows a generic retry-capable error, not the unavailable message", async () => {
     __setNetworkMonitorForTests(fakeNetworkMonitor("online"));

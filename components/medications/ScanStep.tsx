@@ -229,6 +229,7 @@ export function ScanStep({
   }
 
   // view.phase === "not-found"
+  const searchTerm = view.parsed?.gtin ?? view.parsed?.raw ?? null;
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-dashed border-zinc-300 p-4 text-center dark:border-zinc-700">
@@ -238,6 +239,7 @@ export function ScanStep({
             : "Δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος."}
         </p>
       </div>
+      {searchTerm && !view.offline && <OfficialSourceSearchLinks searchTerm={searchTerm} />}
       <button
         type="button"
         onClick={() => onFallbackToManual(view.parsed)}
@@ -248,6 +250,82 @@ export function ScanStep({
       <button type="button" onClick={onCancel} className="min-h-12 self-start text-sm font-medium underline">
         ← Πίσω
       </button>
+    </div>
+  );
+}
+
+/**
+ * Optional convenience for the "not found" fallback: lets the user check
+ * this specific number against real official regulatory sources
+ * themselves, rather than MedTracking guessing at or scraping a match.
+ *
+ * Deliberately NOT a pre-filled deep link: neither EOF's "Αναζήτηση
+ * φαρμάκων" tool (`services.eof.gr/human-search/home.xhtml`) nor EMA's
+ * medicine finder documents a URL query-parameter contract for
+ * pre-filling a search (confirmed by checking both sites directly,
+ * 2026-08-23 — not assumed), so promising a pre-filled result would be a
+ * claim this code can't actually keep. Instead: copy the number, open the
+ * official page, the user pastes it in and reads the result themselves —
+ * this only ever opens real official government/EU regulatory sites, and
+ * MedTracking never parses or trusts whatever the user finds there; if
+ * they want to use it, they still go through "Continue manually" and
+ * confirm it themselves (CLAUDE.md: never auto-create from an external
+ * lookup, and that discipline applies just as much to a source the user
+ * found on their own as to an automated one).
+ */
+function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(searchTerm);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API can be unavailable (permissions, older WebView); the
+      // number is still shown on-screen below for the user to select/type
+      // manually, so this failure mode is a minor inconvenience, not a dead end.
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+      <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        Αναζήτηση σε επίσημες πηγές
+      </p>
+      <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-500">
+        Αντιγράψτε τον κωδικό και αναζητήστε τον στον ιστότοπο του Εθνικού Οργανισμού Φαρμάκων (ΕΟΦ) ή
+        του Ευρωπαϊκού Οργανισμού Φαρμάκων (EMA). Τα αποτελέσματα εμφανίζονται στον ιστότοπό τους — το
+        MedTracking δεν τα διαβάζει ούτε τα συμπληρώνει αυτόματα.
+      </p>
+      <div className="mb-3 flex items-center gap-2 rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+        <code className="flex-1 truncate text-sm">{searchTerm}</code>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="min-h-8 shrink-0 rounded-full border border-zinc-300 px-3 text-xs font-medium dark:border-zinc-700"
+        >
+          {copied ? "Αντιγράφηκε ✓" : "Αντιγραφή"}
+        </button>
+      </div>
+      <div className="flex flex-col gap-2">
+        <a
+          href="https://services.eof.gr/human-search/home.xhtml"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="min-h-10 rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium underline dark:border-zinc-700"
+        >
+          Αναζήτηση στον ΕΟΦ (eof.gr)
+        </a>
+        <a
+          href="https://www.ema.europa.eu/en/medicines"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="min-h-10 rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium underline dark:border-zinc-700"
+        >
+          Αναζήτηση στον EMA (ema.europa.eu)
+        </a>
+      </div>
     </div>
   );
 }
