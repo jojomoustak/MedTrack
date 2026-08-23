@@ -1,5 +1,5 @@
 /**
- * GET /api/catalog/lookup?gtin= — Phase 1 §7's scan flow server lookup,
+ * GET /api/catalog/lookup?gtin=|eofCode= — Phase 1 §7's scan flow server lookup,
  * hit only when the local cache (`lib/db-client/catalog-cache-repository.ts`)
  * misses and the device is online (`lib/catalog/client/lookup-gtin.ts`).
  * Requires an authenticated session and is rate-limited, mirroring
@@ -35,10 +35,13 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const query = parseOrThrow(catalogLookupQuerySchema, {
       gtin: url.searchParams.get("gtin") ?? undefined,
+      eofCode: url.searchParams.get("eofCode") ?? undefined,
     });
 
-    const product = await getProvider().lookupByGtin(query.gtin);
-    return NextResponse.json({ product, gtin: query.gtin });
+    const product = query.gtin
+      ? await getProvider().lookupByGtin(query.gtin)
+      : await getProvider().lookupByEofCode(query.eofCode!);
+    return NextResponse.json({ product, gtin: query.gtin ?? null, eofCode: query.eofCode ?? null });
   } catch (err) {
     return toSafeErrorResponse(err, { route: "catalog.lookup" });
   }

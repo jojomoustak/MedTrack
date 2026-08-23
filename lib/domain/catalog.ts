@@ -23,6 +23,17 @@ export type CatalogProduct = typeof schema.medicationCatalogProduct.$inferSelect
  */
 export const SEED_PLACEHOLDER_SOURCE = "seed-placeholder-not-verified";
 
+/**
+ * Marks a catalog row imported from a real official EOF/Ministry of
+ * Health price bulletin (`scripts/import/`, `data/README.md`) — real
+ * government data, unlike `SEED_PLACEHOLDER_SOURCE`, but explicitly
+ * DEV-ONLY: production redistribution isn't yet approved (licensing terms
+ * are contradictory — medication-resolution-architecture.md §2.3/§12 item
+ * 7). Never conflate the two constants; a row's source must always say
+ * honestly which kind of data it actually is.
+ */
+export const EOF_DEV_IMPORT_SOURCE = "eof-mysyfa-bulletin-dev-only-not-for-production";
+
 export interface CatalogSearchOptions {
   limit?: number;
   offset?: number;
@@ -39,4 +50,14 @@ export interface MedicationCatalogProvider {
   search(query: string, options?: CatalogSearchOptions): Promise<CatalogProduct[]>;
   /** GTIN exact-match lookup — the scan flow's eventual entry point (Phase 1 §7); implemented now since it shares the same table/provider, even though nothing calls it until Phase 7-8 builds scanning. */
   lookupByGtin(gtin: string): Promise<CatalogProduct | null>;
+  /**
+   * EOF product code exact-match lookup — Path A's resolution step
+   * (medication-resolution-architecture.md §2.5): the 9-digit code a Greek
+   * national `280`-prefix EAN-13 barcode decodes to
+   * (`lib/domain/greek-national-barcode.ts`), looked up against whatever
+   * `medication_catalog_product` rows a development import has populated.
+   * `eofCode` must be passed exactly as decoded (leading zeros preserved,
+   * never coerced through a number).
+   */
+  lookupByEofCode(eofCode: string): Promise<CatalogProduct | null>;
 }

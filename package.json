@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx lib/db/migrate.ts",
-    "db:seed": "tsx lib/db/seed.ts"
+    "db:seed": "tsx lib/db/seed.ts",
+    "catalog:import-mysyfa": "tsx scripts/import/run-mysyfa-import.ts",
+    "catalog:import-reimbursed-new-drugs": "tsx scripts/import/run-reimbursed-new-drugs-import.ts"
   },
   "dependencies": {
     "@better-auth/core": "1.7.1",
@@ -47,7 +49,8 @@
     "tsx": "^4.19.2",
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "xlsx": "^0.18.5"
   },
   "packageManager": "pnpm@11.18.0"
 }

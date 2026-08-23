@@ -113,6 +113,19 @@ export class MedTrackingDexie extends Dexie {
       unresolvedScan: "id, profileId, gtin, resolvedAt",
     });
 
+    // v2: adds an `eofCode` index to `catalogProductCache` for Path A
+    // lookups (medication-resolution-architecture.md §2.5,
+    // `lib/db-client/catalog-cache-repository.ts`'s `getByEofCode`). A new
+    // version, not an edit to v1's `stores()` above — this app already has
+    // real installed local data (it's in active personal use), and Dexie
+    // requires a version bump to add an index to an existing table rather
+    // than silently changing an already-shipped schema. Only the changed
+    // table needs to be listed; every other v1 table carries forward
+    // unchanged automatically.
+    this.version(2).stores({
+      catalogProductCache: "id, gtin, eofCode, name, cachedAt",
+    });
+
     // Single choke point for "a new outbox entry was durably written" —
     // every repository's write path (direct `enqueue()`, or a raw
     // `outbox.put()` inside a larger multi-table transaction) passes

@@ -9,6 +9,7 @@ function makeProduct(overrides: Partial<CatalogProduct> = {}): CatalogProduct {
   return {
     id: crypto.randomUUID(),
     gtin: null,
+    eofCode: null,
     name: "Παρακεταμόλη 500mg",
     nameNormalized: "παρακεταμολη 500mg",
     manufacturer: "Placeholder Pharma",
@@ -67,5 +68,21 @@ describe("DexieCatalogCacheRepository (Phase 1 §7 local-cache-first)", () => {
   it("cacheAll() with an empty array is a no-op", async () => {
     await repo.cacheAll([]);
     expect(await db.catalogProductCache.count()).toBe(0);
+  });
+
+  it("getByGtin() finds a cached product by its GTIN, against the real Dexie index (not a mock)", async () => {
+    const product = makeProduct({ gtin: "05012345678900" });
+    await repo.cacheAll([product]);
+
+    expect(await repo.getByGtin("05012345678900")).toEqual(product);
+    expect(await repo.getByGtin("00000000000000")).toBeNull();
+  });
+
+  it("getByEofCode() finds a cached product by its EOF code (Path A, medication-resolution-architecture.md §2.5), against the real Dexie index", async () => {
+    const product = makeProduct({ gtin: null, eofCode: "023280202" });
+    await repo.cacheAll([product]);
+
+    expect(await repo.getByEofCode("023280202")).toEqual(product);
+    expect(await repo.getByEofCode("000000000")).toBeNull();
   });
 });

@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { ParsedBarcode } from "@/lib/domain/gs1";
 import { parseBarcode } from "@/lib/domain/gs1";
+import { classifyBarcode } from "@/lib/domain/medication-identifier";
 import type { CatalogCacheRepository, UnresolvedScanRepository } from "@/lib/domain/repositories";
 import { DexieUnresolvedScanRepository } from "@/lib/db-client/unresolved-scan-repository";
 import { lookupGtin } from "@/lib/catalog/client/lookup-gtin";
+import { lookupEofCode } from "@/lib/catalog/client/lookup-eof-code";
 import { useNetworkStatus } from "@/lib/sync/client/use-network-status";
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import { MobilePlatformUnavailableError, type MobilePlatform } from "@/lib/platform/mobile-platform";
@@ -32,7 +34,17 @@ type ViewState =
   | { phase: "scanning" }
   | { phase: "looking-up" }
   | { phase: "candidate"; product: CatalogProduct; parsed: ParsedBarcode }
-  | { phase: "not-found"; parsed: ParsedBarcode | null; offline: boolean }
+  /**
+   * `recognizedButUnavailable` distinguishes two different "not found"
+   * situations (spec: architecture doc §2.5's Path A "unknown offline
+   * barcode" case): a well-formed Greek national EAN-13 that decoded
+   * cleanly but has no matching catalog entry (the barcode itself is
+   * understood — MedTracking just doesn't have data for this specific
+   * product yet) vs. a barcode that couldn't be identified as any known
+   * scheme at all. Never guessed either way — this only changes which
+   * message is shown, not any resolution behavior.
+   */
+  | { phase: "not-found"; parsed: ParsedBarcode | null; offline: boolean; recognizedButUnavailable: boolean }
   | { phase: "unavailable" }
   | { phase: "error"; message: string };
 
@@ -114,12 +126,24 @@ export function ScanStep({
     const parsed = parseBarcode(result.rawValue, result.format);
 
     if (!parsed.gtin) {
-      setView({ phase: "not-found", parsed, offline: false });
+      setView({ phase: "not-found", parsed, offline: false, recognizedButUnavailable: false });
       return;
     }
 
     setView({ phase: "looking-up" });
-    const outcome = await lookupGtin(parsed.gtin, networkRef.current, { cache: cacheRepository });
+    // Path A (medication-resolution-architecture.md §2.5): a well-formed
+    // Greek national `280`-prefix EAN-13 resolves by its decoded EOF code,
+    // not by GTIN — that barcode isn't a globally-resolvable GTIN at all
+    // (architecture doc §2.1), so `classifyBarcode` routes it to a
+    // different lookup entirely rather than reusing `parsed.gtin`. Anything
+    // else (including an unrecognized-scheme barcode, which still has a
+    // padded `parsed.gtin` from `parseBarcode`'s plain-EAN normalization)
+    // falls through to the existing, unchanged Path B GTIN lookup.
+    const identifier = classifyBarcode(result.rawValue, result.format);
+    const isGreekNational = identifier?.kind === "GREEK_NATIONAL_EAN13";
+    const outcome = isGreekNational
+      ? await lookupEofCode(identifier.eofCode, networkRef.current, { cache: cacheRepository })
+      : await lookupGtin(parsed.gtin, networkRef.current, { cache: cacheRepository });
     if (!mountedRef.current) return;
 
     if (outcome.status === "found") {
@@ -143,11 +167,11 @@ export function ScanStep({
       } catch (err) {
         logger.warn("scan_step.save_unresolved_failed", { message: (err as Error).message });
       }
-      if (mountedRef.current) setView({ phase: "not-found", parsed, offline: true });
+      if (mountedRef.current) setView({ phase: "not-found", parsed, offline: true, recognizedButUnavailable: isGreekNational });
       return;
     }
 
-    setView({ phase: "not-found", parsed, offline: false });
+    setView({ phase: "not-found", parsed, offline: false, recognizedButUnavailable: isGreekNational });
   }
 
   if (view.phase === "scanning" || view.phase === "looking-up") {
@@ -230,14 +254,22 @@ export function ScanStep({
 
   // view.phase === "not-found"
   const searchTerm = view.parsed?.gtin ?? view.parsed?.raw ?? null;
+  // `recognizedButUnavailable`: the barcode itself decoded cleanly as a
+  // Greek national medicine identifier (architecture doc §2.5) — MedTracking
+  // just doesn't have a catalog entry for this specific product yet. A
+  // materially more honest message than the generic "couldn't identify"
+  // one, and never a guess either way (spec §26).
+  const notFoundMessage = view.offline
+    ? view.recognizedButUnavailable
+      ? "Αναγνωρίσαμε τον κωδικό του φαρμάκου, αλλά δεν έχουμε ακόμα στοιχεία για αυτό το προϊόν εκτός σύνδεσης. Το αποθηκεύσαμε και θα προσπαθήσουμε ξανά μόλις συνδεθείτε."
+      : "Είστε εκτός σύνδεσης — δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Το αποθηκεύσαμε και θα προσπαθήσουμε ξανά μόλις συνδεθείτε."
+    : view.recognizedButUnavailable
+      ? "Αναγνωρίσαμε τον κωδικό του φαρμάκου, αλλά δεν έχουμε ακόμα στοιχεία για αυτό το προϊόν στον κατάλογό μας."
+      : "Δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος.";
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-dashed border-zinc-300 p-4 text-center dark:border-zinc-700">
-        <p className="mb-1 text-sm text-zinc-700 dark:text-zinc-300">
-          {view.offline
-            ? "Είστε εκτός σύνδεσης — δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Το αποθηκεύσαμε και θα προσπαθήσουμε ξανά μόλις συνδεθείτε."
-            : "Δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος."}
-        </p>
+        <p className="mb-1 text-sm text-zinc-700 dark:text-zinc-300">{notFoundMessage}</p>
       </div>
       {searchTerm && !view.offline && <OfficialSourceSearchLinks searchTerm={searchTerm} />}
       <button

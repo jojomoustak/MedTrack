@@ -53,4 +53,13 @@ export class PostgresCatalogProvider implements MedicationCatalogProvider {
     const [row] = await this.db.select().from(schema.medicationCatalogProduct).where(sql`${schema.medicationCatalogProduct.gtin} = ${gtin}`).limit(1);
     return row ?? null;
   }
+
+  async lookupByEofCode(eofCode: string): Promise<CatalogProduct | null> {
+    const [row] = await this.db
+      .select()
+      .from(schema.medicationCatalogProduct)
+      .where(sql`${schema.medicationCatalogProduct.eofCode} = ${eofCode}`)
+      .limit(1);
+    return row ?? null;
+  }
 }

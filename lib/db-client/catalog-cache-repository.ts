@@ -31,6 +31,12 @@ export class DexieCatalogCacheRepository implements CatalogCacheRepository {
     return stripCacheMetadata(record);
   }
 
+  async getByEofCode(eofCode: string): Promise<CatalogProduct | null> {
+    const record = await this.db.catalogProductCache.where("eofCode").equals(eofCode).first();
+    if (!record) return null;
+    return stripCacheMetadata(record);
+  }
+
   async cacheAll(products: readonly CatalogProduct[]): Promise<void> {
     if (products.length === 0) return;
     const cachedAt = new Date().toISOString();

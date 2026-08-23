@@ -36,6 +36,7 @@ function fakeCache(overrides: Partial<CatalogCacheRepository> = {}): CatalogCach
   return {
     get: vi.fn().mockResolvedValue(null),
     getByGtin: vi.fn().mockResolvedValue(null),
+    getByEofCode: vi.fn().mockResolvedValue(null),
     cacheAll: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -53,6 +54,7 @@ function makeProduct(overrides: Partial<CatalogProduct> = {}): CatalogProduct {
   return {
     id: "product-1",
     gtin: "05012345678900",
+    eofCode: null,
     name: "Παρακεταμόλη 500mg",
     nameNormalized: "παρακεταμολη 500mg",
     manufacturer: null,
@@ -146,6 +148,39 @@ describe("ScanStep — the four native bridge response shapes", () => {
     expect(confirmedProduct).toEqual(product);
     expect(parsed.batch).toBe("LOT9");
   });
+
+  it("'ok' + a Greek national EAN-13 barcode (Path A, medication-resolution-architecture.md §2.5): resolves by EOF code, not GTIN, and shows candidate confirmation", async () => {
+    __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
+    const product = makeProduct({ gtin: null, eofCode: "023280202", name: "DEPON αναβράζον 500mg" });
+    const platform = fakePlatform({
+      scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "2800232802025", format: "EAN_13" }),
+    });
+    const getByGtin = vi.fn().mockResolvedValue(null);
+    const getByEofCode = vi.fn().mockResolvedValue(product);
+    const cache = fakeCache({ getByGtin, getByEofCode });
+    const onConfirmCandidate = vi.fn();
+
+    render(
+      <ScanStep
+        profileId="profile-1"
+        platform={platform}
+        cacheRepository={cache}
+        onConfirmCandidate={onConfirmCandidate}
+        onFallbackToManual={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText(product.name)).toBeTruthy();
+    // Resolved via the EOF-code cache lookup, never the GTIN one — a Greek
+    // national barcode isn't a globally-resolvable GTIN (architecture doc §2.1).
+    expect(getByEofCode).toHaveBeenCalledWith("023280202");
+    expect(getByGtin).not.toHaveBeenCalled();
+
+    screen.getByRole("button", { name: /επιβεβαίωση/i }).click();
+    expect(onConfirmCandidate).toHaveBeenCalledTimes(1);
+    expect(onConfirmCandidate.mock.calls[0][0]).toEqual(product);
+  });
 });
 
 describe("ScanStep — catalog lookup outcomes", () => {
@@ -230,6 +265,24 @@ describe("ScanStep — 'not found' official-source search links", () => {
     expect(screen.getByText("05201234567890")).toBeTruthy();
     screen.getByRole("button", { name: /Αντιγραφή/i }).click();
     expect(writeText).toHaveBeenCalledWith("05201234567890");
+  });
+
+  it("online + a well-formed Greek national EAN-13 with no catalog match: shows the 'recognized but not available' message, distinct from the generic one (spec §26)", async () => {
+    __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
+    const platform = fakePlatform({
+      scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "2800232802025", format: "EAN_13" }),
+    });
+    const cache = fakeCache();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ product: null, gtin: null, eofCode: "023280202" }) }) as unknown as typeof fetch;
+
+    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+
+    expect(await screen.findByText(/Αναγνωρίσαμε τον κωδικό του φαρμάκου/i)).toBeTruthy();
+    // The barcode was understood, not an unrecognized-scheme case — this is
+    // never worded as "couldn't identify" (that would misrepresent what
+    // actually happened: the code decoded fine, MedTracking just has no
+    // catalog data for it yet).
+    expect(screen.queryByText(/Δεν μπορέσαμε να αναγνωρίσουμε αυτόματα/i)).toBeNull();
   });
 
   it("offline + not-found: does NOT show official-source links (there's no point sending someone offline to an external site)", async () => {

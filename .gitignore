@@ -42,3 +42,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# development-only official EOF/Ministry of Health medication datasets —
+# see data/README.md. Never committed: production redistribution/licensing
+# is not yet resolved (medication-resolution-architecture.md §12 item 7).
+# Only data/README.md and data/fixtures/ (small, hand-curated) are tracked.
+/data/raw/**
+/data/normalized/**

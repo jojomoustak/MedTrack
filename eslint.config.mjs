@@ -17,7 +17,7 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["lib/db/migrate.ts", "lib/db/seed.ts"],
+    files: ["lib/db/migrate.ts", "lib/db/seed.ts", "scripts/import/run-mysyfa-import.ts", "scripts/import/run-reimbursed-new-drugs-import.ts"],
     rules: {
       "no-console": "off",
     },

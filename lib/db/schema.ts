@@ -131,6 +131,14 @@ export const medicationCatalogProduct = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     gtin: text("gtin"),
+    // Path A resolution key (architecture doc §2.5) — the 9-digit EOF
+    // product code embedded in a Greek national `280`-prefix EAN-13
+    // barcode (`lib/domain/greek-national-barcode.ts`). Distinct from
+    // `gtin`: a Greek national barcode is not a globally-resolvable GTIN
+    // (architecture doc §2.1), so this is deliberately its own column,
+    // never conflated with or derived from `gtin` at query time. Text, not
+    // numeric — leading zeros are significant (e.g. `023280101`).
+    eofCode: text("eof_code"),
     name: text("name").notNull(),
     // Uses `immutable_unaccent` (defined in migration 0000), not the bare
     // `unaccent()` extension function directly: Postgres refuses a
@@ -156,12 +164,57 @@ export const medicationCatalogProduct = pgTable(
   },
   (t) => [
     uniqueIndex("uq_catalog_gtin").on(t.gtin).where(sql`${t.gtin} IS NOT NULL`),
+    uniqueIndex("uq_catalog_eof_code").on(t.eofCode).where(sql`${t.eofCode} IS NOT NULL`),
     index("ix_catalog_name_trgm").using("gin", t.nameNormalized.op("gin_trgm_ops")),
     check(
       "chk_catalog_form",
       sql`${t.form} IS NULL OR ${t.form} IN ('tablet','capsule','ml','mg','mcg','g','dose','spray','drop','sachet','patch','injection','other')`,
     ),
     check("chk_catalog_lifecycle_state", sql`${t.lifecycleState} IN ('active','discontinued','recalled')`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// 2.4a MedicationCatalogSourceSnapshot — import-batch provenance for
+// development-only catalog ingestion (architecture doc §13/§30, added
+// alongside the Greek national EAN-13 resolution path). Records WHERE a
+// batch of catalog rows came from (which official file, when published,
+// when downloaded, its checksum) so a catalog row's `regulatorySource`/
+// `sourceVersion` (per-row, already on `medicationCatalogProduct`) can be
+// traced back to the actual dataset file it was imported from. This is
+// batch/file-level provenance; per-row provenance already exists via the
+// three `source*` columns above — this table does not duplicate that, it
+// answers a different question ("which download produced these rows").
+// ---------------------------------------------------------------------------
+export const medicationCatalogSourceSnapshot = pgTable(
+  "medication_catalog_source_snapshot",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sourceOrganization: text("source_organization").notNull(),
+    datasetType: text("dataset_type").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    publishedAt: date("published_at"),
+    downloadedAt: timestamptz("downloaded_at").notNull().defaultNow(),
+    filename: text("filename").notNull(),
+    checksumSha256: text("checksum_sha256").notNull(),
+    importVersion: text("import_version").notNull(),
+    recordCount: integer("record_count"),
+    status: text("status").notNull().default("downloaded"),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "chk_snapshot_source_organization",
+      sql`${t.sourceOrganization} IN ('EOF','MINISTRY_OF_HEALTH')`,
+    ),
+    check(
+      "chk_snapshot_dataset_type",
+      sql`${t.datasetType} IN ('REIMBURSED_PRICE_BULLETIN','MYSYFA_PRICE_BULLETIN','NEW_PRODUCTS','GENERICS','OTHER')`,
+    ),
+    check(
+      "chk_snapshot_status",
+      sql`${t.status} IN ('downloaded','parsed','imported','rejected')`,
+    ),
   ],
 );
 

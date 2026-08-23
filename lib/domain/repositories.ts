@@ -91,6 +91,8 @@ export interface CatalogCacheRepository {
   get(id: string): Promise<CatalogProduct | null>;
   /** GTIN exact-match against the local cache — the scan flow's local-cache-first lookup (Phase 1 §7) before ever touching the network. `gtin` is expected pre-normalized (14-digit, `lib/domain/gs1.ts`). */
   getByGtin(gtin: string): Promise<CatalogProduct | null>;
+  /** EOF code exact-match against the local cache — Path A's local-cache-first lookup (medication-resolution-architecture.md §2.5), the `getByGtin` analogue for `lib/domain/greek-national-barcode.ts`'s decoded 9-digit EOF code. */
+  getByEofCode(eofCode: string): Promise<CatalogProduct | null>;
   /** Upserts every result from a completed search/lookup into the cache, so it's available offline afterward. */
   cacheAll(products: readonly CatalogProduct[]): Promise<void>;
 }

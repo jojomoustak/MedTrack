@@ -97,6 +97,7 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     return {
       id: "product-1",
       gtin: "05012345678900",
+      eofCode: null,
       name: "Παρακεταμόλη 500mg",
       nameNormalized: "παρακεταμολη 500mg",
       manufacturer: null,
@@ -133,6 +134,7 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     const cacheRepository: CatalogCacheRepository = {
       get: vi.fn().mockResolvedValue(null),
       getByGtin: vi.fn().mockResolvedValue(product),
+      getByEofCode: vi.fn().mockResolvedValue(null),
       cacheAll: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -176,6 +178,7 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     const cacheRepository: CatalogCacheRepository = {
       get: vi.fn().mockResolvedValue(null),
       getByGtin: vi.fn().mockResolvedValue(null),
+      getByEofCode: vi.fn().mockResolvedValue(null),
       cacheAll: vi.fn().mockResolvedValue(undefined),
     };
 
