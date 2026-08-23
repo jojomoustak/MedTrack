@@ -252,12 +252,50 @@
  *      progressed, per the idempotency check above (and if it had in fact
  *      already fully succeeded despite the stuck row, this call is a
  *      no-op that also closes out the stale audit row).
+ *   6. `medication.photo_blob_cleanup_failed` warning log lines (see
+ *      item 7 below) name the specific blob pathname that failed to
+ *      delete — cross-reference the timestamp against this same
+ *      request/incident and retry `deleteMedicationPhotoBlobByKey()`
+ *      (`lib/medications/server/photo.ts`) directly for that pathname; by
+ *      this point the DB row that referenced it is already gone, so this
+ *      IS the only remaining record of it.
+ *
+ * 7. **User-uploaded medication photos (Vercel Blob) — added after this
+ *    module's original security review, same rigor applied.** A blob
+ *    delete is an external HTTP call, not a Postgres statement, so it
+ *    structurally cannot be part of the one atomic `withProfileScope`
+ *    batch below. Ordering choice, and why: every profile's photo blob
+ *    pathnames are collected (read-only) and best-effort DELETED FIRST,
+ *    BEFORE the atomic DB batch runs (which is what actually deletes the
+ *    `user_medication` rows that reference them). The alternative order
+ *    (delete DB rows first, clean up blobs after) was rejected: if the
+ *    process died between "DB batch committed" and "blob loop finished",
+ *    the surviving `user_medication` rows — the only record of which
+ *    blob pathnames existed — would already be gone, making any
+ *    unfinished blob deletions PERMANENTLY unreachable by id, with no
+ *    audit trail pointing at them. That is a strictly worse outcome for
+ *    a "right to erasure" workflow than this module's chosen order,
+ *    whose worst case is: a blob delete fails (e.g. a transient Vercel
+ *    Blob outage), gets logged with its actual pathname (see item 6 —
+ *    deliberately NOT redacted the way health-domain fields are,
+ *    CLAUDE.md rule 8, because a storage pathname built from opaque UUIDs
+ *    carries no medication name/dose/note content, and losing this one
+ *    specific log line would be the only remaining way to ever find and
+ *    delete that object again), and the DB batch proceeds regardless —
+ *    the profile's `user_medication` rows (and therefore all PII-bearing
+ *    references to that blob) are deleted either way, on schedule, not
+ *    blocked by a Vercel Blob hiccup. A transient blob-storage failure
+ *    must never be allowed to block or fail the GDPR-mandated DB erasure,
+ *    which is why blob cleanup failures are logged and swallowed here
+ *    rather than re-thrown into the same catch block that flips
+ *    `account_deletion_audit.outcome` to `'failed'`.
  */
 import { eq } from "drizzle-orm";
 import { getDb, type Db, type TestableDb } from "@/lib/db/client";
 import { withProfileScope } from "@/lib/db/rls";
 import * as schema from "@/lib/db/schema";
 import { hashAccountId } from "@/lib/account/server/account-id-hash";
+import { collectMedicationPhotoBlobKeysForProfile, deleteMedicationPhotoBlobByKey } from "@/lib/medications/server/photo";
 import { logger } from "@/lib/logging/logger";
 
 export type DeletionMethod = "user_initiated" | "admin" | "legal_request";
@@ -321,6 +359,26 @@ export async function deleteAccount(request: DeleteAccountRequest, dbOverride?: 
   const [auditRow] = await db.insert(schema.accountDeletionAudit).values({ accountIdHash, method, actor, outcome: "in_progress" }).returning();
 
   try {
+    // Item 7 (module header): best-effort blob cleanup BEFORE the DB rows
+    // that reference them are deleted below — see the header doc for the
+    // full ordering rationale. Read-only collection first (safe to retry;
+    // an empty result is the normal case for most accounts), then a
+    // per-key delete that never throws past this loop — one failed blob
+    // must not block the DB erasure that follows, and must not flip this
+    // whole deletion to 'failed' over a transient storage-provider issue.
+    const photoBlobKeys = await collectMedicationPhotoBlobKeysForProfile(profileId, db);
+    for (const blobKey of photoBlobKeys) {
+      try {
+        await deleteMedicationPhotoBlobByKey(blobKey);
+      } catch (err) {
+        logger.warn("account.delete.photo_blob_cleanup_failed", {
+          accountIdHash,
+          blobKey,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
     await withProfileScope(
       profileId,
       (scopedDb) =>

@@ -36,7 +36,12 @@ export default function AddMedicationPage() {
         </p>
       )}
       {session.status === "ready" && (
-        <AddMedicationFlow profileId={session.profileId} onCreated={() => router.push("/medications")} />
+        // Navigates to the optional photo-attach screen rather than
+        // straight back to the list — the medication is already fully
+        // saved (local-first) by the time `onCreated` fires, so this is a
+        // non-blocking next step, not a gate on completing the add flow
+        // (that screen's own "Ολοκλήρωση" button is the actual finish).
+        <AddMedicationFlow profileId={session.profileId} onCreated={(record) => router.push(`/medications/${record.id}/photo?new=1`)} />
       )}
     </main>
   );

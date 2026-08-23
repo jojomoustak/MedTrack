@@ -89,6 +89,17 @@ const envSchema = z.object({
     (v) => v.length >= 32,
     "ACCOUNT_ID_HASH_PEPPER must be at least 32 characters",
   ),
+
+  // Vercel Blob (user-uploaded medication photos, `lib/medications/server/photo.ts`).
+  // Deliberately OPTIONAL, unlike every other secret above: there is no
+  // meaningful local-only fallback for blob storage (see .env.example),
+  // and this app must still build/run/typecheck/test for everyone who
+  // hasn't set up Blob storage on their Vercel project yet — the photo
+  // feature itself fails closed with a clear `ConfigError` (never a
+  // silent no-op) the moment it's actually exercised without this set,
+  // rather than making the ENTIRE app (including unrelated routes that
+  // happen to call `getEnv()`) refuse to start.
+  BLOB_READ_WRITE_TOKEN: z.string().trim().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

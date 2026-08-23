@@ -121,6 +121,14 @@ export default function MedicationsPage() {
                     {med.customStrengthValue} {med.customStrengthUnit}
                   </p>
                 )}
+                {/* A freshly-created medication may not exist on the server yet (local-first write) — the photo endpoints need a real server row, so this link only appears once synced (mirrors `MedicationPhotoAttach`'s own gating). */}
+                {med.syncState === "synced" ? (
+                  <Link href={`/medications/${med.id}/photo`} className="text-sm font-medium underline">
+                    Φωτογραφία
+                  </Link>
+                ) : (
+                  <p className="text-sm text-zinc-500 dark:text-zinc-500">Φωτογραφία μετά τον συγχρονισμό</p>
+                )}
               </div>
               <SyncStatusChip state={med.syncState} />
             </li>

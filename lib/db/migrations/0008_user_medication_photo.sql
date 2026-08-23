@@ -1,0 +1,1 @@
+ALTER TABLE "user_medication" ADD COLUMN "photo_blob_key" text;

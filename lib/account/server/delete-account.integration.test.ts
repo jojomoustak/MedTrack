@@ -27,7 +27,7 @@
  *     (`validateSessionToken` returns null).
  */
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
@@ -39,6 +39,18 @@ import { hashSessionToken } from "@/lib/auth/adr003-adapter";
 import { validateSessionToken } from "@/lib/auth/session";
 import { applyMutations } from "@/lib/sync/server/mutations";
 import { ConflictError } from "@/lib/errors/app-error";
+
+// `@vercel/blob` needs a real BLOB_READ_WRITE_TOKEN this environment
+// doesn't have — mocked at the module boundary (task convention: mock
+// the blob SDK, never the authorization/DB logic that calls it). `del`
+// is the only function `deleteAccount`'s photo-cleanup step calls
+// (`lib/medications/server/photo.ts`'s `deleteMedicationPhotoBlobByKey`).
+const blobDel = vi.fn().mockResolvedValue(undefined);
+vi.mock("@vercel/blob", () => ({
+  del: (...args: unknown[]) => blobDel(...args),
+  put: vi.fn(),
+  get: vi.fn(),
+}));
 
 const connectionString = process.env.ACCOUNT_DELETE_IT_DATABASE_URL;
 
@@ -57,6 +69,7 @@ describe.skipIf(!connectionString)("deleteAccount — full hard-delete workflow 
     process.env.IP_HASH_PEPPER ??= "test-only-pepper-not-for-production-use-32chars";
     process.env.GOOGLE_CLIENT_ID ??= "test-client-id.apps.googleusercontent.com";
     process.env.GOOGLE_CLIENT_SECRET ??= "test-client-secret";
+    process.env.BLOB_READ_WRITE_TOKEN ??= "test-only-token-not-a-real-vercel-blob-token";
 
     pool = new Pool({ connectionString });
     db = drizzle(pool, { schema });
@@ -96,12 +109,17 @@ describe.skipIf(!connectionString)("deleteAccount — full hard-delete workflow 
       await tx.insert(schema.profile).values({ id: profileId, ownerAccountId: accountId, displayName: "Real Person" });
       await tx.insert(schema.userPreferences).values({ accountId });
 
-      // --- seed: a medication with both schedule subtypes -------------------
+      // --- seed: a medication with both schedule subtypes, plus a photo -----
+      // `photoBlobKey` is a fake pathname — never a real Vercel Blob object
+      // in this test (the SDK is mocked above) — just enough for the
+      // deletion job's blob-cleanup step to have something real to collect
+      // and pass to the mocked `del()`.
       await tx.insert(schema.userMedication).values({
         id: userMedicationId,
         profileId,
         customName: "Παρακεταμόλη",
         inventoryUnit: "tablet",
+        photoBlobKey: `medication-photos/${profileId}/${userMedicationId}-test`,
         clientMutationId: randomUUID(),
       });
       await tx.insert(schema.medicationSchedule).values({
@@ -256,6 +274,11 @@ describe.skipIf(!connectionString)("deleteAccount — full hard-delete workflow 
     const result = await deleteAccount({ accountId, profileId, method: "user_initiated", actor: "test" }, db);
     expect(result.alreadyDeleted).toBe(false);
     expect(result.auditId).toBeTruthy();
+
+    // --- assert: the medication's photo blob was really deleted -------------
+    // (module header item 7 — collected + best-effort-deleted BEFORE the
+    // DB batch that removes the `user_medication` row referencing it).
+    expect(blobDel).toHaveBeenCalledWith(`medication-photos/${profileId}/${userMedicationId}-test`);
 
     // --- assert: every listed table is empty for this profile/account ------
     const emptyChecks: Array<[string, unknown[]]> = [

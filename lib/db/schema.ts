@@ -185,6 +185,24 @@ export const userMedication = pgTable(
     lowStockThresholdValue: numeric("low_stock_threshold_value", { precision: 12, scale: 3 }),
     expiryWarningDays: smallint("expiry_warning_days").notNull().default(30),
     notes: text("notes"),
+    // User-uploaded photo of their own medication package (added post-Phase
+    // 6, web-engineer task "user-uploaded medication photo"). Deliberately
+    // NOT the same concern as `MedicationCatalogProduct` photo-sourcing
+    // (that's a separate, catalog-side research task) — this is one
+    // user's own camera photo of their own package. Stores the Vercel Blob
+    // object's PATHNAME (not a public URL): `@vercel/blob`'s `put()` is
+    // called with `access: "private"`, so the pathname alone is useless
+    // without the server's `BLOB_READ_WRITE_TOKEN` — the client never sees
+    // this value; every read goes through the authenticated
+    // `GET /api/medications/[id]/photo` proxy route
+    // (`lib/medications/server/photo.ts`), never a bare CDN URL. Not part
+    // of the offline outbox/sync system on purpose (no meaningful offline
+    // story for binary blob storage, unlike every other field here) —
+    // uploading/viewing a photo requires network; `version` is
+    // deliberately NEVER bumped by a photo write so a stale-looking
+    // `baseVersion` on the client can't spuriously conflict with an
+    // unrelated field it never touched.
+    photoBlobKey: text("photo_blob_key"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
     version: integer("version").notNull().default(1),
