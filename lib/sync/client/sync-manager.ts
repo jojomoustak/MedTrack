@@ -26,6 +26,7 @@ import { drainOutboxFully, type DrainSummary } from "@/lib/sync/client/worker";
 import { createNetworkMonitor, type NetworkMonitor, type NetworkState } from "@/lib/sync/client/network";
 import { onOutboxWrite } from "@/lib/sync/client/outbox-signal";
 import { syncOfflineIndex, type SyncOfflineIndexOutcome } from "@/lib/catalog/client/sync-offline-index";
+import { syncLearnedMappings, type SyncLearnedMappingsOutcome } from "@/lib/catalog/client/sync-learned-mappings";
 import { logger } from "@/lib/logging/logger";
 
 export interface SyncManager {
@@ -34,6 +35,7 @@ export interface SyncManager {
   stop(): void;
   drainNow(): Promise<DrainSummary | null>;
   syncOfflineIndexNow(): Promise<SyncOfflineIndexOutcome | null>;
+  syncLearnedMappingsNow(): Promise<SyncLearnedMappingsOutcome | null>;
 }
 
 export function createSyncManager(): SyncManager {
@@ -46,6 +48,7 @@ export function createSyncManager(): SyncManager {
 
   let draining = false;
   let syncingOfflineIndex = false;
+  let syncingLearnedMappings = false;
   let unsubscribeNetwork: (() => void) | undefined;
   let unsubscribeOutbox: (() => void) | undefined;
 
@@ -79,6 +82,20 @@ export function createSyncManager(): SyncManager {
     }
   }
 
+  async function syncLearnedMappingsNow(): Promise<SyncLearnedMappingsOutcome | null> {
+    if (syncingLearnedMappings) return null;
+    syncingLearnedMappings = true;
+    try {
+      const outcome = await syncLearnedMappings(network.getState());
+      if (outcome.attempted > 0) {
+        logger.info("sync.manager.learned_mappings_synced", { ...outcome });
+      }
+      return outcome;
+    } finally {
+      syncingLearnedMappings = false;
+    }
+  }
+
   return {
     network,
     start() {
@@ -86,12 +103,14 @@ export function createSyncManager(): SyncManager {
         if (state === "online") {
           void drainNow();
           void syncOfflineIndexNow();
+          void syncLearnedMappingsNow();
         }
       });
       unsubscribeOutbox = onOutboxWrite(() => void drainNow());
       network.start();
       void drainNow();
       void syncOfflineIndexNow();
+      void syncLearnedMappingsNow();
     },
     stop() {
       network.stop();
@@ -100,5 +119,6 @@ export function createSyncManager(): SyncManager {
     },
     drainNow,
     syncOfflineIndexNow,
+    syncLearnedMappingsNow,
   };
 }

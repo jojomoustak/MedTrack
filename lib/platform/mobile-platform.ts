@@ -34,6 +34,30 @@ export interface ScanResultError {
 export type ScanResult = ScanResultOk | ScanResultCancelled | ScanResultError;
 
 /**
+ * Same three-shape contract as `ScanResult`, for the on-device package-text
+ * OCR capture command (OCR-fallback task spec §2/§3). `rawText` is exactly
+ * what ML Kit's Text Recognition v2 recognized — no parsing/structuring
+ * happens natively (same "native returns raw data, shared layer parses it"
+ * split as barcode scanning, `lib/domain/ocr.ts` does the structuring).
+ * The captured photo itself never crosses this bridge at all — the native
+ * layer discards the bitmap the moment OCR finishes (spec §3), so there is
+ * no `imageData`/`photoUri` field here to accidentally wire up later.
+ */
+export interface OcrCaptureResultOk {
+  status: "ok";
+  rawText: string;
+}
+export interface OcrCaptureResultCancelled {
+  status: "cancelled";
+}
+export interface OcrCaptureResultError {
+  status: "error";
+  errorCode: string;
+  message: string;
+}
+export type OcrCaptureResult = OcrCaptureResultOk | OcrCaptureResultCancelled | OcrCaptureResultError;
+
+/**
  * Thrown (never resolved as a `ScanResult`) when there's no native shell
  * to actually call — running in a plain browser, or a Median build where
  * the bridge didn't respond at all. Kept distinct from `ScanResultError`
@@ -62,4 +86,15 @@ export interface MobilePlatform {
    * when there's no native shell to respond at all.
    */
   scanBarcode(): Promise<ScanResult>;
+  /**
+   * Invokes the native on-device package-text OCR capture (OCR-fallback
+   * task spec §1/§2) — only ever called after an exact identifier lookup
+   * came back `VALID_IDENTIFIER_UNRESOLVED` (spec §1: "do not run OCR
+   * unnecessarily when an exact trusted identifier already resolves the
+   * package"). Same rejection contract as `scanBarcode`: rejects with
+   * `MobilePlatformUnavailableError` only when there's no native shell to
+   * respond at all; a user cancel or native-reported failure resolves with
+   * the corresponding `OcrCaptureResult` status instead.
+   */
+  recognizePackageText(): Promise<OcrCaptureResult>;
 }

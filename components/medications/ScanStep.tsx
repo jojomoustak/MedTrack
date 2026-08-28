@@ -5,7 +5,7 @@ import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { ParsedBarcode } from "@/lib/domain/gs1";
 import { parseBarcode } from "@/lib/domain/gs1";
 import { classifyBarcode } from "@/lib/domain/medication-identifier";
-import type { CatalogCacheRepository, OfflineIndexRepository, UnresolvedScanRepository } from "@/lib/domain/repositories";
+import type { CatalogCacheRepository, LearnedMappingRepository, OfflineIndexRepository, UnresolvedScanRepository } from "@/lib/domain/repositories";
 import { DexieUnresolvedScanRepository } from "@/lib/db-client/unresolved-scan-repository";
 import { lookupGtin } from "@/lib/catalog/client/lookup-gtin";
 import { lookupEofCode } from "@/lib/catalog/client/lookup-eof-code";
@@ -16,6 +16,7 @@ import { newId } from "@/lib/domain/ids";
 import { logger } from "@/lib/logging/logger";
 import { CandidateConfirmation } from "@/components/medications/CandidateConfirmation";
 import { ScanDiagnosticsPanel, type ScanDiagnostics } from "@/components/medications/ScanDiagnosticsPanel";
+import { PackageOcrCandidateFlow } from "@/components/medications/PackageOcrCandidateFlow";
 
 export interface ScanStepProps {
   profileId: string;
@@ -31,6 +32,8 @@ export interface ScanStepProps {
   /** The full compact offline index (spec §17/§22) — checked before `cacheRepository`, since it covers every synced product, not just ones this device has personally looked up before. */
   offlineIndex?: OfflineIndexRepository;
   unresolvedScanRepository?: UnresolvedScanRepository;
+  /** Device-local OCR-confirmed GTIN mappings (OCR-fallback task spec §15) — checked offline, after `offlineIndex`, before giving up. Also threaded down into `PackageOcrCandidateFlow`. */
+  learnedMappings?: LearnedMappingRepository;
 }
 
 type ViewState =
@@ -76,6 +79,7 @@ export function ScanStep({
   cacheRepository,
   offlineIndex,
   unresolvedScanRepository,
+  learnedMappings,
 }: ScanStepProps) {
   const network = useNetworkStatus();
   const [view, setView] = useState<ViewState>({ phase: "scanning" });
@@ -179,7 +183,7 @@ export function ScanStep({
     const matchedIdentifierType: ScanDiagnostics["matchedIdentifierType"] = isGreekNational ? "EOF_CODE" : "GTIN";
     const outcome = isGreekNational
       ? await lookupEofCode(identifier.eofCode, networkRef.current, { cache: cacheRepository, offlineIndex })
-      : await lookupGtin(identifier.gtin, networkRef.current, { cache: cacheRepository, offlineIndex });
+      : await lookupGtin(identifier.gtin, networkRef.current, { cache: cacheRepository, offlineIndex, learnedMappings });
     if (!mountedRef.current) return;
 
     if (outcome.status === "found") {
@@ -351,6 +355,28 @@ export function ScanStep({
       <div className="rounded-xl border border-dashed border-zinc-300 p-4 text-center dark:border-zinc-700">
         <p className="mb-1 text-sm text-zinc-700 dark:text-zinc-300">{notFoundMessage}</p>
       </div>
+      {
+        // OCR fallback (OCR-fallback task spec §1) — only for a genuinely
+        // unresolved real GTIN (Path B), never for Path A's own EOF-code
+        // resolution (out of this task's scope, spec is scoped to
+        // "GS1 DataMatrix -> parse GTIN"), never for "unrecognized"/
+        // "conflict" (there is no well-formed identifier to attach a
+        // learned mapping to in either case). Works fully offline —
+        // candidate matching and the local learned-mapping write need no
+        // network; only the best-effort server sync does, and that never
+        // blocks anything here (spec §25's airplane-mode requirement).
+        view.reason === "unresolved" && view.diagnostics?.matchedIdentifierType === "GTIN" && view.parsed?.gtin && (
+          <PackageOcrCandidateFlow
+            gtin={view.parsed.gtin}
+            parsed={view.parsed}
+            onConfirmCandidate={onConfirmCandidate}
+            onFallbackToManual={() => onFallbackToManual(view.parsed)}
+            platform={platform}
+            offlineIndex={offlineIndex}
+            learnedMappings={learnedMappings}
+          />
+        )
+      }
       {searchTerm && !view.offline && <OfficialSourceSearchLinks searchTerm={searchTerm} />}
       {view.diagnostics && <ScanDiagnosticsPanel diagnostics={view.diagnostics} />}
       <button

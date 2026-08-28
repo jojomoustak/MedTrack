@@ -13,6 +13,7 @@ import type { PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/ent
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
+import type { LearnedGtinMapping } from "@/lib/domain/learned-mapping";
 
 export interface OutboxRepository {
   enqueue(entry: OutboxEntry): Promise<void>;
@@ -117,10 +118,24 @@ export interface OfflineIndexLocalManifest {
  */
 export interface OfflineIndexRepository {
   getManifest(): Promise<OfflineIndexLocalManifest | null>;
+  getById(id: string): Promise<OfflineIndexEntry | null>;
   getByEofCode(eofCode: string): Promise<OfflineIndexEntry | null>;
   getByGtin(gtin: string): Promise<OfflineIndexEntry | null>;
   /** Accent/case-insensitive substring search over brand name and active ingredient — the offline analogue of `MedicationCatalogProvider.search` (spec §23: search must use the same local index, never a separate duplicate database). */
   search(query: string, limit?: number): Promise<OfflineIndexEntry[]>;
+  /**
+   * The full local index, unfiltered — what OCR package-candidate matching
+   * (`lib/domain/package-candidate-matching.ts`) scores against
+   * (OCR-fallback task spec §7: "must use the existing synced offline
+   * catalog," never a second database). Deliberately not query-filtered
+   * server-side-`search`-style: `rankPackageCandidates` does its own
+   * prefiltering internally from the full OCR text, which is more robust
+   * than a single substring query when the OCR brand guess is imperfect or
+   * empty. At the measured index size (~9,400 records) reading the whole
+   * table is well within the same latency budget `search` already proved
+   * out (spec §14).
+   */
+  getAll(): Promise<readonly OfflineIndexEntry[]>;
   /** Atomically replaces the ENTIRE local index with `entries`, in one transaction, and records `manifest` as the new locally-synced version. Never a partial/incremental write. */
   replaceAll(manifest: OfflineIndexLocalManifest, entries: readonly OfflineIndexEntry[]): Promise<void>;
 }
@@ -152,4 +167,26 @@ export type SaveUnresolvedScanInput = Omit<UnresolvedScanRecord, "scannedAt" | "
 export interface UnresolvedScanRepository {
   save(input: SaveUnresolvedScanInput): Promise<void>;
   listPending(profileId: string): Promise<UnresolvedScanRecord[]>;
+}
+
+/**
+ * Device-local, user-confirmed GTIN mappings (OCR-fallback task spec §12-
+ * §16) — the primary, always-offline-available resolution path once a
+ * user has confirmed an OCR candidate once (spec §15: "second scan → local
+ * exact USER_CONFIRMED mapping → no OCR required"). One row per GTIN per
+ * device (`gtin` is the Dexie primary key); `save` on a GTIN that already
+ * maps to a DIFFERENT product overwrites the local row (this device only
+ * ever remembers its most recent confirmation for a given GTIN) but
+ * `save`'s return value reports whether that happened, so the caller can
+ * still surface it honestly rather than silently swap the answer — the
+ * server side (`confirmIdentifier`) is where a genuine, permanent
+ * cross-confirmation CONFLICT record is preserved (spec §19).
+ */
+export interface LearnedMappingRepository {
+  getByGtin(gtin: string): Promise<LearnedGtinMapping | null>;
+  /** Returns `{overwroteDifferentProduct: true}` when this GTIN was already locally mapped to a DIFFERENT `catalogProductId` — never silent. */
+  save(mapping: LearnedGtinMapping): Promise<{ overwroteDifferentProduct: boolean }>;
+  /** Every row not yet confirmed synced server-side (`syncedAt === null`) — the background sync worker's retry queue. */
+  listUnsynced(): Promise<LearnedGtinMapping[]>;
+  markSynced(gtin: string, syncedAt: string): Promise<void>;
 }

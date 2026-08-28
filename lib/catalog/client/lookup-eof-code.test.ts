@@ -60,6 +60,8 @@ function makeCache(overrides: Partial<CatalogCacheRepository> = {}): CatalogCach
 function makeOfflineIndex(overrides: Partial<OfflineIndexRepository> = {}): OfflineIndexRepository {
   return {
     getManifest: vi.fn().mockResolvedValue(null),
+    getById: vi.fn().mockResolvedValue(null),
+    getAll: vi.fn().mockResolvedValue([]),
     getByEofCode: vi.fn().mockResolvedValue(null),
     getByGtin: vi.fn().mockResolvedValue(null),
     search: vi.fn().mockResolvedValue([]),

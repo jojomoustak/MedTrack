@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { ScanStep } from "@/components/medications/ScanStep";
 import { MobilePlatformUnavailableError, type MobilePlatform, type ScanResult } from "@/lib/platform/mobile-platform";
-import type { CatalogCacheRepository, OfflineIndexRepository, UnresolvedScanRepository } from "@/lib/domain/repositories";
+import type { CatalogCacheRepository, LearnedMappingRepository, OfflineIndexRepository, UnresolvedScanRepository } from "@/lib/domain/repositories";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import { SEED_PLACEHOLDER_SOURCE } from "@/lib/domain/catalog";
 import { __setNetworkMonitorForTests } from "@/lib/sync/client/use-network-status";
@@ -18,6 +18,7 @@ function fakePlatform(overrides: Partial<MobilePlatform> = {}): MobilePlatform {
   return {
     isAvailable: () => true,
     scanBarcode: vi.fn().mockResolvedValue({ status: "cancelled" } satisfies ScanResult),
+    recognizePackageText: vi.fn(),
     ...overrides,
   };
 }
@@ -45,10 +46,22 @@ function fakeCache(overrides: Partial<CatalogCacheRepository> = {}): CatalogCach
 function fakeOfflineIndex(overrides: Partial<OfflineIndexRepository> = {}): OfflineIndexRepository {
   return {
     getManifest: vi.fn().mockResolvedValue(null),
+    getById: vi.fn().mockResolvedValue(null),
+    getAll: vi.fn().mockResolvedValue([]),
     getByEofCode: vi.fn().mockResolvedValue(null),
     getByGtin: vi.fn().mockResolvedValue(null),
     search: vi.fn().mockResolvedValue([]),
     replaceAll: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+}
+
+function fakeLearnedMappings(overrides: Partial<LearnedMappingRepository> = {}): LearnedMappingRepository {
+  return {
+    getByGtin: vi.fn().mockResolvedValue(null),
+    save: vi.fn().mockResolvedValue({ overwroteDifferentProduct: false }),
+    listUnsynced: vi.fn().mockResolvedValue([]),
+    markSynced: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -254,6 +267,7 @@ describe("ScanStep — catalog lookup outcomes", () => {
         profileId="profile-1"
         platform={platform}
         cacheRepository={cache} offlineIndex={fakeOfflineIndex()}
+        learnedMappings={fakeLearnedMappings()}
         unresolvedScanRepository={unresolvedScanRepository}
         onConfirmCandidate={vi.fn()}
         onFallbackToManual={onFallbackToManual}
@@ -345,6 +359,7 @@ describe("ScanStep — 'not found' official-source search links", () => {
         profileId="profile-1"
         platform={platform}
         cacheRepository={cache} offlineIndex={fakeOfflineIndex()}
+        learnedMappings={fakeLearnedMappings()}
         unresolvedScanRepository={unresolvedScanRepository}
         onConfirmCandidate={vi.fn()}
         onFallbackToManual={vi.fn()}

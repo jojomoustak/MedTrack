@@ -41,10 +41,21 @@ export async function generateOfflineIndex(db: Db | TestableDb = getDb()): Promi
   // rather than needing a `GROUP BY`/`array_agg` that would need revisiting
   // the moment a real bulk import lands. Revisit only if a real
   // measurement says otherwise (spec §14).
+  // `evidence_type = 'AUTHORITATIVE'` is not optional here (OCR-fallback
+  // task spec §17): this index is downloaded by EVERY device. A
+  // USER_CONFIRMED row (one profile's own OCR confirmation) leaking into
+  // it would silently turn "this one profile confirmed a GTIN" into a
+  // fact every other installation resolves as if it were official —
+  // exactly the "one user's mistake poisons every installation" failure
+  // spec §17 forbids. USER_CONFIRMED mappings stay local to the
+  // confirming device (`lib/db-client/learned-mapping-repository.ts`) and,
+  // when synced, are only ever re-resolved through the authenticated,
+  // profile-scoped `resolve-identifier` API — never through this shared
+  // index.
   const identifierRows = await db
     .select({ catalogProductId: schema.medicationIdentifier.catalogProductId, identifierValue: schema.medicationIdentifier.identifierValue })
     .from(schema.medicationIdentifier)
-    .where(sql`${schema.medicationIdentifier.identifierType} = 'GTIN'`);
+    .where(sql`${schema.medicationIdentifier.identifierType} = 'GTIN' AND ${schema.medicationIdentifier.evidenceType} = 'AUTHORITATIVE'`);
 
   const gtinsByProductId = new Map<string, string[]>();
   for (const row of identifierRows) {

@@ -118,7 +118,7 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
   }
 
   it("the Scan option is disabled when the platform reports unavailable", () => {
-    const platform: MobilePlatform = { isAvailable: () => false, scanBarcode: vi.fn() };
+    const platform: MobilePlatform = { isAvailable: () => false, scanBarcode: vi.fn(), recognizePackageText: vi.fn() };
     render(<AddMedicationFlow profileId="profile-1" platform={platform} />);
     expect(screen.getByRole("button", { name: /σάρωση/i })).toBeDisabled();
   });
@@ -130,6 +130,7 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     const platform: MobilePlatform = {
       isAvailable: () => true,
       scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: raw, format: "GS1_DATA_MATRIX" }),
+      recognizePackageText: vi.fn(),
     };
     const cacheRepository: CatalogCacheRepository = {
       get: vi.fn().mockResolvedValue(null),
@@ -139,6 +140,8 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     };
     const offlineIndex: OfflineIndexRepository = {
       getManifest: vi.fn().mockResolvedValue(null),
+      getById: vi.fn().mockResolvedValue(null),
+      getAll: vi.fn().mockResolvedValue([]),
       getByEofCode: vi.fn().mockResolvedValue(null),
       getByGtin: vi.fn().mockResolvedValue(null),
       search: vi.fn().mockResolvedValue([]),
@@ -167,6 +170,7 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     const platform: MobilePlatform = {
       isAvailable: () => true,
       scanBarcode: vi.fn().mockResolvedValue({ status: "cancelled" }),
+      recognizePackageText: vi.fn(),
     };
     render(<AddMedicationFlow profileId="profile-1" platform={platform} />);
 
@@ -181,6 +185,7 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     const platform: MobilePlatform = {
       isAvailable: () => true,
       scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: `10${"BATCHONLY"}${GS}17${"260630"}`, format: "GS1_DATA_MATRIX" }),
+      recognizePackageText: vi.fn(),
     };
     const cacheRepository: CatalogCacheRepository = {
       get: vi.fn().mockResolvedValue(null),
@@ -190,6 +195,8 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     };
     const offlineIndex: OfflineIndexRepository = {
       getManifest: vi.fn().mockResolvedValue(null),
+      getById: vi.fn().mockResolvedValue(null),
+      getAll: vi.fn().mockResolvedValue([]),
       getByEofCode: vi.fn().mockResolvedValue(null),
       getByGtin: vi.fn().mockResolvedValue(null),
       search: vi.fn().mockResolvedValue([]),

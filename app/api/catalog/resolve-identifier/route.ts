@@ -37,7 +37,13 @@ export async function GET(request: Request) {
       value: url.searchParams.get("value") ?? undefined,
     });
 
-    const resolution = await getProvider().lookupByIdentifier(query.type, query.value);
+    // `session.profileId` (OCR-fallback task spec §17/§20): scopes which
+    // USER_CONFIRMED rows are considered, in addition to every
+    // AUTHORITATIVE row — never another profile's confirmations, and
+    // AUTHORITATIVE always wins when both exist (see
+    // `PostgresCatalogProvider.lookupByIdentifier`'s doc for the full
+    // precedence algorithm).
+    const resolution = await getProvider().lookupByIdentifier(query.type, query.value, session.profileId);
     return NextResponse.json(resolution);
   } catch (err) {
     return toSafeErrorResponse(err, { route: "catalog.resolve_identifier" });

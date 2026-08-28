@@ -1,7 +1,8 @@
 import type { CatalogProduct } from "@/lib/domain/catalog";
-import type { CatalogCacheRepository, OfflineIndexRepository } from "@/lib/domain/repositories";
+import type { CatalogCacheRepository, LearnedMappingRepository, OfflineIndexRepository } from "@/lib/domain/repositories";
 import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
 import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
+import { DexieLearnedMappingRepository } from "@/lib/db-client/learned-mapping-repository";
 import { offlineIndexEntryToCatalogProduct } from "@/lib/domain/offline-index";
 import { resolveCatalogIdentifier } from "@/lib/catalog/client/api";
 import type { NetworkState } from "@/lib/sync/client/network";
@@ -43,11 +44,14 @@ export type CatalogLookupOutcome =
 export async function lookupGtin(
   gtin: string,
   network: NetworkState,
-  deps: { cache?: CatalogCacheRepository; offlineIndex?: OfflineIndexRepository; fetchImpl?: typeof fetch } = {},
+  deps: { cache?: CatalogCacheRepository; offlineIndex?: OfflineIndexRepository; learnedMappings?: LearnedMappingRepository; fetchImpl?: typeof fetch } = {},
 ): Promise<CatalogLookupOutcome> {
   const offlineIndex = deps.offlineIndex ?? new DexieOfflineIndexRepository();
   const cache = deps.cache ?? new DexieCatalogCacheRepository();
 
+  // AUTHORITATIVE first (spec §20's precedence, "1. AUTHORITATIVE exact
+  // identifier mapping" outranks everything else) — the offline index only
+  // ever carries AUTHORITATIVE GTINs (`lib/catalog/server/offline-index.ts`).
   const indexed = await offlineIndex.getByGtin(gtin);
   if (indexed) return { status: "found", product: offlineIndexEntryToCatalogProduct(indexed) };
 
@@ -55,6 +59,22 @@ export async function lookupGtin(
   if (cached) return { status: "found", product: cached };
 
   if (network !== "online") {
+    // Precedence tier 3 (spec §20): this profile's own past OCR
+    // confirmation, checked only once no AUTHORITATIVE match was found
+    // locally — resolves entirely offline, no OCR needed for a repeat
+    // scan (spec §15/§25's airplane-mode acceptance test). Constructed
+    // lazily, here, not at the top of this function: `offlineIndex`/
+    // `cache` above are real exceptions to this (every existing caller
+    // already always supplies them), but this is a brand-new dependency
+    // most callers don't pass yet — constructing it unconditionally would
+    // touch `indexedDB` on every single call, including the online
+    // success path that never needs it at all.
+    const learnedMappings = deps.learnedMappings ?? new DexieLearnedMappingRepository();
+    const learned = await learnedMappings.getByGtin(gtin);
+    if (learned) {
+      const entry = await offlineIndex.getById(learned.catalogProductId);
+      if (entry) return { status: "found", product: offlineIndexEntryToCatalogProduct(entry) };
+    }
     return { status: "unresolved-offline" };
   }
 

@@ -22,6 +22,7 @@ import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { UnresolvedScanRecord } from "@/lib/domain/repositories";
 import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
+import type { LearnedGtinMapping } from "@/lib/domain/learned-mapping";
 import { notifyOutboxWrite } from "@/lib/sync/client/outbox-signal";
 
 export interface LocalMedicationSchedule {
@@ -120,6 +121,7 @@ export class MedTrackingDexie extends Dexie {
   unresolvedScan!: EntityTable<LocalUnresolvedScan, "id">;
   offlineIndexEntry!: EntityTable<LocalOfflineIndexEntry, "id">;
   offlineIndexMeta!: EntityTable<OfflineIndexMetaRecord, "id">;
+  learnedGtinMapping!: EntityTable<LearnedGtinMapping, "gtin">;
 
   constructor(name = "medtracking") {
     super(name);
@@ -173,6 +175,23 @@ export class MedTrackingDexie extends Dexie {
     // device's read-only compact index does not).
     this.version(4).stores({
       offlineIndexEntry: "id, eofCode, gtin, *gtins, name",
+    });
+
+    // v5: device-local learned GTIN mappings (OCR-fallback task spec §12-
+    // §15) — `gtin` is the primary key (one confirmed product per GTIN per
+    // device; a genuine same-device re-confirmation-of-a-different-product
+    // is handled at the application layer as an explicit overwrite-with-
+    // logging, not a silent Dexie `put()` collision — see
+    // `lib/db-client/learned-mapping-repository.ts`). `syncedAt` is
+    // deliberately NOT a secondary Dexie index: it's `string | null`, and
+    // IndexedDB doesn't accept `null` as an index key at all (rows with a
+    // `null` indexed value are simply never findable via that index) — this
+    // table only ever holds a handful of rows (one per medicine a user has
+    // personally OCR-confirmed), so `listUnsynced()` does a plain in-memory
+    // filter over `toArray()` rather than working around that with a
+    // sentinel value.
+    this.version(5).stores({
+      learnedGtinMapping: "gtin",
     });
 
     // Single choke point for "a new outbox entry was durably written" —

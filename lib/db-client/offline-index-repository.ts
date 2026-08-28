@@ -27,6 +27,12 @@ export class DexieOfflineIndexRepository implements OfflineIndexRepository {
     return { version, recordCount, generatedAt, syncedAt };
   }
 
+  /** Direct primary-key lookup — used to resolve a `LearnedGtinMapping.catalogProductId` back to its display data (OCR-fallback task spec §15), since a learned mapping stores only the id, not a full product snapshot. */
+  async getById(id: string): Promise<OfflineIndexEntry | null> {
+    const entry = await this.db.offlineIndexEntry.get(id);
+    return entry ?? null;
+  }
+
   async getByEofCode(eofCode: string): Promise<OfflineIndexEntry | null> {
     const entry = await this.db.offlineIndexEntry.where("eofCode").equals(eofCode).first();
     return entry ?? null;
@@ -76,6 +82,10 @@ export class DexieOfflineIndexRepository implements OfflineIndexRepository {
       }
     });
     return results;
+  }
+
+  async getAll(): Promise<readonly OfflineIndexEntry[]> {
+    return this.db.offlineIndexEntry.toArray();
   }
 
   async replaceAll(manifest: OfflineIndexLocalManifest, entries: readonly OfflineIndexEntry[]): Promise<void> {

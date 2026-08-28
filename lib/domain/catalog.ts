@@ -43,28 +43,64 @@ export interface CatalogSearchOptions {
 export type CatalogIdentifierType = "EOF_CODE" | "NHRN" | "EAN13" | "GTIN";
 
 /**
+ * How confidently a `medication_identifier` row's mapping is known to be
+ * correct (OCR-fallback task spec §13). Only `AUTHORITATIVE` and
+ * `USER_CONFIRMED` are ever actually written by this codebase today — the
+ * other two are reserved so a future, separately-reviewed aggregation
+ * system (spec §18: "design the schema so future aggregation is possible
+ * without implementing unsafe global learning now") has somewhere to write
+ * without a type change, not a promise that they're implemented:
+ *
+ * - `AUTHORITATIVE`: from a real official source (EOF/Ministry import
+ *   today; HMVO or another verified GTIN↔NHRN source in the future —
+ *   medication-resolution-architecture.md §20).
+ * - `USER_CONFIRMED`: one specific profile explicitly confirmed an OCR (or
+ *   manual-search) candidate for this GTIN (spec §12). Never labeled
+ *   AUTHORITATIVE, never promoted to it automatically (spec §13/§18).
+ * - `VERIFIED_PHYSICAL_OBSERVATION` / `COMMUNITY_CONFIRMED`: reserved,
+ *   unimplemented (spec §14/§18).
+ */
+export type IdentifierEvidence = "AUTHORITATIVE" | "USER_CONFIRMED" | "VERIFIED_PHYSICAL_OBSERVATION" | "COMMUNITY_CONFIRMED";
+
+/**
  * The three, and only three, outcomes an identifier lookup can produce
  * (spec §11/§19) — deliberately not a bare `CatalogProduct | null`, which
  * cannot distinguish "no mapping exists yet" from "this identifier is
  * genuinely ambiguous, two different products claim it." Never resolved
  * to a fourth, "best guess" outcome under any circumstance:
  *
- * - `EXACT`: exactly one product claims this identifier — safe to resolve to.
+ * - `EXACT`: exactly one product claims this identifier — safe to resolve
+ *   to. `evidence` says WHY (an official mapping, or this profile's own
+ *   past confirmation, per the precedence order in
+ *   medication-resolution-architecture.md §21 — `AUTHORITATIVE` always
+ *   outranks `USER_CONFIRMED` when both exist).
  * - `CONFLICT`: two or more DIFFERENT products claim the same identifier
- *   value (from possibly-disagreeing sources). Never silently picked
+ *   value (from possibly-disagreeing sources, or from this same profile
+ *   confirming two different OCR candidates for the same GTIN at
+ *   different times, OCR-fallback task spec §19). Never silently picked
  *   between — the caller must show this as unresolved/ambiguous, same as
  *   the broader multi-provider `CONFLICT` state in
  *   medication-resolution-architecture.md §3, not auto-resolved here either.
  * - `VALID_IDENTIFIER_UNRESOLVED`: the identifier itself is well-formed
  *   (already validated by the caller — e.g. a real GS1 GTIN successfully
- *   parsed from a DataMatrix scan), but no authoritative mapping to any
- *   catalog product exists yet (spec §7/§11/§14) — distinct from an
- *   invalid/malformed scan, which never reaches this lookup at all.
+ *   parsed from a DataMatrix scan), but no authoritative OR this-profile's-
+ *   own-confirmed mapping to any catalog product exists yet (spec
+ *   §7/§11/§14) — distinct from an invalid/malformed scan, which never
+ *   reaches this lookup at all.
  */
 export type IdentifierResolution =
-  | { state: "EXACT"; product: CatalogProduct }
+  | { state: "EXACT"; product: CatalogProduct; evidence: IdentifierEvidence }
   | { state: "CONFLICT"; catalogProductIds: readonly string[] }
   | { state: "VALID_IDENTIFIER_UNRESOLVED" };
+
+/** Outcome of `MedicationCatalogProvider.confirmIdentifier` (OCR-fallback task spec §12/§19). */
+export type ConfirmIdentifierOutcome =
+  /** A new `USER_CONFIRMED` row was written. */
+  | { status: "created" }
+  /** This exact profile already confirmed this exact GTIN → product pair before — no-op, not an error (spec §15's "second scan" case is a read, not a re-confirm, but a user re-running confirmation for any reason must not create a duplicate row). */
+  | { status: "already_confirmed" }
+  /** This profile previously confirmed this same GTIN for a DIFFERENT product — both rows are preserved (never silently overwritten, spec §19); the caller should treat the identifier as `CONFLICT` on next lookup. */
+  | { status: "conflict_with_own_prior_mapping" };
 
 /**
  * Phase 1 §8's provider abstraction — no implementation ships until a
@@ -98,6 +134,22 @@ export interface MedicationCatalogProvider {
    * resolves correctly instead of silently picking one row. `value` must
    * be passed exactly as decoded/normalized (leading zeros preserved) —
    * never re-derived or fuzzy-matched (spec §11).
+   *
+   * `confirmingProfileId`, when supplied, scopes which `USER_CONFIRMED`
+   * rows are considered in addition to every `AUTHORITATIVE` row
+   * (OCR-fallback task spec §17: a profile's own confirmations are never
+   * visible to, or resolved for, any other profile — see
+   * `medication-resolution-architecture.md` §21 for the full precedence
+   * algorithm). Omitted entirely, only `AUTHORITATIVE` rows are considered
+   * (the GTIN-resolution task's original behavior, unchanged).
    */
-  lookupByIdentifier(type: CatalogIdentifierType, value: string): Promise<IdentifierResolution>;
+  lookupByIdentifier(type: CatalogIdentifierType, value: string, confirmingProfileId?: string): Promise<IdentifierResolution>;
+  /**
+   * Records one profile's explicit confirmation of an OCR (or manual)
+   * candidate as a `USER_CONFIRMED` identifier mapping (OCR-fallback task
+   * spec §12/§14/§19). Never called except after real, explicit user
+   * confirmation in the UI — never from OCR output alone (spec §12: "Never
+   * learn from OCR output alone").
+   */
+  confirmIdentifier(type: CatalogIdentifierType, value: string, catalogProductId: string, profileId: string): Promise<ConfirmIdentifierOutcome>;
 }

@@ -13,3 +13,17 @@ export const catalogResolveIdentifierQuerySchema = z.object({
   value: z.string().trim().min(1, "Η τιμή του αναγνωριστικού είναι υποχρεωτική."),
 });
 export type CatalogResolveIdentifierQuery = z.infer<typeof catalogResolveIdentifierQuerySchema>;
+
+/**
+ * POST /api/catalog/confirm-identifier body — OCR-fallback task spec §12:
+ * only ever sent after real, explicit user confirmation in the UI (never
+ * automatically from an OCR result alone). `catalogProductId` must be a
+ * real UUID of the specific candidate the user picked — never inferred
+ * server-side.
+ */
+export const catalogConfirmIdentifierBodySchema = z.object({
+  type: z.enum(["EOF_CODE", "NHRN", "EAN13", "GTIN"]),
+  value: z.string().trim().min(1, "Η τιμή του αναγνωριστικού είναι υποχρεωτική."),
+  catalogProductId: z.string().uuid(),
+});
+export type CatalogConfirmIdentifierBody = z.infer<typeof catalogConfirmIdentifierBodySchema>;

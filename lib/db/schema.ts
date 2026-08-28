@@ -199,6 +199,18 @@ export const medicationCatalogProduct = pgTable(
 // repeated import — a real conflict (different `catalog_product_id`)
 // still passes it freely.
 // ---------------------------------------------------------------------------
+// `evidence_type`/`profile_id` (OCR-fallback task spec §13/§14/§17) were
+// added in migration 0011, after this table's original creation
+// (migration 0010) — every pre-existing row is `AUTHORITATIVE`/
+// `profile_id IS NULL` by the column defaults below, so the backfill is
+// implicit and lossless. A `USER_CONFIRMED` row's uniqueness is enforced
+// by a SEPARATE partial index from the original AUTHORITATIVE one
+// (`uq_medication_identifier_user_confirmed_no_dupe` vs.
+// `uq_medication_identifier_authoritative_no_dupe`, both below) rather
+// than by adding `profile_id` to the original constraint's column list —
+// Postgres treats two NULLs as non-equal for uniqueness purposes, so every
+// AUTHORITATIVE row (profile_id always NULL) would silently stop deduping
+// against re-imports if `profile_id` were folded into that same index.
 export const medicationIdentifier = pgTable(
   "medication_identifier",
   {
@@ -221,12 +233,30 @@ export const medicationIdentifier = pgTable(
     validFrom: date("valid_from"),
     validTo: date("valid_to"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
+    // --- migration 0011 additions (OCR-fallback task) ---
+    evidenceType: text("evidence_type").notNull().default("AUTHORITATIVE"),
+    // Which profile confirmed a USER_CONFIRMED row — always NULL for
+    // AUTHORITATIVE rows (never a global/shared fact from one profile,
+    // spec §17). Resolution queries scope USER_CONFIRMED rows to the
+    // requesting profile's own `profile_id` — see
+    // `lib/catalog/server/postgres-provider.ts`'s `lookupByIdentifier`.
+    profileId: uuid("profile_id").references(() => profile.id),
   },
   (t) => [
     index("ix_medication_identifier_lookup").on(t.identifierType, t.identifierValue),
     index("ix_medication_identifier_product").on(t.catalogProductId),
-    uniqueIndex("uq_medication_identifier_no_dupe_import").on(t.catalogProductId, t.identifierType, t.identifierValue, t.source),
+    uniqueIndex("uq_medication_identifier_authoritative_no_dupe")
+      .on(t.catalogProductId, t.identifierType, t.identifierValue, t.source)
+      .where(sql`${t.evidenceType} = 'AUTHORITATIVE'`),
+    uniqueIndex("uq_medication_identifier_user_confirmed_no_dupe")
+      .on(t.catalogProductId, t.identifierType, t.identifierValue, t.profileId)
+      .where(sql`${t.evidenceType} = 'USER_CONFIRMED'`),
     check("chk_medication_identifier_type", sql`${t.identifierType} IN ('EOF_CODE','NHRN','EAN13','GTIN')`),
+    check("chk_medication_identifier_evidence_type", sql`${t.evidenceType} IN ('AUTHORITATIVE','USER_CONFIRMED','VERIFIED_PHYSICAL_OBSERVATION','COMMUNITY_CONFIRMED')`),
+    check(
+      "chk_medication_identifier_profile_scope",
+      sql`(${t.evidenceType} = 'AUTHORITATIVE' AND ${t.profileId} IS NULL) OR (${t.evidenceType} <> 'AUTHORITATIVE' AND ${t.profileId} IS NOT NULL)`,
+    ),
   ],
 );
 

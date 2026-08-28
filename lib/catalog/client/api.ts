@@ -1,4 +1,4 @@
-import type { CatalogIdentifierType, CatalogProduct, IdentifierResolution } from "@/lib/domain/catalog";
+import type { CatalogIdentifierType, CatalogProduct, ConfirmIdentifierOutcome, IdentifierResolution } from "@/lib/domain/catalog";
 
 export class CatalogApiError extends Error {
   constructor(
@@ -92,4 +92,28 @@ export async function resolveCatalogIdentifier(type: CatalogIdentifierType, valu
     throw new CatalogApiError(`Catalog identifier resolution failed with status ${response.status}`, response.status);
   }
   return response.json() as Promise<IdentifierResolution>;
+}
+
+/**
+ * POST /api/catalog/confirm-identifier — the best-effort server-side half
+ * of learned-mapping sync (OCR-fallback task spec §16, see the route's own
+ * doc for why a failure here is never fatal to the caller).
+ */
+export async function confirmCatalogIdentifier(
+  type: CatalogIdentifierType,
+  value: string,
+  catalogProductId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ConfirmIdentifierOutcome> {
+  const response = await fetchImpl("/api/catalog/confirm-identifier", {
+    method: "POST",
+    credentials: "include",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, value, catalogProductId }),
+  });
+  if (!response.ok) {
+    throw new CatalogApiError(`Catalog identifier confirmation failed with status ${response.status}`, response.status);
+  }
+  return response.json() as Promise<ConfirmIdentifierOutcome>;
 }

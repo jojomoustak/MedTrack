@@ -153,4 +153,130 @@ describe.skipIf(!connectionString)("PostgresCatalogProvider.lookupByIdentifier �
     const resolution = await provider.lookupByIdentifier("GTIN", "00000000000099");
     expect(resolution).toEqual({ state: "VALID_IDENTIFIER_UNRESOLVED" });
   });
+
+  it("EXACT resolutions report evidence: 'AUTHORITATIVE'", async () => {
+    const productId = await insertTestProduct("Integration Test Product — Evidence Authoritative");
+    await db.insert(schema.medicationIdentifier).values({ catalogProductId: productId, identifierType: "GTIN", identifierValue: "09999999999995", source: "integration-test" });
+
+    const resolution = await provider.lookupByIdentifier("GTIN", "09999999999995");
+    expect(resolution).toMatchObject({ state: "EXACT", evidence: "AUTHORITATIVE" });
+  });
+});
+
+/**
+ * `confirmIdentifier`/USER_CONFIRMED precedence and profile-scoping
+ * (OCR-fallback task spec §12/§13/§17/§19/§20) — a second self-contained
+ * describe block since these fixtures need a real `account`/`profile` pair
+ * (the FK `medication_identifier.profile_id` requires one), which the
+ * block above doesn't need at all.
+ */
+describe.skipIf(!connectionString)("PostgresCatalogProvider — USER_CONFIRMED evidence, precedence, and conflict (OCR-fallback task)", () => {
+  let pool: Pool;
+  let db: ReturnType<typeof drizzle<typeof schema>>;
+  let provider: PostgresCatalogProvider;
+  const productIds: string[] = [];
+  let accountId: string;
+  let profileId: string;
+  let otherAccountId: string;
+  let otherProfileId: string;
+
+  beforeAll(async () => {
+    pool = new Pool({ connectionString });
+    db = drizzle(pool, { schema });
+    provider = new PostgresCatalogProvider(db);
+
+    accountId = crypto.randomUUID();
+    profileId = crypto.randomUUID();
+    otherAccountId = crypto.randomUUID();
+    otherProfileId = crypto.randomUUID();
+    await db.insert(schema.account).values([
+      { id: accountId, email: `ocr-fallback-${accountId}@example.com`, status: "active" },
+      { id: otherAccountId, email: `ocr-fallback-${otherAccountId}@example.com`, status: "active" },
+    ]);
+    await db.insert(schema.profile).values([
+      { id: profileId, ownerAccountId: accountId },
+      { id: otherProfileId, ownerAccountId: otherAccountId },
+    ]);
+  });
+
+  afterAll(async () => {
+    if (productIds.length > 0) {
+      await db.delete(schema.medicationIdentifier).where(sql`${schema.medicationIdentifier.catalogProductId} = ANY(${productIds})`);
+      await db.delete(schema.medicationCatalogProduct).where(sql`${schema.medicationCatalogProduct.id} = ANY(${productIds})`);
+    }
+    await db.delete(schema.profile).where(sql`${schema.profile.id} = ANY(${[profileId, otherProfileId]})`);
+    await db.delete(schema.account).where(sql`${schema.account.id} = ANY(${[accountId, otherAccountId]})`);
+    await pool.end();
+  });
+
+  async function insertTestProduct(name: string): Promise<string> {
+    const [row] = await db
+      .insert(schema.medicationCatalogProduct)
+      .values({ name, regulatorySource: "integration-test-fixture", lifecycleState: "active" })
+      .returning({ id: schema.medicationCatalogProduct.id });
+    productIds.push(row.id);
+    return row.id;
+  }
+
+  it("confirmIdentifier creates a USER_CONFIRMED row, and the confirming profile can then resolve it EXACT", async () => {
+    const productId = await insertTestProduct("Integration Test Product — User Confirmed");
+    const outcome = await provider.confirmIdentifier("GTIN", "08888888888881", productId, profileId);
+    expect(outcome).toEqual({ status: "created" });
+
+    const resolution = await provider.lookupByIdentifier("GTIN", "08888888888881", profileId);
+    expect(resolution).toMatchObject({ state: "EXACT", evidence: "USER_CONFIRMED" });
+  });
+
+  it("without confirmingProfileId, a USER_CONFIRMED-only mapping is VALID_IDENTIFIER_UNRESOLVED (spec §17: never global)", async () => {
+    const productId = await insertTestProduct("Integration Test Product — Scope Check A");
+    await provider.confirmIdentifier("GTIN", "08888888888882", productId, profileId);
+
+    expect(await provider.lookupByIdentifier("GTIN", "08888888888882")).toEqual({ state: "VALID_IDENTIFIER_UNRESOLVED" });
+  });
+
+  it("a DIFFERENT profile's own lookup never sees another profile's USER_CONFIRMED mapping (spec §17)", async () => {
+    const productId = await insertTestProduct("Integration Test Product — Scope Check B");
+    await provider.confirmIdentifier("GTIN", "08888888888883", productId, profileId);
+
+    expect(await provider.lookupByIdentifier("GTIN", "08888888888883", otherProfileId)).toEqual({ state: "VALID_IDENTIFIER_UNRESOLVED" });
+  });
+
+  it("re-confirming the SAME product for the SAME profile/gtin is idempotent — already_confirmed, no duplicate row", async () => {
+    const productId = await insertTestProduct("Integration Test Product — Idempotent Confirm");
+    const first = await provider.confirmIdentifier("GTIN", "08888888888884", productId, profileId);
+    const second = await provider.confirmIdentifier("GTIN", "08888888888884", productId, profileId);
+    expect(first).toEqual({ status: "created" });
+    expect(second).toEqual({ status: "already_confirmed" });
+  });
+
+  it("confirming a DIFFERENT product for a gtin this profile already confirmed preserves BOTH rows and reports the conflict (spec §19)", async () => {
+    const productA = await insertTestProduct("Integration Test Product — Own Conflict A");
+    const productB = await insertTestProduct("Integration Test Product — Own Conflict B");
+    const first = await provider.confirmIdentifier("GTIN", "08888888888885", productA, profileId);
+    const second = await provider.confirmIdentifier("GTIN", "08888888888885", productB, profileId);
+    expect(first).toEqual({ status: "created" });
+    expect(second).toEqual({ status: "conflict_with_own_prior_mapping" });
+
+    const resolution = await provider.lookupByIdentifier("GTIN", "08888888888885", profileId);
+    expect(resolution.state).toBe("CONFLICT");
+    if (resolution.state === "CONFLICT") {
+      expect(resolution.catalogProductIds).toEqual(expect.arrayContaining([productA, productB]));
+    }
+  });
+
+  it("AUTHORITATIVE always wins over this profile's own USER_CONFIRMED mapping for the same identifier (spec §20)", async () => {
+    const authoritativeProduct = await insertTestProduct("Integration Test Product — Authoritative Wins");
+    const userConfirmedProduct = await insertTestProduct("Integration Test Product — Shadowed User Mapping");
+    await db.insert(schema.medicationIdentifier).values({
+      catalogProductId: authoritativeProduct,
+      identifierType: "GTIN",
+      identifierValue: "08888888888886",
+      source: "integration-test",
+    });
+    await provider.confirmIdentifier("GTIN", "08888888888886", userConfirmedProduct, profileId);
+
+    const resolution = await provider.lookupByIdentifier("GTIN", "08888888888886", profileId);
+    expect(resolution).toMatchObject({ state: "EXACT", evidence: "AUTHORITATIVE" });
+    if (resolution.state === "EXACT") expect(resolution.product.id).toBe(authoritativeProduct);
+  });
 });
