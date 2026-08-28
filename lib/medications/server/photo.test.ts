@@ -93,8 +93,9 @@ describe("uploadMedicationPhoto", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  it("fails closed with ConfigError when BLOB_READ_WRITE_TOKEN isn't set, even for an otherwise-owned medication", async () => {
+  it("fails closed with ConfigError when NEITHER BLOB_READ_WRITE_TOKEN nor BLOB_STORE_ID is set, even for an otherwise-owned medication", async () => {
     delete process.env.BLOB_READ_WRITE_TOKEN;
+    delete process.env.BLOB_STORE_ID;
     __resetEnvCacheForTests();
     const db = buildFakeDb([["set_config_result", selectResult({ id: MEDICATION_ID, photo_blob_key: null })]]);
     await expect(
@@ -104,6 +105,25 @@ describe("uploadMedicationPhoto", () => {
       ),
     ).rejects.toBeInstanceOf(ConfigError);
     expect(put).not.toHaveBeenCalled();
+  });
+
+  it("real bug fixed 2026-08-29 (stabilization task): BLOB_STORE_ID alone (Vercel OIDC federation, no static token) is ALSO accepted as configured — Production had this set the whole time but the old check only looked at BLOB_READ_WRITE_TOKEN", async () => {
+    delete process.env.BLOB_READ_WRITE_TOKEN;
+    process.env.BLOB_STORE_ID = "store_test123";
+    __resetEnvCacheForTests();
+    const db = buildFakeDb([
+      ["set_config_result", selectResult({ id: MEDICATION_ID, photo_blob_key: null })],
+      ["set_config_result", { rowCount: 1 }],
+    ]);
+    vi.mocked(put).mockResolvedValue({ url: "https://example.com/x", downloadUrl: "https://example.com/x", pathname: "medication-photos/p/m", contentType: "image/jpeg", contentDisposition: "inline" } as never);
+
+    await uploadMedicationPhoto(
+      { profileId: PROFILE_ID, userMedicationId: MEDICATION_ID, file: { bytes: JPEG_BYTES, contentType: "image/jpeg", size: JPEG_BYTES.length } },
+      db,
+    );
+
+    expect(put).toHaveBeenCalledTimes(1);
+    delete process.env.BLOB_STORE_ID;
   });
 
   it("uploads as a PRIVATE blob and best-effort deletes the previous photo's blob afterward", async () => {

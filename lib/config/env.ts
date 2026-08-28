@@ -100,6 +100,16 @@ const envSchema = z.object({
   // rather than making the ENTIRE app (including unrelated routes that
   // happen to call `getEnv()`) refuse to start.
   BLOB_READ_WRITE_TOKEN: z.string().trim().min(1).optional(),
+
+  // Alternative to BLOB_READ_WRITE_TOKEN (stabilization task, 2026-08-29):
+  // `@vercel/blob@2.8.0` also authenticates via Vercel's OIDC federation —
+  // a short-lived token Vercel injects into every deployed function's
+  // runtime automatically, combined with which store to use. `getEnv()`
+  // only needs to know the store id; the SDK reads the OIDC token itself
+  // from `process.env.VERCEL_OIDC_TOKEN` (not re-declared here — it's
+  // platform-injected, never something this app's own config should
+  // require or validate the shape of).
+  BLOB_STORE_ID: z.string().trim().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

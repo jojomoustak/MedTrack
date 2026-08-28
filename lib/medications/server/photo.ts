@@ -68,9 +68,25 @@ export interface MedicationPhotoContent {
   etag: string;
 }
 
-/** Fails closed with a clear, operator-facing error rather than letting `@vercel/blob` throw its own less-obvious "token missing" error deep inside a `put()`/`get()`/`del()` call. */
+/**
+ * Fails closed with a clear, operator-facing error rather than letting
+ * `@vercel/blob` throw its own less-obvious "token missing" error deep
+ * inside a `put()`/`get()`/`del()` call.
+ *
+ * Two independent ways this project's Blob store can be configured
+ * (stabilization task, 2026-08-29 — found the deployed Production
+ * environment had neither BLOB_READ_WRITE_TOKEN NOR any code path that
+ * would have accepted the alternative): the classic static
+ * BLOB_READ_WRITE_TOKEN, or BLOB_STORE_ID + Vercel's own OIDC federation
+ * (a short-lived token Vercel injects into every deployed function
+ * automatically as VERCEL_OIDC_TOKEN — never something this app reads or
+ * validates directly, the SDK handles it). Either one being present is
+ * sufficient; this function's job is only to fail fast with a clear
+ * message when NEITHER is, not to prefer one over the other.
+ */
 function assertBlobConfigured(): void {
-  if (!getEnv().BLOB_READ_WRITE_TOKEN) {
+  const env = getEnv();
+  if (!env.BLOB_READ_WRITE_TOKEN && !env.BLOB_STORE_ID) {
     throw new ConfigError(
       "Η αποθήκευση φωτογραφιών δεν έχει ρυθμιστεί ακόμα σε αυτό το περιβάλλον. Δοκιμάστε ξανά αργότερα.",
     );
