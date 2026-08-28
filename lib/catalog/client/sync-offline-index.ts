@@ -3,6 +3,7 @@ import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repos
 import { fetchOfflineIndex, fetchOfflineIndexManifest } from "@/lib/catalog/client/offline-index-api";
 import type { NetworkState } from "@/lib/sync/client/network";
 import { logger } from "@/lib/logging/logger";
+import { notifyOfflineIndexUpdated } from "@/lib/catalog/client/offline-index-signal";
 
 export type SyncOfflineIndexOutcome =
   | { status: "up-to-date"; version: string }
@@ -75,6 +76,9 @@ export async function syncOfflineIndex(
     await repository.replaceAll({ version: manifest.version, recordCount: manifest.recordCount, generatedAt: manifest.generatedAt, syncedAt: new Date().toISOString() }, entries);
 
     logger.info("catalog.offline_index.synced", { version: manifest.version, recordCount: manifest.recordCount });
+    // Tells any already-rendered screen that resolved a catalogProductId
+    // before this sync finished (module doc above) to look again now.
+    notifyOfflineIndexUpdated();
     return { status: "updated", version: manifest.version, recordCount: manifest.recordCount };
   } catch (err) {
     const reason = (err as Error).message;

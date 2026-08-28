@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { syncOfflineIndex } from "@/lib/catalog/client/sync-offline-index";
+import { onOfflineIndexUpdated } from "@/lib/catalog/client/offline-index-signal";
 import type { OfflineIndexRepository } from "@/lib/domain/repositories";
 import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
 
@@ -75,6 +76,42 @@ describe("syncOfflineIndex — manifest-first, checksum-validated, atomic (spec 
     const [installedManifest, installedEntries] = (repository.replaceAll as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(installedManifest).toMatchObject({ version: "hash-v1", recordCount: 1, generatedAt: "gen-t" });
     expect(installedEntries).toEqual(entries);
+  });
+
+  it("notifies onOfflineIndexUpdated subscribers when a real update installs (real bug fixed 2026-08-28: a page that resolved a catalogProductId before this sync finished — the common case right after a fresh reinstall + login — never re-resolved once the real name arrived, since nothing told it to look again)", async () => {
+    const entries = [makeEntry()];
+    const repository = makeRepo();
+    const fetchImpl = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/manifest")) return Promise.resolve(jsonResponse({ version: "hash-v1", recordCount: 1, generatedAt: "gen-t" }));
+      return Promise.resolve(jsonResponse({ manifest: { version: "hash-v1", recordCount: 1, generatedAt: "gen-t" }, entries }));
+    });
+    const computeSha256Hex = vi.fn().mockResolvedValue("hash-v1");
+    const listener = vi.fn();
+    const unsubscribe = onOfflineIndexUpdated(listener);
+
+    try {
+      await syncOfflineIndex("online", { repository, fetchImpl, computeSha256Hex });
+      expect(listener).toHaveBeenCalledTimes(1);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it("does NOT notify onOfflineIndexUpdated when already up-to-date — nothing actually changed", async () => {
+    const repository = makeRepo({ getManifest: vi.fn().mockResolvedValue({ version: "same-hash", recordCount: 1, generatedAt: "t", syncedAt: "t" }) });
+    const fetchImpl = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/manifest")) return Promise.resolve(jsonResponse({ version: "same-hash", recordCount: 1, generatedAt: "t" }));
+      throw new Error("should never fetch the full index when up to date");
+    });
+    const listener = vi.fn();
+    const unsubscribe = onOfflineIndexUpdated(listener);
+
+    try {
+      await syncOfflineIndex("online", { repository, fetchImpl });
+      expect(listener).not.toHaveBeenCalled();
+    } finally {
+      unsubscribe();
+    }
   });
 
   it("record-count mismatch between manifest and payload: rejected, never installed", async () => {

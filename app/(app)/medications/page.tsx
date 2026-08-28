@@ -6,6 +6,7 @@ import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
 import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
+import { onOfflineIndexUpdated } from "@/lib/catalog/client/offline-index-signal";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 
@@ -20,6 +21,15 @@ const SEGMENTS: { key: Segment; label: string }[] = [
 
 function useDisplayNames(medications: UserMedicationRecord[]): Map<string, string> {
   const [names, setNames] = useState<Map<string, string>>(new Map());
+  const [refreshNonce, setRefreshNonce] = useState(0);
+
+  // Real bug (2026-08-28, see offline-index-signal.ts's doc): re-resolves
+  // when the offline index finishes syncing in the background, not just
+  // when `medications` itself changes — otherwise a name resolved before
+  // that sync completed (the common case right after a fresh reinstall +
+  // login) is stuck on the placeholder forever, even though the real data
+  // arrives moments later.
+  useEffect(() => onOfflineIndexUpdated(() => setRefreshNonce((n) => n + 1)), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +68,7 @@ function useDisplayNames(medications: UserMedicationRecord[]): Map<string, strin
     return () => {
       cancelled = true;
     };
-  }, [medications]);
+  }, [medications, refreshNonce]);
 
   return names;
 }
