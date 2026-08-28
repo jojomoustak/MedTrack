@@ -12,6 +12,7 @@ import type { OutboxEntry } from "@/lib/domain/outbox";
 import type { PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { CatalogProduct } from "@/lib/domain/catalog";
+import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
 
 export interface OutboxRepository {
   enqueue(entry: OutboxEntry): Promise<void>;
@@ -95,6 +96,33 @@ export interface CatalogCacheRepository {
   getByEofCode(eofCode: string): Promise<CatalogProduct | null>;
   /** Upserts every result from a completed search/lookup into the cache, so it's available offline afterward. */
   cacheAll(products: readonly CatalogProduct[]): Promise<void>;
+}
+
+export interface OfflineIndexLocalManifest {
+  version: string;
+  recordCount: number;
+  generatedAt: string;
+  syncedAt: string;
+}
+
+/**
+ * The full compact offline index (spec §12/§17/§22) — replaces
+ * `CatalogCacheRepository`'s "only what's been looked up before" cache
+ * behavior with a proactively-synced complete authoritative catalog, so a
+ * never-before-scanned-on-this-device product still resolves offline.
+ * `replaceAll` is the ONLY write path and must be atomic (spec §18): a
+ * failed/interrupted sync must never leave the local index partially
+ * overwritten — either the whole replacement lands, or the previous
+ * version stays fully intact.
+ */
+export interface OfflineIndexRepository {
+  getManifest(): Promise<OfflineIndexLocalManifest | null>;
+  getByEofCode(eofCode: string): Promise<OfflineIndexEntry | null>;
+  getByGtin(gtin: string): Promise<OfflineIndexEntry | null>;
+  /** Accent/case-insensitive substring search over brand name and active ingredient — the offline analogue of `MedicationCatalogProvider.search` (spec §23: search must use the same local index, never a separate duplicate database). */
+  search(query: string, limit?: number): Promise<OfflineIndexEntry[]>;
+  /** Atomically replaces the ENTIRE local index with `entries`, in one transaction, and records `manifest` as the new locally-synced version. Never a partial/incremental write. */
+  replaceAll(manifest: OfflineIndexLocalManifest, entries: readonly OfflineIndexEntry[]): Promise<void>;
 }
 
 /**

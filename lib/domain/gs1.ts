@@ -15,8 +15,19 @@
  * already parsed before the unrecognized AI is kept.
  */
 
-/** Mirrors the native bridge's fixed `format` contract exactly — see `lib/platform/mobile-platform.ts`. */
-export type BarcodeFormat = "GS1_DATA_MATRIX" | "EAN_13" | "EAN_8" | "CODE_128" | "UNKNOWN";
+/**
+ * Mirrors the native bridge's fixed `format` contract exactly — see
+ * `lib/platform/mobile-platform.ts`. `QR_CODE` is its own format, not
+ * folded into `UNKNOWN` (catalog-coverage task spec §10): a QR found on a
+ * medicine pack is far more likely to encode a URL, marketing content, or
+ * an e-leaflet link than a machine-parseable product identifier — none of
+ * which identify the product. Naming it distinctly exists ONLY so the UI
+ * can show an accurate message ("that's a QR code, not a product
+ * barcode") instead of a generic one; `parseBarcode` below still treats it
+ * exactly like any other opaque format (never attempts to extract a GTIN
+ * from it) — the distinction is cosmetic/diagnostic, never a resolution path.
+ */
+export type BarcodeFormat = "GS1_DATA_MATRIX" | "EAN_13" | "EAN_8" | "CODE_128" | "QR_CODE" | "UNKNOWN";
 
 export interface ParsedBarcode {
   /** The untouched raw string the scanner returned, for logging/debugging and as the ultimate fallback. */
@@ -149,6 +160,6 @@ export function parseBarcode(rawValue: string, format: BarcodeFormat): ParsedBar
   if (format === "GS1_DATA_MATRIX") {
     return parseGs1DataMatrix(rawValue);
   }
-  // CODE_128 / UNKNOWN: opaque beyond the raw string (module doc / Phase 1 §7).
+  // CODE_128 / QR_CODE / UNKNOWN: opaque beyond the raw string (module doc / Phase 1 §7).
   return emptyResult(rawValue, format);
 }

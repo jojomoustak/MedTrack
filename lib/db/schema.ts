@@ -175,6 +175,62 @@ export const medicationCatalogProduct = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// 2.4a1 MedicationIdentifier — multi-identifier model (GTIN-resolution task
+// spec §1/§5/§12/§19). `medication_catalog_product.eof_code`/`gtin` above
+// are UNCHANGED and remain Path A's proven, fast lookup path (never
+// migrated off — "do not restart the catalog work"). This table is
+// strictly additive: it's where the NEW identifier types this task adds
+// live — primarily `GTIN` (a real GS1 DataMatrix's serialized GTIN, which
+// a Greek national EAN-13's `280`-prefix code structurally is NOT — see
+// `lib/domain/greek-national-barcode.ts`'s header comment), with `NHRN`/
+// `EAN13` reserved for whatever a future authoritative source supplies,
+// without needing a schema change to ingest it (spec §5/§7).
+//
+// One product may have MULTIPLE rows here (spec §5: "do not impose a
+// one-to-one package → GTIN relationship") — e.g. two real GTINs for two
+// repackaging events of the same product. Deliberately NOT unique on
+// (identifier_type, identifier_value) alone: that would make a genuine
+// conflict (two DIFFERENT products both authoritatively claiming the same
+// GTIN, spec §19) impossible to represent at all, when the correct
+// behavior is to preserve BOTH rows and surface `CONFLICT` at query time
+// (`lib/catalog/server/postgres-provider.ts`'s `lookupByIdentifier`),
+// never silently pick one. The narrower uniqueness constraint below only
+// prevents the same source from creating an exact duplicate row on a
+// repeated import — a real conflict (different `catalog_product_id`)
+// still passes it freely.
+// ---------------------------------------------------------------------------
+export const medicationIdentifier = pgTable(
+  "medication_identifier",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    catalogProductId: uuid("catalog_product_id")
+      .notNull()
+      .references(() => medicationCatalogProduct.id),
+    identifierType: text("identifier_type").notNull(),
+    // Text, never numeric (spec §18) — leading zeros are significant for
+    // EOF/NHRN-derived values, and GTIN-14's own canonical form is
+    // fixed-width. Canonical representation: GTIN is stored exactly as
+    // decoded from AI 01 (`lib/domain/gs1.ts`'s existing 14-digit
+    // left-zero-padded normalization — the same form already used for
+    // `medication_catalog_product.gtin` and the offline cache, so no new
+    // normalization convention is introduced). Never silently re-padded
+    // or re-derived at query time — whatever form was stored is what's
+    // matched against, byte for byte.
+    identifierValue: text("identifier_value").notNull(),
+    source: text("source").notNull(),
+    validFrom: date("valid_from"),
+    validTo: date("valid_to"),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("ix_medication_identifier_lookup").on(t.identifierType, t.identifierValue),
+    index("ix_medication_identifier_product").on(t.catalogProductId),
+    uniqueIndex("uq_medication_identifier_no_dupe_import").on(t.catalogProductId, t.identifierType, t.identifierValue, t.source),
+    check("chk_medication_identifier_type", sql`${t.identifierType} IN ('EOF_CODE','NHRN','EAN13','GTIN')`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // 2.4a MedicationCatalogSourceSnapshot — import-batch provenance for
 // development-only catalog ingestion (architecture doc §13/§30, added
 // alongside the Greek national EAN-13 resolution path). Records WHERE a

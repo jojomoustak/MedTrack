@@ -125,7 +125,7 @@ describe("parseBarcode — GS1_DATA_MATRIX, multiple AIs in one string", () => {
   });
 });
 
-describe("parseBarcode — CODE_128 / UNKNOWN: opaque, never guessed", () => {
+describe("parseBarcode — CODE_128 / QR_CODE / UNKNOWN: opaque, never guessed", () => {
   it("CODE_128 carries only the raw string, every parsed field is null", () => {
     const result = parseBarcode("1234567890", "CODE_128");
     expect(result).toEqual({ raw: "1234567890", format: "CODE_128", gtin: null, expiry: null, batch: null, serial: null });
@@ -134,5 +134,10 @@ describe("parseBarcode — CODE_128 / UNKNOWN: opaque, never guessed", () => {
   it("UNKNOWN carries only the raw string, every parsed field is null", () => {
     const result = parseBarcode("whatever-this-is", "UNKNOWN");
     expect(result).toEqual({ raw: "whatever-this-is", format: "UNKNOWN", gtin: null, expiry: null, batch: null, serial: null });
+  });
+
+  it("QR_CODE is opaque too, even when its content looks like a URL or a numeric string — never mined for a GTIN", () => {
+    const result = parseBarcode("https://example.com/leaflet/5012345678900", "QR_CODE");
+    expect(result).toEqual({ raw: "https://example.com/leaflet/5012345678900", format: "QR_CODE", gtin: null, expiry: null, batch: null, serial: null });
   });
 });

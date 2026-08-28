@@ -6,24 +6,37 @@
  *
  *   Κωδικός | BARCODE | Περιγραφή Προϊόντος | ATC | Μη Αποζημιούμενο | Τιμή Παραγωγού | Χονδρική Τιμή | Λιανική Τιμή | Δραστική/ες | KAK | ΦΠΑ
  *
+ * ...and, confirmed by inspecting the December 2025 comprehensive
+ * revised-prices baseline bulletin (8,510 rows — the actual "all currently
+ * priced reimbursed products" baseline, not a delta), a further real
+ * variant of the SAME document family:
+ *
+ *   Κωδικός | Barcode | Προϊόν | ATC | Μη Αποζημιούμενο | Τιμή Παραγωγού | Χονδρική Τιμή | Λιανική Τιμή | Δραστική ουσία | Κάτοχος Άδειας Κυκλοφορίας | ΦΠΑ
+ *
+ * (mixed-case "Barcode" — already covered by normalization being
+ * case-insensitive; "Προϊόν" and "Δραστική ουσία" already covered by
+ * synonyms shared with `mysyfa-importer.ts`'s equivalents; "Κάτοχος Άδειας
+ * Κυκλοφορίας" — the MAH column's full, unabbreviated name — is new and
+ * added below.)
+ *
  * Deliberately a SEPARATE adapter from `mysyfa-importer.ts` (spec §14:
  * "one giant parser" is the wrong shape), even though both ultimately
- * produce the same `MedicationImportRecord` shape — this bulletin is a
- * genuinely different document: the retail-price column is labeled
- * "Λιανική Τιμή" here, not MYSYFA's "Ενδεικτική Λιανική Τιμή", and there's
- * a wholesale-price column MYSYFA's bulletin doesn't have at all. Real
- * barcode-decode confirmed against the real first two rows of this file
- * (both AFLIBERCEPT/MYNZEPLI presentations) — same `280`+EOF-code+
- * check-digit scheme as every other Greek pharma barcode (architecture
- * doc §2.5), as expected: it's a national scheme, not specific to one
- * bulletin track.
+ * produce the same `MedicationImportRecord` shape — this is a genuinely
+ * different document family: the retail-price column is labeled "Λιανική
+ * Τιμή" here, not MYSYFA's "Ενδεικτική Λιανική Τιμή", and there's a
+ * wholesale-price column MYSYFA's bulletin doesn't have at all. Real
+ * barcode-decode confirmed against real rows from multiple files in this
+ * family (AFLIBERCEPT/MYNZEPLI, DORALIN/OTILONIUM, MAXUDIN/PRAVASTATIN)
+ * — same `280`+EOF-code+check-digit scheme as every other Greek pharma
+ * barcode (architecture doc §2.5), as expected: it's a national scheme,
+ * not specific to one bulletin track.
  *
- * Scope note: this covers only the "new drugs" sub-table of the
- * reimbursed-track bulletin. The same bulletin publication also includes
- * separate "repricing due to data-protection expiry" and "non-reimbursed
- * price readjustment" sub-tables — different shapes again, not yet
- * inspected or covered by an adapter. Extending to those is a follow-up,
- * not attempted here.
+ * Scope note: covers the "new drugs"/"new generics"/"repricing"/
+ * "non-reimbursed adjustment"/"comprehensive revision" sub-tables of the
+ * reimbursed-track bulletin family — all confirmed to share this shape.
+ * Not yet covering: whatever the "Θετική Λίστα" (positive/reimbursement
+ * list) publishes separately, if its format differs — not inspected in
+ * this pass.
  *
  * Pure mapping only — same constraints as `mysyfa-importer.ts` (no I/O,
  * no free-text product-description normalization, testable against small
@@ -36,12 +49,12 @@ type CanonicalField = "EOF_CODE" | "BARCODE" | "PRODUCT_DESCRIPTION" | "ATC" | "
 /** Every value here is copied verbatim from the real downloaded file's header row — never invented. */
 const HEADER_SYNONYMS: Record<CanonicalField, readonly string[]> = {
   EOF_CODE: ["Κωδικός"],
-  BARCODE: ["BARCODE"],
-  PRODUCT_DESCRIPTION: ["Περιγραφή Προϊόντος"],
+  BARCODE: ["BARCODE", "Barcode"],
+  PRODUCT_DESCRIPTION: ["Περιγραφή Προϊόντος", "Προϊόν"],
   ATC: ["ATC"],
   RETAIL_PRICE: ["Λιανική Τιμή"],
-  ACTIVE_INGREDIENT: ["Δραστική/ες"],
-  MAH: ["KAK", "ΚΑΚ"],
+  ACTIVE_INGREDIENT: ["Δραστική/ες", "Δραστική ουσία"],
+  MAH: ["KAK", "ΚΑΚ", "Κάτοχος Άδειας Κυκλοφορίας"],
 };
 
 const REQUIRED_FIELDS: readonly CanonicalField[] = ["EOF_CODE", "BARCODE", "PRODUCT_DESCRIPTION", "ATC", "RETAIL_PRICE", "ACTIVE_INGREDIENT", "MAH"];

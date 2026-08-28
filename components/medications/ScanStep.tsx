@@ -5,7 +5,7 @@ import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { ParsedBarcode } from "@/lib/domain/gs1";
 import { parseBarcode } from "@/lib/domain/gs1";
 import { classifyBarcode } from "@/lib/domain/medication-identifier";
-import type { CatalogCacheRepository, UnresolvedScanRepository } from "@/lib/domain/repositories";
+import type { CatalogCacheRepository, OfflineIndexRepository, UnresolvedScanRepository } from "@/lib/domain/repositories";
 import { DexieUnresolvedScanRepository } from "@/lib/db-client/unresolved-scan-repository";
 import { lookupGtin } from "@/lib/catalog/client/lookup-gtin";
 import { lookupEofCode } from "@/lib/catalog/client/lookup-eof-code";
@@ -15,6 +15,7 @@ import { MobilePlatformUnavailableError, type MobilePlatform } from "@/lib/platf
 import { newId } from "@/lib/domain/ids";
 import { logger } from "@/lib/logging/logger";
 import { CandidateConfirmation } from "@/components/medications/CandidateConfirmation";
+import { ScanDiagnosticsPanel, type ScanDiagnostics } from "@/components/medications/ScanDiagnosticsPanel";
 
 export interface ScanStepProps {
   profileId: string;
@@ -27,24 +28,34 @@ export interface ScanStepProps {
   /** Test/DI seam — defaults to the real Median-backed implementation. */
   platform?: MobilePlatform;
   cacheRepository?: CatalogCacheRepository;
+  /** The full compact offline index (spec §17/§22) — checked before `cacheRepository`, since it covers every synced product, not just ones this device has personally looked up before. */
+  offlineIndex?: OfflineIndexRepository;
   unresolvedScanRepository?: UnresolvedScanRepository;
 }
 
 type ViewState =
   | { phase: "scanning" }
   | { phase: "looking-up" }
-  | { phase: "candidate"; product: CatalogProduct; parsed: ParsedBarcode }
+  | { phase: "candidate"; product: CatalogProduct; parsed: ParsedBarcode; diagnostics: ScanDiagnostics }
   /**
-   * `recognizedButUnavailable` distinguishes two different "not found"
-   * situations (spec: architecture doc §2.5's Path A "unknown offline
-   * barcode" case): a well-formed Greek national EAN-13 that decoded
-   * cleanly but has no matching catalog entry (the barcode itself is
-   * understood — MedTracking just doesn't have data for this specific
-   * product yet) vs. a barcode that couldn't be identified as any known
-   * scheme at all. Never guessed either way — this only changes which
-   * message is shown, not any resolution behavior.
+   * `reason` distinguishes three different "not found" situations, never
+   * collapsed into one generic message (GTIN-resolution task spec §11:
+   * `VALID_IDENTIFIER_UNRESOLVED` as its own controlled state):
+   * - `"unrecognized"`: the scanned code couldn't be classified as any
+   *   known identifier scheme at all (Path A nor Path B) — e.g. a QR, an
+   *   unrecognized symbology, or an invalid checksum.
+   * - `"unresolved"`: a well-formed identifier WAS recognized — either a
+   *   Greek national EAN-13 (Path A) or a real GTIN (Path B) — but no
+   *   catalog entry maps to it yet. The barcode itself is understood;
+   *   MedTrack just doesn't have data for this specific product. Never
+   *   guessed either way — this only changes which message is shown, not
+   *   any resolution behavior.
+   * - `"conflict"`: the server found two or more DIFFERENT products both
+   *   authoritatively claiming this exact identifier (spec §19) — never
+   *   silently resolved to either one; only reachable via Path B's online
+   *   resolution (`lookupGtin`'s `"conflict"` outcome).
    */
-  | { phase: "not-found"; parsed: ParsedBarcode | null; offline: boolean; recognizedButUnavailable: boolean }
+  | { phase: "not-found"; parsed: ParsedBarcode | null; offline: boolean; reason: "unrecognized" | "unresolved" | "conflict"; diagnostics: ScanDiagnostics | null }
   | { phase: "unavailable" }
   | { phase: "error"; message: string };
 
@@ -63,6 +74,7 @@ export function ScanStep({
   onCancel,
   platform,
   cacheRepository,
+  offlineIndex,
   unresolvedScanRepository,
 }: ScanStepProps) {
   const network = useNetworkStatus();
@@ -124,9 +136,34 @@ export function ScanStep({
     }
 
     const parsed = parseBarcode(result.rawValue, result.format);
+    // Recognized as SOME real identifier scheme — Greek national EAN-13
+    // (Path A) or a genuine GTIN (Path B) — as opposed to an unparseable/
+    // unsupported format (QR, Code 128, an invalid checksum). Drives the
+    // "unrecognized" vs "unresolved" distinction below; both paths count
+    // equally here (GTIN-resolution task spec §11's `VALID_IDENTIFIER_UNRESOLVED`
+    // applies to a recognized-but-unmapped GTIN just as much as to Path A).
+    const identifier = classifyBarcode(result.rawValue, result.format);
+
+    // Base diagnostics (spec §8) — never includes the serial VALUE, only
+    // whether one was present (`ScanDiagnosticsPanel`'s own doc comment
+    // explains why). Extended per-branch below with resolution
+    // state/matched identifier once known.
+    const baseDiagnostics = { format: parsed.format, gtin: parsed.gtin, batch: parsed.batch, expiry: parsed.expiry, serialPresent: parsed.serial !== null };
+
+    if (!identifier) {
+      setView({ phase: "not-found", parsed, offline: false, reason: "unrecognized", diagnostics: { ...baseDiagnostics, resolutionState: "unrecognized", matchedIdentifierType: null, matchedProductName: null } });
+      return;
+    }
 
     if (!parsed.gtin) {
-      setView({ phase: "not-found", parsed, offline: false, recognizedButUnavailable: false });
+      // Invariant, not expected in practice: `classifyBarcode` only ever
+      // returns a non-null identifier when `parseBarcode`'s own `gtin` is
+      // also non-null (both derive from the same all-numeric check on the
+      // same raw value) — TypeScript can't see that cross-function
+      // guarantee, so it's asserted explicitly here (with a log, in case
+      // it's ever actually hit) rather than with a silent `!` assertion.
+      logger.warn("scan_step.unexpected_null_gtin_with_identifier", { format: parsed.format });
+      setView({ phase: "not-found", parsed, offline: false, reason: "unrecognized", diagnostics: { ...baseDiagnostics, resolutionState: "unrecognized", matchedIdentifierType: null, matchedProductName: null } });
       return;
     }
 
@@ -134,20 +171,38 @@ export function ScanStep({
     // Path A (medication-resolution-architecture.md §2.5): a well-formed
     // Greek national `280`-prefix EAN-13 resolves by its decoded EOF code,
     // not by GTIN — that barcode isn't a globally-resolvable GTIN at all
-    // (architecture doc §2.1), so `classifyBarcode` routes it to a
-    // different lookup entirely rather than reusing `parsed.gtin`. Anything
-    // else (including an unrecognized-scheme barcode, which still has a
-    // padded `parsed.gtin` from `parseBarcode`'s plain-EAN normalization)
-    // falls through to the existing, unchanged Path B GTIN lookup.
-    const identifier = classifyBarcode(result.rawValue, result.format);
-    const isGreekNational = identifier?.kind === "GREEK_NATIONAL_EAN13";
+    // (architecture doc §2.1). Path B (GTIN-resolution task spec §3): a
+    // real GS1 DataMatrix/EAN GTIN resolves via the authoritative
+    // multi-identifier mapping (`lookupGtin`) — never by deriving a
+    // product from the GTIN's own digits.
+    const isGreekNational = identifier.kind === "GREEK_NATIONAL_EAN13";
+    const matchedIdentifierType: ScanDiagnostics["matchedIdentifierType"] = isGreekNational ? "EOF_CODE" : "GTIN";
     const outcome = isGreekNational
-      ? await lookupEofCode(identifier.eofCode, networkRef.current, { cache: cacheRepository })
-      : await lookupGtin(parsed.gtin, networkRef.current, { cache: cacheRepository });
+      ? await lookupEofCode(identifier.eofCode, networkRef.current, { cache: cacheRepository, offlineIndex })
+      : await lookupGtin(identifier.gtin, networkRef.current, { cache: cacheRepository, offlineIndex });
     if (!mountedRef.current) return;
 
     if (outcome.status === "found") {
-      setView({ phase: "candidate", product: outcome.product, parsed });
+      setView({
+        phase: "candidate",
+        product: outcome.product,
+        parsed,
+        diagnostics: { ...baseDiagnostics, resolutionState: "found", matchedIdentifierType, matchedProductName: outcome.product.name },
+      });
+      return;
+    }
+
+    if (outcome.status === "conflict") {
+      // Never reachable while offline (`lookupGtin` only ever returns
+      // `"conflict"` from the online server path) — no unresolved-scan
+      // save needed here, unlike the offline branch below.
+      setView({
+        phase: "not-found",
+        parsed,
+        offline: false,
+        reason: "conflict",
+        diagnostics: { ...baseDiagnostics, resolutionState: "conflict", matchedIdentifierType, matchedProductName: null },
+      });
       return;
     }
 
@@ -167,11 +222,24 @@ export function ScanStep({
       } catch (err) {
         logger.warn("scan_step.save_unresolved_failed", { message: (err as Error).message });
       }
-      if (mountedRef.current) setView({ phase: "not-found", parsed, offline: true, recognizedButUnavailable: isGreekNational });
+      if (mountedRef.current)
+        setView({
+          phase: "not-found",
+          parsed,
+          offline: true,
+          reason: "unresolved",
+          diagnostics: { ...baseDiagnostics, resolutionState: "unresolved-offline", matchedIdentifierType, matchedProductName: null },
+        });
       return;
     }
 
-    setView({ phase: "not-found", parsed, offline: false, recognizedButUnavailable: isGreekNational });
+    setView({
+      phase: "not-found",
+      parsed,
+      offline: false,
+      reason: "unresolved",
+      diagnostics: { ...baseDiagnostics, resolutionState: "not-found", matchedIdentifierType, matchedProductName: null },
+    });
   }
 
   if (view.phase === "scanning" || view.phase === "looking-up") {
@@ -241,37 +309,50 @@ export function ScanStep({
 
   if (view.phase === "candidate") {
     return (
-      <CandidateConfirmation
-        product={view.product}
-        parsedExpiry={view.parsed.expiry}
-        parsedBatch={view.parsed.batch}
-        parsedSerial={view.parsed.serial}
-        onConfirm={() => onConfirmCandidate(view.product, view.parsed)}
-        onBack={onCancel}
-      />
+      <div className="flex flex-col gap-4">
+        <CandidateConfirmation
+          product={view.product}
+          parsedExpiry={view.parsed.expiry}
+          parsedBatch={view.parsed.batch}
+          parsedSerial={view.parsed.serial}
+          onConfirm={() => onConfirmCandidate(view.product, view.parsed)}
+          onBack={onCancel}
+        />
+        <ScanDiagnosticsPanel diagnostics={view.diagnostics} />
+      </div>
     );
   }
 
   // view.phase === "not-found"
   const searchTerm = view.parsed?.gtin ?? view.parsed?.raw ?? null;
-  // `recognizedButUnavailable`: the barcode itself decoded cleanly as a
-  // Greek national medicine identifier (architecture doc §2.5) — MedTracking
-  // just doesn't have a catalog entry for this specific product yet. A
-  // materially more honest message than the generic "couldn't identify"
-  // one, and never a guess either way (spec §26).
-  const notFoundMessage = view.offline
-    ? view.recognizedButUnavailable
-      ? "Αναγνωρίσαμε τον κωδικό του φαρμάκου, αλλά δεν έχουμε ακόμα στοιχεία για αυτό το προϊόν εκτός σύνδεσης. Το αποθηκεύσαμε και θα προσπαθήσουμε ξανά μόλις συνδεθείτε."
-      : "Είστε εκτός σύνδεσης — δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Το αποθηκεύσαμε και θα προσπαθήσουμε ξανά μόλις συνδεθείτε."
-    : view.recognizedButUnavailable
-      ? "Αναγνωρίσαμε τον κωδικό του φαρμάκου, αλλά δεν έχουμε ακόμα στοιχεία για αυτό το προϊόν στον κατάλογό μας."
-      : "Δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος.";
+  // `reason` (see the `ViewState` type comment above): three genuinely
+  // different situations, three genuinely different honest messages —
+  // never collapsed into one generic "couldn't identify" (GTIN-resolution
+  // task spec §11's `VALID_IDENTIFIER_UNRESOLVED`, spec §26).
+  // A QR code is never a resolution path (spec §10) — its content is
+  // opaque to this app by design (likely a marketing/e-leaflet URL, not a
+  // product identifier), so it gets its own honest message rather than
+  // either the generic "couldn't identify" one or an online/offline retry
+  // framing that implies this might resolve later. It never will.
+  const notFoundMessage =
+    view.parsed?.format === "QR_CODE"
+      ? "Αυτό είναι κωδικός QR, όχι barcode προϊόντος — το MedTracking δεν μπορεί να αναγνωρίσει φάρμακα από περιεχόμενο QR."
+      : view.reason === "conflict"
+        ? "Αυτός ο κωδικός αντιστοιχεί σε περισσότερα από ένα προϊόντα στα επίσημα δεδομένα μας — δεν μπορούμε να τον επιλύσουμε αυτόματα με ασφάλεια. Αναζητήστε το φάρμακο χειροκίνητα."
+        : view.offline
+          ? view.reason === "unresolved"
+            ? "Αναγνωρίσαμε τον κωδικό του φαρμάκου, αλλά δεν έχουμε ακόμα στοιχεία για αυτό το προϊόν εκτός σύνδεσης. Το αποθηκεύσαμε και θα προσπαθήσουμε ξανά μόλις συνδεθείτε."
+            : "Είστε εκτός σύνδεσης — δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Το αποθηκεύσαμε και θα προσπαθήσουμε ξανά μόλις συνδεθείτε."
+          : view.reason === "unresolved"
+            ? "Αναγνωρίσαμε τον κωδικό του φαρμάκου, αλλά δεν έχουμε ακόμα στοιχεία για αυτό το προϊόν στον κατάλογό μας."
+            : "Δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος.";
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-dashed border-zinc-300 p-4 text-center dark:border-zinc-700">
         <p className="mb-1 text-sm text-zinc-700 dark:text-zinc-300">{notFoundMessage}</p>
       </div>
       {searchTerm && !view.offline && <OfficialSourceSearchLinks searchTerm={searchTerm} />}
+      {view.diagnostics && <ScanDiagnosticsPanel diagnostics={view.diagnostics} />}
       <button
         type="button"
         onClick={() => onFallbackToManual(view.parsed)}

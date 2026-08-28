@@ -39,19 +39,37 @@ export interface GreekNationalMedicineIdentifier {
 
 /**
  * Standard EAN-13 check-digit algorithm (GS1 General Specifications §7.9):
- * alternating ×1/×3 weights over the first 12 digits, the 13th digit must
- * equal `(10 - (sum % 10)) % 10`. `barcode` must already be verified as
- * exactly 13 numeric characters before calling this — it does not
+ * alternating ×1/×3 weights over the first 12 digits, the check digit is
+ * `(10 - (sum % 10)) % 10`. `first12Digits` must already be verified as
+ * exactly 12 numeric characters before calling this — it does not
  * re-validate that itself.
  */
-function isValidEan13CheckDigit(barcode: string): boolean {
+function computeEan13CheckDigit(first12Digits: string): number {
   let sum = 0;
   for (let i = 0; i < 12; i++) {
-    const digit = Number(barcode[i]);
+    const digit = Number(first12Digits[i]);
     sum += i % 2 === 0 ? digit * 1 : digit * 3;
   }
-  const expectedCheckDigit = (10 - (sum % 10)) % 10;
-  return expectedCheckDigit === Number(barcode[12]);
+  return (10 - (sum % 10)) % 10;
+}
+
+function isValidEan13CheckDigit(barcode: string): boolean {
+  return computeEan13CheckDigit(barcode.slice(0, 12)) === Number(barcode[12]);
+}
+
+/**
+ * The reverse of `parseGreekNationalMedicineBarcode`: reconstructs the full
+ * 13-digit barcode from a 9-digit EOF code (offline-index generation,
+ * spec §12's "Device Offline Index" record shape includes `barcode`
+ * alongside `eofCode` — precomputed server-side rather than making every
+ * device redo check-digit arithmetic for display purposes). Returns `null`
+ * if `eofCode` isn't exactly 9 digits — never pads, truncates, or guesses.
+ */
+export function computeGreekNationalBarcode(eofCode: string): string | null {
+  if (!/^\d{9}$/.test(eofCode)) return null;
+  const first12 = GREEK_PHARMA_PREFIX + eofCode;
+  const checkDigit = computeEan13CheckDigit(first12);
+  return first12 + String(checkDigit);
 }
 
 /**

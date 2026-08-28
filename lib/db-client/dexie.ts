@@ -21,6 +21,7 @@ import type { PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/ent
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { UnresolvedScanRecord } from "@/lib/domain/repositories";
+import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
 import { notifyOutboxWrite } from "@/lib/sync/client/outbox-signal";
 
 export interface LocalMedicationSchedule {
@@ -83,6 +84,28 @@ export interface LocalCatalogProductCache extends CatalogProduct {
 /** Dexie's on-disk shape for `UnresolvedScanRecord` (`lib/domain/repositories.ts`) — no extra storage metadata needed, unlike `LocalCatalogProductCache`, since every field here is already client-local by definition. */
 export type LocalUnresolvedScan = UnresolvedScanRecord;
 
+/**
+ * The full compact offline index (spec §12/§17) — distinct from, and
+ * eventually superseding for lookup purposes, `catalogProductCache` above
+ * (which only ever held products this specific device had actually
+ * looked up online — the "seen-products-only cache" spec §22 calls out
+ * for replacement). This table holds the WHOLE synced authoritative
+ * catalog, so a never-before-scanned-on-this-device product still
+ * resolves offline. Always written as a complete replacement in one
+ * transaction (`lib/db-client/offline-index-repository.ts`'s
+ * `replaceAll`), never incrementally — see that file for why.
+ */
+export type LocalOfflineIndexEntry = OfflineIndexEntry;
+
+/** Single-row table (`id` always `"current"`) tracking which offline-index version is currently active locally — compared against the server's manifest to decide whether a re-sync is needed (spec §16). */
+export interface OfflineIndexMetaRecord {
+  id: "current";
+  version: string;
+  recordCount: number;
+  generatedAt: string;
+  syncedAt: string;
+}
+
 export class MedTrackingDexie extends Dexie {
   outbox!: EntityTable<OutboxEntry, "clientMutationId">;
   userPreferences!: EntityTable<UserPreferencesRecord, "accountId">;
@@ -95,6 +118,8 @@ export class MedTrackingDexie extends Dexie {
   recentlyUsedEvent!: EntityTable<LocalRecentlyUsedEvent, "id">;
   catalogProductCache!: EntityTable<LocalCatalogProductCache, "id">;
   unresolvedScan!: EntityTable<LocalUnresolvedScan, "id">;
+  offlineIndexEntry!: EntityTable<LocalOfflineIndexEntry, "id">;
+  offlineIndexMeta!: EntityTable<OfflineIndexMetaRecord, "id">;
 
   constructor(name = "medtracking") {
     super(name);
@@ -124,6 +149,30 @@ export class MedTrackingDexie extends Dexie {
     // unchanged automatically.
     this.version(2).stores({
       catalogProductCache: "id, gtin, eofCode, name, cachedAt",
+    });
+
+    // v3: the full compact offline index (spec §12/§17) — new tables, no
+    // change to any v1/v2 table, so no migration concern for existing
+    // installs beyond Dexie's own additive-version handling.
+    this.version(3).stores({
+      offlineIndexEntry: "id, eofCode, gtin, name",
+      offlineIndexMeta: "id",
+    });
+
+    // v4: `*gtins` is a Dexie multiEntry index (the leading `*`) — it
+    // indexes every element of the `gtins` array individually, so
+    // `.where("gtins").equals(x)` finds the one product whose array
+    // CONTAINS `x`, in O(1), with no join and no duplicating product
+    // metadata per identifier (GTIN-resolution task spec §5/§12: "one
+    // package may have... possibly additional valid GTINs" without a
+    // separate identifiers table on the client side — the array-plus-
+    // multiEntry-index approach achieves the same "each identifier maps
+    // back to one product record" property spec §12 asks for, just without
+    // a second table, which the server side genuinely needs (for
+    // provenance/conflict tracking, `medication_identifier`) but the
+    // device's read-only compact index does not).
+    this.version(4).stores({
+      offlineIndexEntry: "id, eofCode, gtin, *gtins, name",
     });
 
     // Single choke point for "a new outbox entry was durably written" —

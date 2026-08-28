@@ -49,6 +49,40 @@ describe("parseReimbursedNewDrugsRows — real header/row shape from the live 20
     expect(() => parseReimbursedNewDrugsRows([wrongHeader, MYNZEPLI_ROW], "snapshot-reimbursed-1")).toThrow(/required column\(s\) not found/i);
   });
 
+  it("real December 2025 comprehensive-baseline header variant: mixed-case 'Barcode', 'Προϊόν' instead of 'Περιγραφή Προϊόντος', 'Δραστική ουσία', and the MAH column's full unabbreviated name", () => {
+    const baselineHeader = ["Κωδικός", "Barcode", "Προϊόν", "ATC", "Μη Αποζημιούμενο", "Τιμή Παραγωγού", "Χονδρική Τιμή", "Λιανική Τιμή", "Δραστική ουσία", "Κάτοχος Άδειας Κυκλοφορίας", "ΦΠΑ"];
+    const doralinRow = [
+      "210040201",
+      "2802100402016",
+      "DORALIN F.C.TAB 40MG/TAB ΒΤx30 (BLIST 3x10)",
+      "A03AB06",
+      " ",
+      "5.66 ",
+      "5.94 ",
+      "8.19 ",
+      "OTILONIUM",
+      "A.MENARINI INDUSTRIE FARMACEUTICHE RIUNITE SRL, ITALY",
+      "6%",
+    ];
+
+    const { records } = parseReimbursedNewDrugsRows([baselineHeader, doralinRow], "snapshot-baseline");
+
+    expect(records).toEqual([
+      {
+        eofCode: "210040201",
+        barcode: "2802100402016",
+        rawProductDescription: "DORALIN F.C.TAB 40MG/TAB ΒΤx30 (BLIST 3x10)",
+        atcCode: "A03AB06",
+        retailPrice: "8.19",
+        activeIngredient: "OTILONIUM",
+        marketingAuthorisationHolder: "A.MENARINI INDUSTRIE FARMACEUTICHE RIUNITE SRL, ITALY",
+        sourceSnapshotId: "snapshot-baseline",
+        sourceRowNumber: 1,
+      },
+    ]);
+    expect(validateImportRecord(records[0])).toEqual({ status: "ok" });
+  });
+
   it("skips a row with a blank product description rather than fabricating one", () => {
     const blankNameRow = ["342010101", "2803420101016", "", "S01LA05", "", "240.81", "244.42", "290.18", "AFLIBERCEPT", "ADVANZ PHARMA LIMITED, IRELAND", "6%"];
     const { records, skippedRowNumbers } = parseReimbursedNewDrugsRows([REAL_HEADER, blankNameRow], "snapshot-reimbursed-1");

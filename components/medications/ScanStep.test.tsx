@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { ScanStep } from "@/components/medications/ScanStep";
 import { MobilePlatformUnavailableError, type MobilePlatform, type ScanResult } from "@/lib/platform/mobile-platform";
-import type { CatalogCacheRepository, UnresolvedScanRepository } from "@/lib/domain/repositories";
+import type { CatalogCacheRepository, OfflineIndexRepository, UnresolvedScanRepository } from "@/lib/domain/repositories";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import { SEED_PLACEHOLDER_SOURCE } from "@/lib/domain/catalog";
 import { __setNetworkMonitorForTests } from "@/lib/sync/client/use-network-status";
@@ -38,6 +38,17 @@ function fakeCache(overrides: Partial<CatalogCacheRepository> = {}): CatalogCach
     getByGtin: vi.fn().mockResolvedValue(null),
     getByEofCode: vi.fn().mockResolvedValue(null),
     cacheAll: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+}
+
+function fakeOfflineIndex(overrides: Partial<OfflineIndexRepository> = {}): OfflineIndexRepository {
+  return {
+    getManifest: vi.fn().mockResolvedValue(null),
+    getByEofCode: vi.fn().mockResolvedValue(null),
+    getByGtin: vi.fn().mockResolvedValue(null),
+    search: vi.fn().mockResolvedValue([]),
+    replaceAll: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -131,16 +142,22 @@ describe("ScanStep — the four native bridge response shapes", () => {
       <ScanStep
         profileId="profile-1"
         platform={platform}
-        cacheRepository={cache}
+        cacheRepository={cache} offlineIndex={fakeOfflineIndex()}
         onConfirmCandidate={onConfirmCandidate}
         onFallbackToManual={vi.fn()}
         onCancel={vi.fn()}
       />,
     );
 
-    expect(await screen.findByText(product.name)).toBeTruthy();
-    expect(screen.getByText("LOT9")).toBeTruthy();
-    expect(screen.getByText("2026-12-31")).toBeTruthy();
+    // Scoped to the CandidateConfirmation heading/dev-diagnostics-panel
+    // both legitimately show this data (spec §8's diagnostics panel
+    // intentionally duplicates batch/expiry/product-name for real-device
+    // debugging) — `getByRole("heading", ...)` and `getAllByText` (rather
+    // than the single-match `getByText`) target the real UI without
+    // assuming there's only one matching element on the page.
+    expect(await screen.findByRole("heading", { name: product.name })).toBeTruthy();
+    expect(screen.getAllByText("LOT9").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2026-12-31").length).toBeGreaterThan(0);
 
     screen.getByRole("button", { name: /επιβεβαίωση/i }).click();
     expect(onConfirmCandidate).toHaveBeenCalledTimes(1);
@@ -164,14 +181,14 @@ describe("ScanStep — the four native bridge response shapes", () => {
       <ScanStep
         profileId="profile-1"
         platform={platform}
-        cacheRepository={cache}
+        cacheRepository={cache} offlineIndex={fakeOfflineIndex()}
         onConfirmCandidate={onConfirmCandidate}
         onFallbackToManual={vi.fn()}
         onCancel={vi.fn()}
       />,
     );
 
-    expect(await screen.findByText(product.name)).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: product.name })).toBeTruthy();
     // Resolved via the EOF-code cache lookup, never the GTIN one — a Greek
     // national barcode isn't a globally-resolvable GTIN (architecture doc §2.1).
     expect(getByEofCode).toHaveBeenCalledWith("023280202");
@@ -184,17 +201,43 @@ describe("ScanStep — the four native bridge response shapes", () => {
 });
 
 describe("ScanStep — catalog lookup outcomes", () => {
-  it("cache miss + online + server not-found: shows the 'couldn't identify automatically' screen", async () => {
+  it("cache miss + online + server VALID_IDENTIFIER_UNRESOLVED: shows the honest 'recognized, but no data yet' message (GTIN-resolution task spec §11) — not the generic 'couldn't identify' one, since a real GTIN WAS recognized", async () => {
     __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
     const platform = fakePlatform({
       scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "5201234567890", format: "EAN_13" }),
     });
     const cache = fakeCache();
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ product: null, gtin: "05201234567890" }) }) as unknown as typeof fetch;
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ state: "VALID_IDENTIFIER_UNRESOLVED" }) }) as unknown as typeof fetch;
 
-    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} offlineIndex={fakeOfflineIndex()} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
 
-    expect(await screen.findByText(/δεν μπορέσαμε να αναγνωρίσουμε αυτόματα/i)).toBeTruthy();
+    expect(await screen.findByText(/αναγνωρίσαμε τον κωδικό του φαρμάκου/i)).toBeTruthy();
+    expect(screen.queryByText(/δεν μπορέσαμε να αναγνωρίσουμε αυτόματα/i)).toBeNull();
+  });
+
+  it("cache miss + online + server CONFLICT: shows the honest 'multiple products claim this code' message — never silently picks one (GTIN-resolution task spec §19)", async () => {
+    __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
+    const platform = fakePlatform({
+      scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "5201234567890", format: "EAN_13" }),
+    });
+    const cache = fakeCache();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ state: "CONFLICT", catalogProductIds: ["product-a", "product-b"] }) }) as unknown as typeof fetch;
+    const onConfirmCandidate = vi.fn();
+
+    render(
+      <ScanStep
+        profileId="profile-1"
+        platform={platform}
+        cacheRepository={cache}
+        offlineIndex={fakeOfflineIndex()}
+        onConfirmCandidate={onConfirmCandidate}
+        onFallbackToManual={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText(/περισσότερα από ένα προϊόντα/i)).toBeTruthy();
+    expect(onConfirmCandidate).not.toHaveBeenCalled();
   });
 
   it("offline + cache miss: saves the unresolved scan, tells the user, and still allows continuing manually immediately", async () => {
@@ -210,7 +253,7 @@ describe("ScanStep — catalog lookup outcomes", () => {
       <ScanStep
         profileId="profile-1"
         platform={platform}
-        cacheRepository={cache}
+        cacheRepository={cache} offlineIndex={fakeOfflineIndex()}
         unresolvedScanRepository={unresolvedScanRepository}
         onConfirmCandidate={vi.fn()}
         onFallbackToManual={onFallbackToManual}
@@ -233,7 +276,7 @@ describe("ScanStep — catalog lookup outcomes", () => {
     });
     const cache = fakeCache();
 
-    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} offlineIndex={fakeOfflineIndex()} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
 
     expect(await screen.findByText(/δεν μπορέσαμε να αναγνωρίσουμε αυτόματα/i)).toBeTruthy();
     expect(cache.getByGtin).not.toHaveBeenCalled();
@@ -247,11 +290,11 @@ describe("ScanStep — 'not found' official-source search links", () => {
       scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "5201234567890", format: "EAN_13" }),
     });
     const cache = fakeCache();
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ product: null, gtin: "05201234567890" }) }) as unknown as typeof fetch;
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ state: "VALID_IDENTIFIER_UNRESOLVED" }) }) as unknown as typeof fetch;
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
 
-    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} offlineIndex={fakeOfflineIndex()} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
 
     const eofLink = await screen.findByRole("link", { name: /ΕΟΦ/i });
     expect(eofLink.getAttribute("href")).toBe("https://services.eof.gr/human-search/home.xhtml");
@@ -262,7 +305,11 @@ describe("ScanStep — 'not found' official-source search links", () => {
     expect(eofLink.getAttribute("href")).not.toContain("05201234567890");
     expect(emaLink.getAttribute("href")).not.toContain("05201234567890");
 
-    expect(screen.getByText("05201234567890")).toBeTruthy();
+    // Scoped via the <code> element specifically — the dev-only
+    // diagnostics panel (spec §8) also legitimately displays this same
+    // GTIN as plain text, so a page-wide `getByText` is now ambiguous.
+    const codeElements = document.querySelectorAll("code");
+    expect([...codeElements].some((el) => el.textContent === "05201234567890")).toBe(true);
     screen.getByRole("button", { name: /Αντιγραφή/i }).click();
     expect(writeText).toHaveBeenCalledWith("05201234567890");
   });
@@ -275,7 +322,7 @@ describe("ScanStep — 'not found' official-source search links", () => {
     const cache = fakeCache();
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ product: null, gtin: null, eofCode: "023280202" }) }) as unknown as typeof fetch;
 
-    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} offlineIndex={fakeOfflineIndex()} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
 
     expect(await screen.findByText(/Αναγνωρίσαμε τον κωδικό του φαρμάκου/i)).toBeTruthy();
     // The barcode was understood, not an unrecognized-scheme case — this is
@@ -297,7 +344,7 @@ describe("ScanStep — 'not found' official-source search links", () => {
       <ScanStep
         profileId="profile-1"
         platform={platform}
-        cacheRepository={cache}
+        cacheRepository={cache} offlineIndex={fakeOfflineIndex()}
         unresolvedScanRepository={unresolvedScanRepository}
         onConfirmCandidate={vi.fn()}
         onFallbackToManual={vi.fn()}
@@ -309,6 +356,25 @@ describe("ScanStep — 'not found' official-source search links", () => {
     expect(screen.queryByRole("link", { name: /ΕΟΦ/i })).toBeNull();
   });
 
+  it("QR_CODE format: shows the honest 'that's a QR code, not a product barcode' message, never the generic couldn't-identify one, never looked up as a product", async () => {
+    __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
+    const platform = fakePlatform({
+      scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "https://example.com/leaflet", format: "QR_CODE" }),
+    });
+    const cache = fakeCache();
+    const fetchImpl = vi.fn();
+    global.fetch = fetchImpl as unknown as typeof fetch;
+
+    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} offlineIndex={fakeOfflineIndex()} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+
+    expect(await screen.findByText(/κωδικός QR, όχι barcode προϊόντος/i)).toBeTruthy();
+    expect(screen.queryByText(/δεν μπορέσαμε να αναγνωρίσουμε αυτόματα/i)).toBeNull();
+    // Never even attempts a lookup — a QR isn't a candidate resolution path at all.
+    expect(cache.getByGtin).not.toHaveBeenCalled();
+    expect(cache.getByEofCode).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("empty raw value (degenerate edge case): no official-source links shown, nothing to search with", async () => {
     __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
     const platform = fakePlatform({
@@ -316,7 +382,7 @@ describe("ScanStep — 'not found' official-source search links", () => {
     });
     const cache = fakeCache();
 
-    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} offlineIndex={fakeOfflineIndex()} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
 
     expect(await screen.findByText(/δεν μπορέσαμε να αναγνωρίσουμε αυτόματα/i)).toBeTruthy();
     expect(screen.queryByRole("link", { name: /ΕΟΦ/i })).toBeNull();
@@ -329,7 +395,7 @@ describe("ScanStep — 'not found' official-source search links", () => {
     });
     const cache = fakeCache();
 
-    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} offlineIndex={fakeOfflineIndex()} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
 
     expect(await screen.findByRole("link", { name: /ΕΟΦ/i })).toBeTruthy();
     expect(screen.getByText("not-a-gtin")).toBeTruthy();

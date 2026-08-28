@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGreekNationalMedicineBarcode } from "@/lib/domain/greek-national-barcode";
+import { computeGreekNationalBarcode, parseGreekNationalMedicineBarcode } from "@/lib/domain/greek-national-barcode";
 
 describe("parseGreekNationalMedicineBarcode", () => {
   it("decodes a real, sourced Greek pharmaceutical barcode (DEPON effervescent 500mg, erx.gr SPC listing) into its EOF code", () => {
@@ -46,5 +46,32 @@ describe("parseGreekNationalMedicineBarcode", () => {
 
   it("rejects an empty string", () => {
     expect(parseGreekNationalMedicineBarcode("")).toBeNull();
+  });
+});
+
+describe("computeGreekNationalBarcode — the reverse of parseGreekNationalMedicineBarcode (offline-index generation)", () => {
+  it("reconstructs the real Depon barcode from its EOF code", () => {
+    expect(computeGreekNationalBarcode("023280202")).toBe("2800232802025");
+  });
+
+  it("reconstructs the real FLAGYL barcode from its EOF code (the spec's own known-good regression mapping)", () => {
+    expect(computeGreekNationalBarcode("076130401")).toBe("2800761304014");
+  });
+
+  it("round-trips: parse(compute(eofCode)).eofCode === eofCode, for any well-formed 9-digit code", () => {
+    const eofCode = "156750101";
+    const barcode = computeGreekNationalBarcode(eofCode);
+    expect(barcode).not.toBeNull();
+    expect(parseGreekNationalMedicineBarcode(barcode!)?.eofCode).toBe(eofCode);
+  });
+
+  it("preserves a leading zero in the input EOF code", () => {
+    expect(computeGreekNationalBarcode("023280101")).toBe("2800232801011");
+  });
+
+  it("rejects an EOF code that isn't exactly 9 digits, never pads or truncates", () => {
+    expect(computeGreekNationalBarcode("2328020")).toBeNull(); // 7 digits
+    expect(computeGreekNationalBarcode("0232802025")).toBeNull(); // 10 digits
+    expect(computeGreekNationalBarcode("02328020X")).toBeNull(); // non-numeric
   });
 });

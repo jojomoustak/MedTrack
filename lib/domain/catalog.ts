@@ -39,6 +39,33 @@ export interface CatalogSearchOptions {
   offset?: number;
 }
 
+/** Mirrors `medication_identifier.identifier_type`'s CHECK constraint exactly (GTIN-resolution task spec §1). */
+export type CatalogIdentifierType = "EOF_CODE" | "NHRN" | "EAN13" | "GTIN";
+
+/**
+ * The three, and only three, outcomes an identifier lookup can produce
+ * (spec §11/§19) — deliberately not a bare `CatalogProduct | null`, which
+ * cannot distinguish "no mapping exists yet" from "this identifier is
+ * genuinely ambiguous, two different products claim it." Never resolved
+ * to a fourth, "best guess" outcome under any circumstance:
+ *
+ * - `EXACT`: exactly one product claims this identifier — safe to resolve to.
+ * - `CONFLICT`: two or more DIFFERENT products claim the same identifier
+ *   value (from possibly-disagreeing sources). Never silently picked
+ *   between — the caller must show this as unresolved/ambiguous, same as
+ *   the broader multi-provider `CONFLICT` state in
+ *   medication-resolution-architecture.md §3, not auto-resolved here either.
+ * - `VALID_IDENTIFIER_UNRESOLVED`: the identifier itself is well-formed
+ *   (already validated by the caller — e.g. a real GS1 GTIN successfully
+ *   parsed from a DataMatrix scan), but no authoritative mapping to any
+ *   catalog product exists yet (spec §7/§11/§14) — distinct from an
+ *   invalid/malformed scan, which never reaches this lookup at all.
+ */
+export type IdentifierResolution =
+  | { state: "EXACT"; product: CatalogProduct }
+  | { state: "CONFLICT"; catalogProductIds: readonly string[] }
+  | { state: "VALID_IDENTIFIER_UNRESOLVED" };
+
 /**
  * Phase 1 §8's provider abstraction — no implementation ships until a
  * real source is classified `VERIFIED AVAILABLE`; this MVP implementation
@@ -60,4 +87,17 @@ export interface MedicationCatalogProvider {
    * never coerced through a number).
    */
   lookupByEofCode(eofCode: string): Promise<CatalogProduct | null>;
+  /**
+   * Multi-identifier lookup against `medication_identifier` (GTIN-
+   * resolution task spec §1/§3/§19) — the real GS1 DataMatrix resolution
+   * path. Distinct from `lookupByGtin` above: that method queries the
+   * single, always-null-for-real-data `medication_catalog_product.gtin`
+   * column (kept for backward compatibility, never removed); this one
+   * queries the new multi-row identifier table, so a product with several
+   * valid GTINs (spec §5) or a genuine cross-source conflict (spec §19)
+   * resolves correctly instead of silently picking one row. `value` must
+   * be passed exactly as decoded/normalized (leading zeros preserved) —
+   * never re-derived or fuzzy-matched (spec §11).
+   */
+  lookupByIdentifier(type: CatalogIdentifierType, value: string): Promise<IdentifierResolution>;
 }

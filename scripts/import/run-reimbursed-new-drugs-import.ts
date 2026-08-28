@@ -19,12 +19,11 @@ import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { Client } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import * as XLSX from "xlsx";
 import * as schema from "@/lib/db/schema";
-import { EOF_DEV_IMPORT_SOURCE } from "@/lib/domain/catalog";
-import { validateImportRecord } from "@/lib/domain/medication-import";
 import { parseReimbursedNewDrugsRows } from "@/scripts/import/reimbursed-new-drugs-importer";
+import { upsertMedicationImportRecords } from "@/scripts/import/upsert-catalog-records";
 
 try {
   process.loadEnvFile(".env.local");
@@ -79,56 +78,17 @@ async function main() {
       console.warn(`Skipped ${skippedRowNumbers.length} row(s) with missing required fields: rows ${skippedRowNumbers.join(", ")}`);
     }
 
-    let inserted = 0;
-    let updated = 0;
-    let rejectedForMismatch = 0;
-
-    for (const record of records) {
-      const validation = validateImportRecord(record);
-      if (validation.status !== "ok") {
-        console.warn(`Row ${record.sourceRowNumber} (EOF ${record.eofCode}): ${validation.status}`, validation);
-        rejectedForMismatch++;
-        continue;
-      }
-
-      const existing = await db
-        .select({ id: schema.medicationCatalogProduct.id })
-        .from(schema.medicationCatalogProduct)
-        .where(eq(schema.medicationCatalogProduct.eofCode, record.eofCode))
-        .limit(1);
-
-      const values = {
-        eofCode: record.eofCode,
-        gtin: null,
-        name: record.rawProductDescription,
-        manufacturer: record.marketingAuthorisationHolder ?? null,
-        activeIngredient: record.activeIngredient ?? null,
-        strengthValue: null,
-        strengthUnit: null,
-        form: null,
-        packSizeValue: null,
-        packSizeUnit: null,
-        regulatorySource: EOF_DEV_IMPORT_SOURCE,
-        sourceVersion: IMPORT_VERSION,
-        sourceLastUpdated: new Date().toISOString(),
-        lifecycleState: "active" as const,
-      };
-
-      if (existing.length > 0) {
-        await db.update(schema.medicationCatalogProduct).set(values).where(eq(schema.medicationCatalogProduct.id, existing[0].id));
-        updated++;
-      } else {
-        await db.insert(schema.medicationCatalogProduct).values(values);
-        inserted++;
-      }
-    }
+    const { inserted, updated, rejectedForMismatch, duplicateEofCodesWithinBatch } = await upsertMedicationImportRecords(db, records, IMPORT_VERSION);
 
     await db
       .update(schema.medicationCatalogSourceSnapshot)
       .set({ status: "imported", recordCount: records.length })
       .where(sql`${schema.medicationCatalogSourceSnapshot.id} = ${snapshot.id}`);
 
-    console.log(`Reimbursed new-drugs import complete: ${inserted} inserted, ${updated} updated, ${rejectedForMismatch} rejected (barcode/EOF-code mismatch), ${skippedRowNumbers.length} skipped (missing fields).`);
+    console.log(
+      `Reimbursed import complete: ${inserted} inserted, ${updated} updated, ${rejectedForMismatch} rejected (barcode/EOF-code mismatch), ` +
+        `${skippedRowNumbers.length} skipped (missing fields), ${duplicateEofCodesWithinBatch} duplicate EOF codes within this file.`,
+    );
   } finally {
     await client.end();
   }

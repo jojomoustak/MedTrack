@@ -71,6 +71,13 @@
       "when": 1787523318498,
       "tag": "0009_greek_national_barcode_resolution",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787573806730,
+      "tag": "0010_medication_identifier",
+      "breakpoints": true
     }
   ]
 }

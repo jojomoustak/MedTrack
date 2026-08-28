@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AddMedicationFlow } from "@/components/medications/AddMedicationFlow";
-import type { CatalogCacheRepository, CreateUserMedicationInput, UserMedicationRepository } from "@/lib/domain/repositories";
+import type { CatalogCacheRepository, CreateUserMedicationInput, OfflineIndexRepository, UserMedicationRepository } from "@/lib/domain/repositories";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MobilePlatform } from "@/lib/platform/mobile-platform";
 import type { CatalogProduct } from "@/lib/domain/catalog";
@@ -137,8 +137,15 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
       getByEofCode: vi.fn().mockResolvedValue(null),
       cacheAll: vi.fn().mockResolvedValue(undefined),
     };
+    const offlineIndex: OfflineIndexRepository = {
+      getManifest: vi.fn().mockResolvedValue(null),
+      getByEofCode: vi.fn().mockResolvedValue(null),
+      getByGtin: vi.fn().mockResolvedValue(null),
+      search: vi.fn().mockResolvedValue([]),
+      replaceAll: vi.fn().mockResolvedValue(undefined),
+    };
 
-    render(<AddMedicationFlow profileId="profile-1" repository={repository} platform={platform} cacheRepository={cacheRepository} />);
+    render(<AddMedicationFlow profileId="profile-1" repository={repository} platform={platform} cacheRepository={cacheRepository} offlineIndex={offlineIndex} />);
 
     fireEvent.click(screen.getByRole("button", { name: /σάρωση/i }));
 
@@ -181,8 +188,15 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
       getByEofCode: vi.fn().mockResolvedValue(null),
       cacheAll: vi.fn().mockResolvedValue(undefined),
     };
+    const offlineIndex: OfflineIndexRepository = {
+      getManifest: vi.fn().mockResolvedValue(null),
+      getByEofCode: vi.fn().mockResolvedValue(null),
+      getByGtin: vi.fn().mockResolvedValue(null),
+      search: vi.fn().mockResolvedValue([]),
+      replaceAll: vi.fn().mockResolvedValue(undefined),
+    };
 
-    render(<AddMedicationFlow profileId="profile-1" platform={platform} cacheRepository={cacheRepository} />);
+    render(<AddMedicationFlow profileId="profile-1" platform={platform} cacheRepository={cacheRepository} offlineIndex={offlineIndex} />);
 
     fireEvent.click(screen.getByRole("button", { name: /σάρωση/i }));
 

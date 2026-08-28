@@ -11,7 +11,7 @@ import { newId } from "@/lib/domain/ids";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { ParsedBarcode } from "@/lib/domain/gs1";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
-import type { CatalogCacheRepository, UnresolvedScanRepository, UserMedicationRepository } from "@/lib/domain/repositories";
+import type { CatalogCacheRepository, OfflineIndexRepository, UnresolvedScanRepository, UserMedicationRepository } from "@/lib/domain/repositories";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import type { MobilePlatform } from "@/lib/platform/mobile-platform";
@@ -26,6 +26,7 @@ export interface AddMedicationFlowProps {
   /** Test/DI seam for the scan path — defaults to `MedianMobilePlatform`. */
   platform?: MobilePlatform;
   cacheRepository?: CatalogCacheRepository;
+  offlineIndex?: OfflineIndexRepository;
   unresolvedScanRepository?: UnresolvedScanRepository;
 }
 
@@ -55,6 +56,7 @@ export function AddMedicationFlow({
   repository,
   platform,
   cacheRepository,
+  offlineIndex,
   unresolvedScanRepository,
 }: AddMedicationFlowProps) {
   const [step, setStep] = useState<FlowStep>("entry");
@@ -142,6 +144,7 @@ export function AddMedicationFlow({
           profileId={profileId}
           platform={platform}
           cacheRepository={cacheRepository}
+          offlineIndex={offlineIndex}
           unresolvedScanRepository={unresolvedScanRepository}
           onConfirmCandidate={handleCandidateConfirmed}
           onFallbackToManual={handleScanFallbackToManual}

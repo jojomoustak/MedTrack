@@ -11,7 +11,7 @@
 import { sql } from "drizzle-orm";
 import { getDb, type Db, type TestableDb } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
-import type { CatalogProduct, CatalogSearchOptions, MedicationCatalogProvider } from "@/lib/domain/catalog";
+import type { CatalogIdentifierType, CatalogProduct, CatalogSearchOptions, IdentifierResolution, MedicationCatalogProvider } from "@/lib/domain/catalog";
 
 export class PostgresCatalogProvider implements MedicationCatalogProvider {
   constructor(private readonly db: Db | TestableDb = getDb()) {}
@@ -61,5 +61,29 @@ export class PostgresCatalogProvider implements MedicationCatalogProvider {
       .where(sql`${schema.medicationCatalogProduct.eofCode} = ${eofCode}`)
       .limit(1);
     return row ?? null;
+  }
+
+  async lookupByIdentifier(type: CatalogIdentifierType, value: string): Promise<IdentifierResolution> {
+    const { medicationIdentifier: mi } = schema;
+    const matches = await this.db
+      .selectDistinct({ catalogProductId: mi.catalogProductId })
+      .from(mi)
+      .where(sql`${mi.identifierType} = ${type} AND ${mi.identifierValue} = ${value}`);
+
+    if (matches.length === 0) return { state: "VALID_IDENTIFIER_UNRESOLVED" };
+
+    if (matches.length > 1) {
+      // Two or more DIFFERENT products both claim this identifier — never
+      // silently pick one (spec §19). Distinct from multiple *rows* for
+      // the same product (e.g. the same product legitimately has several
+      // GTINs, spec §5) — `selectDistinct` on `catalogProductId` already
+      // collapses that case down to one match, so only a genuine
+      // cross-product conflict reaches here.
+      return { state: "CONFLICT", catalogProductIds: matches.map((m) => m.catalogProductId) };
+    }
+
+    const [product] = await this.db.select().from(schema.medicationCatalogProduct).where(sql`${schema.medicationCatalogProduct.id} = ${matches[0].catalogProductId}`).limit(1);
+    if (!product) return { state: "VALID_IDENTIFIER_UNRESOLVED" }; // dangling identifier row (should not happen; FK-enforced) — degrade safely rather than throw
+    return { state: "EXACT", product };
   }
 }
