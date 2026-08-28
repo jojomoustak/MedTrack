@@ -74,12 +74,26 @@ const serwist = new Serwist({
       handler: new NetworkFirst({ cacheName: "next-static-assets" }),
     },
     // Page navigations — the actual "app shell" this file exists for.
-    // `request.mode === "navigate"` is what a real top-level page load
-    // sets; this deliberately does NOT match every same-origin GET (e.g.
-    // RSC data fetches), keeping this cache to exactly "HTML documents a
-    // user has opened," which is also exactly what a cold relaunch needs.
+    // Deliberately NOT gated on `request.mode === "navigate"` (a real
+    // bug, found 2026-08-28 by comparing against a sibling project's
+    // service worker): `SerwistProvider`'s `cacheOnNavigation` (on by
+    // default) proactively asks this worker to cache each route as the
+    // user moves around the app client-side, via a plain `postMessage`
+    // that `Serwist.handleCache` turns into `new Request(url)` — and a
+    // manually-constructed `Request` can never have `mode: "navigate"`
+    // (only a real, browser-initiated top-level navigation gets that).
+    // With the old `mode === "navigate"` condition, every one of those
+    // proactive per-route-visit caching attempts silently matched NO
+    // route at all and cached nothing — meaning normal in-app navigation
+    // (this is a Next.js App Router app; most navigation is a client-side
+    // route change, not a full page reload) never populated this cache,
+    // so a later cold offline relaunch had nothing to fall back to even
+    // after using the app extensively while online. `/_next/static/` and
+    // `/api/` are already claimed by the two more specific routes above
+    // (Serwist checks routes in registration order), so this broader,
+    // final same-origin-GET catch-all is safe.
     {
-      matcher: ({ request, url, sameOrigin }) => sameOrigin && request.mode === "navigate" && !url.pathname.startsWith("/api/"),
+      matcher: ({ url, sameOrigin }) => sameOrigin && !url.pathname.startsWith("/api/") && !url.pathname.startsWith("/serwist/"),
       handler: new NetworkFirst({
         cacheName: "app-shell",
         networkTimeoutSeconds: 4,
