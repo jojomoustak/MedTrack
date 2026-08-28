@@ -12,7 +12,7 @@ import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { ParsedBarcode } from "@/lib/domain/gs1";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import type { CatalogCacheRepository, OfflineIndexRepository, UnresolvedScanRepository, UserMedicationRepository } from "@/lib/domain/repositories";
-import type { UserMedicationRecord } from "@/lib/domain/user-medication";
+import type { MedicationForm, UserMedicationRecord } from "@/lib/domain/user-medication";
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import type { MobilePlatform } from "@/lib/platform/mobile-platform";
 
@@ -81,11 +81,29 @@ export function AddMedicationFlow({
     else if (choice === "manual") handleManualEntryDirect();
   }
 
+  /**
+   * A confirmed catalog/OCR match already carries real form/strength data
+   * (`CandidateConfirmation`'s whole point is showing exactly this before
+   * the user taps confirm) — `DetailsStep` afterward would only ever
+   * re-display the same values read-only-in-practice, for a single
+   * "Συνέχεια" tap that doesn't change anything. Skips straight to Review;
+   * `inventoryUnit` defaults to the catalog's own form, matching
+   * `DetailsStep`'s own prior default for a catalog-sourced product exactly
+   * (a manual override is only actually useful for manual entry, where
+   * nothing is known yet — that path still goes through `DetailsStep`
+   * below).
+   */
   function handleCandidateConfirmed(product: CatalogProduct, parsed?: ParsedBarcode) {
     setCatalogProduct(product);
     setManualName(null);
     setNotes(parsed ? buildScanNotes(parsed.expiry, parsed.batch) : null);
-    setStep("details");
+    setDetails({
+      form: (product.form as MedicationForm | null) ?? null,
+      strengthValue: product.strengthValue ?? "",
+      strengthUnit: product.strengthUnit ?? "",
+      inventoryUnit: (product.form as MedicationForm | null) ?? "tablet",
+    });
+    setStep("review");
   }
 
   /** Scan → "couldn't identify automatically" → "Continue manually," pre-filled with whatever GS1 fields were parsed (Phase 3 Journey 3). */

@@ -374,6 +374,7 @@ export function ScanStep({
             platform={platform}
             offlineIndex={offlineIndex}
             learnedMappings={learnedMappings}
+            cacheRepository={cacheRepository}
           />
         )
       }

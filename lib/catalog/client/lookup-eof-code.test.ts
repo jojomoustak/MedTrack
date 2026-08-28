@@ -71,7 +71,7 @@ function makeOfflineIndex(overrides: Partial<OfflineIndexRepository> = {}): Offl
 }
 
 describe("lookupEofCode — Path A's offline-index-first, then cache, then server if online (spec §17/§22)", () => {
-  it("returns an offline-index hit without ever touching the cache or fetch", async () => {
+  it("returns an offline-index hit without ever reading the cache or calling fetch", async () => {
     const entry = makeOfflineEntry();
     const offlineIndex = makeOfflineIndex({ getByEofCode: vi.fn().mockResolvedValue(entry) });
     const cache = makeCache();
@@ -82,6 +82,19 @@ describe("lookupEofCode — Path A's offline-index-first, then cache, then serve
     expect(outcome.status).toBe("found");
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(cache.getByEofCode).not.toHaveBeenCalled();
+  });
+
+  it("an offline-index hit is still written into catalogProductCache — a UserMedication created from it must resolve its display name later (real bug fixed 2026-08-28)", async () => {
+    const entry = makeOfflineEntry();
+    const offlineIndex = makeOfflineIndex({ getByEofCode: vi.fn().mockResolvedValue(entry) });
+    const cache = makeCache();
+
+    await lookupEofCode(entry.eofCode!, "online", { cache, offlineIndex, fetchImpl: vi.fn() });
+
+    expect(cache.cacheAll).toHaveBeenCalledTimes(1);
+    const [cached] = (cache.cacheAll as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(cached.id).toBe(entry.id);
+    expect(cached.name).toBe(entry.name);
   });
 
   it("offline, but the offline index has this product (synced index, never scanned on this device before) — this is spec §22's actual point", async () => {

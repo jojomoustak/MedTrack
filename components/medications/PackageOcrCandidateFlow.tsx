@@ -6,9 +6,10 @@ import type { ParsedBarcode } from "@/lib/domain/gs1";
 import { extractPackageOcrResult } from "@/lib/domain/ocr";
 import { rankPackageCandidates, type OcrConfidenceState, type PackageCandidateScore } from "@/lib/domain/package-candidate-matching";
 import { offlineIndexEntryToCatalogProduct, type OfflineIndexEntry } from "@/lib/domain/offline-index";
-import type { LearnedMappingRepository, OfflineIndexRepository } from "@/lib/domain/repositories";
+import type { CatalogCacheRepository, LearnedMappingRepository, OfflineIndexRepository } from "@/lib/domain/repositories";
 import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
 import { DexieLearnedMappingRepository } from "@/lib/db-client/learned-mapping-repository";
+import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
 import { confirmCatalogIdentifier } from "@/lib/catalog/client/api";
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import { MobilePlatformUnavailableError, type MobilePlatform } from "@/lib/platform/mobile-platform";
@@ -24,6 +25,7 @@ export interface PackageOcrCandidateFlowProps {
   platform?: MobilePlatform;
   offlineIndex?: OfflineIndexRepository;
   learnedMappings?: LearnedMappingRepository;
+  cacheRepository?: CatalogCacheRepository;
   fetchImpl?: typeof fetch;
 }
 
@@ -69,6 +71,7 @@ export function PackageOcrCandidateFlow({
   platform,
   offlineIndex,
   learnedMappings,
+  cacheRepository,
   fetchImpl,
 }: PackageOcrCandidateFlowProps) {
   const [state, setState] = useState<FlowState>({ phase: "idle" });
@@ -123,7 +126,20 @@ export function PackageOcrCandidateFlow({
 
   async function handleConfirm(entry: OfflineIndexEntry) {
     const mappingRepository = learnedMappings ?? new DexieLearnedMappingRepository();
+    const cache = cacheRepository ?? new DexieCatalogCacheRepository();
     const confirmedAt = new Date().toISOString();
+    const product = offlineIndexEntryToCatalogProduct(entry);
+
+    try {
+      // Same requirement as `lookup-gtin.ts`/`lookup-eof-code.ts`'s
+      // offline-index-hit branches: the medications list resolves a
+      // `UserMedication`'s display name solely via `catalogProductCache`,
+      // by id — skipping this means the medicine this screen just
+      // confirmed would show as a generic placeholder forever after.
+      await cache.cacheAll([product]);
+    } catch (err) {
+      logger.warn("package_ocr_flow.cache_product_failed", { message: (err as Error).message });
+    }
 
     try {
       const { overwroteDifferentProduct } = await mappingRepository.save({
@@ -149,7 +165,7 @@ export function PackageOcrCandidateFlow({
       .then(() => mappingRepository.markSynced(gtin, new Date().toISOString()))
       .catch((err: Error) => logger.warn("package_ocr_flow.server_confirm_failed", { message: err.message }));
 
-    onConfirmCandidate(offlineIndexEntryToCatalogProduct(entry), parsed);
+    onConfirmCandidate(product, parsed);
   }
 
   if (state.phase === "idle") {

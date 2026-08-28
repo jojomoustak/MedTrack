@@ -81,7 +81,7 @@ function makeLearnedMappings(overrides: Partial<LearnedMappingRepository> = {}):
 }
 
 describe("lookupGtin — offline-index-first, then cache, then server if online (spec §17/§22, Phase 1 §7)", () => {
-  it("returns an offline-index hit without ever touching the cache or fetch", async () => {
+  it("returns an offline-index hit without ever reading the cache or calling fetch", async () => {
     const entry = makeOfflineEntry();
     const offlineIndex = makeOfflineIndex({ getByGtin: vi.fn().mockResolvedValue(entry) });
     const cache = makeCache();
@@ -92,6 +92,19 @@ describe("lookupGtin — offline-index-first, then cache, then server if online 
     expect(outcome.status).toBe("found");
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(cache.getByGtin).not.toHaveBeenCalled();
+  });
+
+  it("an offline-index hit is still written into catalogProductCache — a UserMedication created from it must resolve its display name later (real bug fixed 2026-08-28)", async () => {
+    const entry = makeOfflineEntry({ name: "FLAGYL CAPS 500MG/CAP" });
+    const offlineIndex = makeOfflineIndex({ getByGtin: vi.fn().mockResolvedValue(entry) });
+    const cache = makeCache();
+
+    await lookupGtin(entry.gtin!, "online", { cache, offlineIndex, fetchImpl: vi.fn() });
+
+    expect(cache.cacheAll).toHaveBeenCalledTimes(1);
+    const [cached] = (cache.cacheAll as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(cached.id).toBe(entry.id);
+    expect(cached.name).toBe("FLAGYL CAPS 500MG/CAP");
   });
 
   it("offline-index miss, cache hit: returns the cache hit without ever calling fetch", async () => {

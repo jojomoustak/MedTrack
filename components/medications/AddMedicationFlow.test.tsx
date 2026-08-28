@@ -123,7 +123,7 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     expect(screen.getByRole("button", { name: /σάρωση/i })).toBeDisabled();
   });
 
-  it("scan -> candidate found -> confirm -> details -> review -> creates a UserMedication, with the scanned batch/expiry folded into notes", async () => {
+  it("scan -> candidate found -> confirm -> review (Details is skipped for a confirmed catalog match) -> creates a UserMedication, with the scanned batch/expiry folded into notes", async () => {
     const { repository, create } = makeFakeRepository();
     const product = makeProduct();
     const raw = `01${product.gtin}17${"261231"}10${"LOT9"}`;
@@ -154,16 +154,54 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /επιβεβαίωση/i }));
 
-    // Details step, pre-filled read-only from the catalog match — just continue.
-    fireEvent.click(await screen.findByRole("button", { name: /συνέχεια/i }));
-    // Review & finish.
-    fireEvent.click(screen.getByRole("button", { name: /ολοκλήρωση/i }));
+    // Details is skipped entirely for a confirmed catalog match — straight to Review & finish.
+    fireEvent.click(await screen.findByRole("button", { name: /ολοκλήρωση/i }));
 
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
     const input = create.mock.calls[0][0] as CreateUserMedicationInput;
     expect(input.catalogProductId).toBe(product.id);
+    expect(input.customForm).toBe(product.form);
+    expect(input.customStrengthValue).toBe(product.strengthValue);
+    expect(input.customStrengthUnit).toBe(product.strengthUnit);
+    expect(input.inventoryUnit).toBe(product.form);
     expect(input.notes).toContain("LOT9");
     expect(input.notes).toContain("2026-12-31");
+  });
+
+  it("scan -> candidate found -> confirm: Details step is never rendered at all for a catalog match", async () => {
+    const { repository } = makeFakeRepository();
+    const product = makeProduct();
+    const raw = `01${product.gtin}17${"261231"}10${"LOT9"}`;
+    const platform: MobilePlatform = {
+      isAvailable: () => true,
+      scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: raw, format: "GS1_DATA_MATRIX" }),
+      recognizePackageText: vi.fn(),
+    };
+    const cacheRepository: CatalogCacheRepository = {
+      get: vi.fn().mockResolvedValue(null),
+      getByGtin: vi.fn().mockResolvedValue(product),
+      getByEofCode: vi.fn().mockResolvedValue(null),
+      cacheAll: vi.fn().mockResolvedValue(undefined),
+    };
+    const offlineIndex: OfflineIndexRepository = {
+      getManifest: vi.fn().mockResolvedValue(null),
+      getById: vi.fn().mockResolvedValue(null),
+      getAll: vi.fn().mockResolvedValue([]),
+      getByEofCode: vi.fn().mockResolvedValue(null),
+      getByGtin: vi.fn().mockResolvedValue(null),
+      search: vi.fn().mockResolvedValue([]),
+      replaceAll: vi.fn().mockResolvedValue(undefined),
+    };
+
+    render(<AddMedicationFlow profileId="profile-1" repository={repository} platform={platform} cacheRepository={cacheRepository} offlineIndex={offlineIndex} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /σάρωση/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /επιβεβαίωση/i }));
+
+    // Straight to Review: no "Μορφή" fieldset (DetailsStep-only), the
+    // finish button is right there.
+    expect(await screen.findByRole("button", { name: /ολοκλήρωση/i })).toBeTruthy();
+    expect(screen.queryByRole("radiogroup", { name: /μορφή φαρμάκου/i })).toBeNull();
   });
 
   it("scan -> cancelled -> returns to the entry chooser (no error, no flow interruption)", async () => {

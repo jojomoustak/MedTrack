@@ -37,7 +37,14 @@ export async function lookupEofCode(
   const cache = deps.cache ?? new DexieCatalogCacheRepository();
 
   const indexed = await offlineIndex.getByEofCode(eofCode);
-  if (indexed) return { status: "found", product: offlineIndexEntryToCatalogProduct(indexed) };
+  if (indexed) {
+    const product = offlineIndexEntryToCatalogProduct(indexed);
+    // See `lookup-gtin.ts`'s identical fix for why this is required, not
+    // optional: the medications list resolves a `UserMedication`'s display
+    // name solely via `catalogProductCache`, by id.
+    await cache.cacheAll([product]);
+    return { status: "found", product };
+  }
 
   const cached = await cache.getByEofCode(eofCode);
   if (cached) return { status: "found", product: cached };

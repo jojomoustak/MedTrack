@@ -53,7 +53,21 @@ export async function lookupGtin(
   // identifier mapping" outranks everything else) — the offline index only
   // ever carries AUTHORITATIVE GTINs (`lib/catalog/server/offline-index.ts`).
   const indexed = await offlineIndex.getByGtin(gtin);
-  if (indexed) return { status: "found", product: offlineIndexEntryToCatalogProduct(indexed) };
+  if (indexed) {
+    const product = offlineIndexEntryToCatalogProduct(indexed);
+    // Also written to `catalogProductCache`, not just returned: once a
+    // `UserMedication` is created from this product, the medications list
+    // (`app/(app)/medications/page.tsx`'s `useDisplayNames`) looks its name
+    // up ONLY via this cache, by `catalogProductId` — a product that only
+    // ever existed in the offline index and was never cached here would
+    // resolve here just fine but then show as a generic "Φάρμακο από
+    // κατάλογο" placeholder on the list forever after. Found as a real bug
+    // (2026-08-28): the offline-index path was the one branch of this
+    // function that never cached its result, unlike the online-lookup
+    // branch below, which always has.
+    await cache.cacheAll([product]);
+    return { status: "found", product };
+  }
 
   const cached = await cache.getByGtin(gtin);
   if (cached) return { status: "found", product: cached };
