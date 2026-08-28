@@ -36,8 +36,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           discard whatever the user was doing — the existing
           SyncManager/useNetworkStatus reconnect handling already covers
           resuming sync without needing a hard reload.
+
+          `options={{ type: "classic" }}` overrides SerwistProvider's own
+          default of `type: "module"` — a real bug found via live device
+          debugging (2026-08-29): Android WebView (confirmed on a real
+          device) does not support module-type service workers at all,
+          registration fails during script evaluation regardless of
+          content. Must match app/serwist/[path]/route.ts's
+          `esbuildOptions: { format: "iife" }` — a classic-formatted
+          script registered as type:"module" (or the reverse) reproduces
+          the exact same failure.
         */}
-        <SerwistProvider swUrl="/serwist/sw.js" reloadOnOnline={false}>
+        <SerwistProvider swUrl="/serwist/sw.js" reloadOnOnline={false} options={{ type: "classic" }}>
           <SyncManagerBootstrap />
           {children}
         </SerwistProvider>

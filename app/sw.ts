@@ -36,6 +36,21 @@
  * repopulates the cache as routes are visited again — the same as a fresh
  * install. If data is cleared while OFFLINE, there is genuinely nothing to
  * serve (no cache, no network) — an unavoidable, inherent limit, not a bug.
+ *
+ * This SW file itself is content-agnostic about script format — the format
+ * decision (classic vs. ESM) lives in `app/serwist/[path]/route.ts`'s
+ * `esbuildOptions: { format: "iife" }` and must match
+ * `app/layout.tsx`'s `<SerwistProvider options={{ type: "classic" }}>`
+ * exactly. Found via live device debugging (2026-08-29, real Chrome
+ * DevTools Protocol session against the actual Android WebView, not
+ * guessed): this WebView does not support module-type service workers at
+ * all — `@serwist/turbopack`'s default (`format: "esm"` + registering with
+ * `type: "module"`) fails with "ServiceWorker script evaluation failed"
+ * regardless of this file's actual content, confirmed by bisecting with a
+ * byte-for-byte equivalent bundle built both ways. This was the real
+ * reason the entire offline-app-shell feature never worked on Android from
+ * the day it was added, despite every earlier fix in this file's own
+ * history being independently correct.
  */
 import { NetworkFirst, NetworkOnly, Serwist } from "serwist";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";

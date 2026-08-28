@@ -23,4 +23,21 @@ export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } =
   swSrc: "app/sw.ts",
   additionalPrecacheEntries: [{ url: "/offline.html", revision }],
   useNativeEsbuild: true,
+  // Real bug found and fixed via live device debugging (2026-08-29): this
+  // package's default esbuild output format is "esm", registered
+  // client-side with `type: "module"` (SerwistProvider's own default).
+  // Android WebView (confirmed on a real device, Chromium 151) does not
+  // support module-type service workers at all -- registration fails with
+  // "ServiceWorker script evaluation failed" regardless of the script's
+  // actual content, purely because of the type/format combination. Proven
+  // by bisection: a byte-for-byte equivalent bundle, same content, same
+  // minification, built as a classic script (esbuild format "iife")
+  // registers and evaluates successfully; the exact same source built as
+  // "esm" and registered with type:"module" reproduces the failure
+  // 1:1, independent of Serwist/manifest/runtimeCaching content. Overriding
+  // the format here; app/layout.tsx's <SerwistProvider> must register with
+  // type:"classic" to match -- the two have to agree, or the SAME failure
+  // returns (a classic-formatted script registered as type:"module", or
+  // vice versa, both fail to evaluate correctly).
+  esbuildOptions: { format: "iife" },
 });
