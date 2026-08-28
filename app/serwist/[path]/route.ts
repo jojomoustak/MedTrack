@@ -7,24 +7,36 @@
  * exact static params (file paths) it produces, so this route is served
  * statically like any other precomputed route.
  *
- * `additionalPrecacheEntries` is what makes `public/offline.html` (the
- * offline-fallback page `app/sw.ts` references) actually precached at
- * service-worker-install time — `Serwist`'s `fallbacks` option requires
- * its target URL to already be in the precache list, it does not fetch
- * and cache it on its own. `revision` is keyed to the deployed commit
- * (Vercel sets `VERCEL_GIT_COMMIT_SHA`) so a new deploy always invalidates
- * the cached copy, even though the file's own content rarely changes.
+ * No `additionalPrecacheEntries` here, deliberately: `createSerwistRoute`
+ * already auto-scans `public/` (including `offline.html`) and adds each
+ * file to the precache manifest itself, revisioned by the file's own
+ * content hash. An earlier version of this route ALSO added an explicit
+ * `additionalPrecacheEntries: [{ url: "/offline.html", revision: <git SHA> }]`
+ * entry, believing it was required for `app/sw.ts`'s `fallbacks` option to
+ * work — it is not, `Serwist`'s `fallbacks` only needs the URL to be
+ * precached by *some* entry, not a specific one. That redundant entry gave
+ * `/offline.html` two manifest entries with two different revisions (the
+ * auto-scanned content hash vs. the git SHA), which made every single
+ * service-worker install throw `add-to-cache-list-conflicting-entries` at
+ * script-evaluation time. Root-caused 2026-08-29 via live-device CDP
+ * debugging: `navigator.serviceWorker.register()` only ever surfaced a
+ * generic, content-free "ServiceWorker script evaluation failed" TypeError
+ * (Chromium deliberately hides the real error from the registering page);
+ * the actual exception was only visible by attaching CDP directly to the
+ * service worker's own execution target while it was paused at startup.
+ * This conflicting-precache-entries bug — not the module-vs-classic script
+ * format difference below — was the real reason the offline app shell
+ * never worked; the format fix was independently correct (this WebView
+ * genuinely does not support module-type service workers) but insufficient
+ * on its own, since this bug threw before the SW could ever finish
+ * evaluating either way.
  */
 import { createSerwistRoute } from "@serwist/turbopack";
 
-const revision = process.env.VERCEL_GIT_COMMIT_SHA ?? crypto.randomUUID();
-
 export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } = createSerwistRoute({
   swSrc: "app/sw.ts",
-  additionalPrecacheEntries: [{ url: "/offline.html", revision }],
   useNativeEsbuild: true,
-  // Real bug found and fixed via live device debugging (2026-08-29): this
-  // package's default esbuild output format is "esm", registered
+  // This package's default esbuild output format is "esm", registered
   // client-side with `type: "module"` (SerwistProvider's own default).
   // Android WebView (confirmed on a real device, Chromium 151) does not
   // support module-type service workers at all -- registration fails with
