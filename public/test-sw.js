@@ -3052,6 +3052,33 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
   };
 
   // scripts/tmp-sw-src.ts
-  var serwist = new Serwist({});
+  var serwist = new Serwist({
+    precacheEntries: [{ url: "/offline.html", revision: "test-rev-1" }],
+    skipWaiting: true,
+    clientsClaim: true,
+    navigationPreload: true,
+    runtimeCaching: [
+      {
+        matcher: ({ url }) => url.pathname.startsWith("/api/"),
+        handler: new NetworkOnly()
+      },
+      {
+        matcher: ({ url }) => url.pathname.startsWith("/_next/static/"),
+        handler: new NetworkFirst({ cacheName: "next-static-assets" })
+      },
+      {
+        matcher: ({ request, url, sameOrigin }) => sameOrigin && request.mode === "navigate" && !url.pathname.startsWith("/api/") && !url.pathname.startsWith("/serwist/"),
+        handler: new NetworkFirst({ cacheName: "app-shell", networkTimeoutSeconds: 4 })
+      }
+    ],
+    fallbacks: {
+      entries: [
+        {
+          url: "/offline.html",
+          matcher: ({ request }) => request.destination === "document"
+        }
+      ]
+    }
+  });
   serwist.addEventListeners();
 })();
