@@ -39,5 +39,5 @@ export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } =
   // type:"classic" to match -- the two have to agree, or the SAME failure
   // returns (a classic-formatted script registered as type:"module", or
   // vice versa, both fail to evaluate correctly).
-  esbuildOptions: { format: "iife" },
+  esbuildOptions: { format: "iife", target: "es2020" },
 });
