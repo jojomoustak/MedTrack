@@ -222,7 +222,18 @@ describe("ScanStep — catalog lookup outcomes", () => {
     const cache = fakeCache();
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ state: "VALID_IDENTIFIER_UNRESOLVED" }) }) as unknown as typeof fetch;
 
-    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} offlineIndex={fakeOfflineIndex()} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+    render(
+      <ScanStep
+        profileId="profile-1"
+        platform={platform}
+        cacheRepository={cache}
+        offlineIndex={fakeOfflineIndex()}
+        learnedMappings={fakeLearnedMappings()}
+        onConfirmCandidate={vi.fn()}
+        onFallbackToManual={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
 
     expect(await screen.findByText(/αναγνωρίσαμε τον κωδικό του φαρμάκου/i)).toBeTruthy();
     expect(screen.queryByText(/δεν μπορέσαμε να αναγνωρίσουμε αυτόματα/i)).toBeNull();
@@ -308,7 +319,18 @@ describe("ScanStep — 'not found' official-source search links", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
 
-    render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} offlineIndex={fakeOfflineIndex()} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
+    render(
+      <ScanStep
+        profileId="profile-1"
+        platform={platform}
+        cacheRepository={cache}
+        offlineIndex={fakeOfflineIndex()}
+        learnedMappings={fakeLearnedMappings()}
+        onConfirmCandidate={vi.fn()}
+        onFallbackToManual={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
 
     const eofLink = await screen.findByRole("link", { name: /ΕΟΦ/i });
     expect(eofLink.getAttribute("href")).toBe("https://services.eof.gr/human-search/home.xhtml");

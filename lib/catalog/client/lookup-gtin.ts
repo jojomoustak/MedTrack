@@ -72,29 +72,37 @@ export async function lookupGtin(
   const cached = await cache.getByGtin(gtin);
   if (cached) return { status: "found", product: cached };
 
-  if (network !== "online") {
-    // Precedence tier 3 (spec §20): this profile's own past OCR
-    // confirmation, checked only once no AUTHORITATIVE match was found
-    // locally — resolves entirely offline, no OCR needed for a repeat
-    // scan (spec §15/§25's airplane-mode acceptance test). Constructed
-    // lazily, here, not at the top of this function: `offlineIndex`/
-    // `cache` above are real exceptions to this (every existing caller
-    // already always supplies them), but this is a brand-new dependency
-    // most callers don't pass yet — constructing it unconditionally would
-    // touch `indexedDB` on every single call, including the online
-    // success path that never needs it at all.
+  // Precedence tier 3 (spec §20): this profile's own past OCR confirmation.
+  // Constructed lazily — `offlineIndex`/`cache` above are real exceptions
+  // to this (every existing caller already always supplies them), but this
+  // is a brand-new dependency most callers don't pass yet.
+  async function checkLearnedMapping(): Promise<CatalogLookupOutcome | null> {
     const learnedMappings = deps.learnedMappings ?? new DexieLearnedMappingRepository();
     const learned = await learnedMappings.getByGtin(gtin);
-    if (learned) {
-      const entry = await offlineIndex.getById(learned.catalogProductId);
-      if (entry) return { status: "found", product: offlineIndexEntryToCatalogProduct(entry) };
-    }
-    return { status: "unresolved-offline" };
+    if (!learned) return null;
+    const entry = await offlineIndex.getById(learned.catalogProductId);
+    return entry ? { status: "found", product: offlineIndexEntryToCatalogProduct(entry) } : null;
+  }
+
+  if (network !== "online") {
+    // Resolves entirely offline, no OCR needed for a repeat scan (spec
+    // §15/§25's airplane-mode acceptance test).
+    return (await checkLearnedMapping()) ?? { status: "unresolved-offline" };
   }
 
   try {
     const resolution = await resolveCatalogIdentifier("GTIN", gtin, deps.fetchImpl);
-    if (resolution.state === "VALID_IDENTIFIER_UNRESOLVED") return { status: "not-found" };
+    if (resolution.state === "VALID_IDENTIFIER_UNRESOLVED") {
+      // The server doesn't (yet) have this profile's confirmation — the
+      // best-effort background sync (`sync-learned-mappings.ts`) may
+      // simply not have run/landed yet. Real bug fixed 2026-08-28: this
+      // fallback used to be offline-only, so a confirmed-but-not-yet-
+      // synced mapping was invisible on every subsequent scan for as long
+      // as the device stayed online, even though the device itself already
+      // knew the answer. Checked here, not earlier, so it never shadows a
+      // genuine AUTHORITATIVE/CONFLICT server answer.
+      return (await checkLearnedMapping()) ?? { status: "not-found" };
+    }
     if (resolution.state === "CONFLICT") return { status: "conflict" };
     await cache.cacheAll([resolution.product]);
     return { status: "found", product: resolution.product };
@@ -104,6 +112,6 @@ export async function lookupGtin(
     // the request still didn't complete, so this scan genuinely wasn't
     // resolved yet rather than confirmed absent from the catalog.
     logger.warn("catalog.lookup.network_failed", { message: (err as Error).message });
-    return { status: "unresolved-offline" };
+    return (await checkLearnedMapping()) ?? { status: "unresolved-offline" };
   }
 }

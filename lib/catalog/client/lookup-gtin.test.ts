@@ -135,18 +135,34 @@ describe("lookupGtin — offline-index-first, then cache, then server if online 
     expect(cache.cacheAll).toHaveBeenCalledWith([product]);
   });
 
-  it("online + all sources miss + server confirms VALID_IDENTIFIER_UNRESOLVED: returns not-found, never invents a candidate", async () => {
+  it("online + all sources miss + server confirms VALID_IDENTIFIER_UNRESOLVED + no local learned mapping either: returns not-found, never invents a candidate", async () => {
     const cache = makeCache();
     const offlineIndex = makeOfflineIndex();
+    const learnedMappings = makeLearnedMappings();
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ state: "VALID_IDENTIFIER_UNRESOLVED" }),
     });
 
-    const outcome = await lookupGtin("05012345678900", "online", { cache, offlineIndex, fetchImpl });
+    const outcome = await lookupGtin("05012345678900", "online", { cache, offlineIndex, learnedMappings, fetchImpl });
 
     expect(outcome).toEqual({ status: "not-found" });
     expect(cache.cacheAll).not.toHaveBeenCalled();
+  });
+
+  it("online + server confirms VALID_IDENTIFIER_UNRESOLVED, but this device already has a local learned mapping (background sync hasn't landed yet): resolves from the local mapping (real bug fixed 2026-08-28)", async () => {
+    const entry = makeOfflineEntry({ id: "flagyl-product", name: "FLAGYL CAPS 500MG/CAP" });
+    const cache = makeCache();
+    const offlineIndex = makeOfflineIndex({ getById: vi.fn().mockResolvedValue(entry) });
+    const learnedMappings = makeLearnedMappings({
+      getByGtin: vi.fn().mockResolvedValue({ gtin: "05201048000563", catalogProductId: entry.id, evidenceType: "USER_CONFIRMED", confirmedAt: "t", syncedAt: null }),
+    });
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ state: "VALID_IDENTIFIER_UNRESOLVED" }) });
+
+    const outcome = await lookupGtin("05201048000563", "online", { cache, offlineIndex, learnedMappings, fetchImpl });
+
+    expect(outcome.status).toBe("found");
+    if (outcome.status === "found") expect(outcome.product.id).toBe("flagyl-product");
   });
 
   it("online + server finds a CONFLICT (two different products claim this GTIN): returns conflict, never silently picks one (spec §19)", async () => {
@@ -198,9 +214,10 @@ describe("lookupGtin — offline-index-first, then cache, then server if online 
   it("online but the request itself fails (e.g. a flaky connection): treated as unresolved-offline, not a hard error", async () => {
     const cache = makeCache();
     const offlineIndex = makeOfflineIndex();
+    const learnedMappings = makeLearnedMappings();
     const fetchImpl = vi.fn().mockRejectedValue(new Error("network down"));
 
-    const outcome = await lookupGtin("05012345678900", "online", { cache, offlineIndex, fetchImpl });
+    const outcome = await lookupGtin("05012345678900", "online", { cache, offlineIndex, learnedMappings, fetchImpl });
 
     expect(outcome).toEqual({ status: "unresolved-offline" });
   });
