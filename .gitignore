@@ -50,5 +50,9 @@ next-env.d.ts
 /data/raw/**
 /data/normalized/**
 
-.vercel
-.env*
+# service worker — build output (@serwist/next), regenerated on every
+# `next build` from app/sw.ts; never hand-edited, never committed.
+/public/sw.js
+/public/sw.js.map
+/public/swe-worker-*.js
+/public/swe-worker-*.js.map
