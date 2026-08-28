@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.sw.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:db": "vitest run --testTimeout=30000 lib/catalog/server/postgres-provider.integration.test.ts lib/sync/server/mutations.integration.test.ts lib/medications/server/photo.integration.test.ts lib/auth/lockout.integration.test.ts lib/auth/oauth-repeat-signin.integration.test.ts lib/auth/oauth-user-creation.integration.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx lib/db/migrate.ts",
     "db:seed": "tsx lib/db/seed.ts",

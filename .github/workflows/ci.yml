@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Minimal quality gate (stabilization task, 2026-08-29): typecheck, lint,
+# unit tests, real Postgres integration tests, production build. Every
+# step must fail the job on error — no `continue-on-error`/`|| true`
+# anywhere. The DB integration job exists specifically because the
+# migration-0011 gap (a real production bug this task fixes) went
+# undetected for as long as it did partly BECAUSE nothing ever ran these
+# tests automatically.
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Deterministic install — fails if the lockfile is out of sync with
+      # package.json rather than silently resolving something different.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+
+  web-db-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: medtrack_test
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Never production — an isolated, ephemeral service container that
+      # is destroyed with the job. Every var below points at it, never at
+      # a real secret.
+      DATABASE_URL_DIRECT: postgres://postgres:test@localhost:55432/medtrack_test
+      SYNC_IT_DATABASE_URL: postgres://postgres:test@localhost:55432/medtrack_test
+      SYNC_IT_ADMIN_DATABASE_URL: postgres://postgres:test@localhost:55432/medtrack_test
+      OAUTH_IT_DATABASE_URL: postgres://postgres:test@localhost:55432/medtrack_test
+      # The photo integration test's ConfigError-on-missing-env-var
+      # behavior is itself correct (fail-closed) — these are throwaway
+      # values scoped to this ephemeral job, satisfying that check without
+      # ever touching a real credential.
+      GOOGLE_CLIENT_ID: ci-placeholder
+      GOOGLE_CLIENT_SECRET: ci-placeholder
+      ACCOUNT_ID_HASH_PEPPER: ci-placeholder-pepper-at-least-32-characters-long
+      IP_HASH_PEPPER: ci-placeholder-pepper-at-least-32-characters-long
+      BETTER_AUTH_SECRET: ci-placeholder-secret-at-least-32-characters-long
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_TRUSTED_ORIGINS: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Proves the committed migration files alone reconstruct the schema
+      # the application code expects — exactly the check that would have
+      # caught migration 0011 never having been applied to Production.
+      - run: pnpm db:migrate
+      - run: pnpm db:seed
+
+      - run: pnpm test:db

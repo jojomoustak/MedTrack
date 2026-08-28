@@ -9,7 +9,7 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { sql } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import * as schema from "@/lib/db/schema";
 import { PostgresCatalogProvider } from "@/lib/catalog/server/postgres-provider";
 import { SEED_PLACEHOLDER_SOURCE } from "@/lib/domain/catalog";
@@ -91,9 +91,10 @@ describe.skipIf(!connectionString)("PostgresCatalogProvider.lookupByIdentifier �
   });
 
   afterAll(async () => {
+    // Same real bug/fix as the describe block below — see its afterAll's comment.
     if (productIds.length > 0) {
-      await db.delete(schema.medicationIdentifier).where(sql`${schema.medicationIdentifier.catalogProductId} = ANY(${productIds})`);
-      await db.delete(schema.medicationCatalogProduct).where(sql`${schema.medicationCatalogProduct.id} = ANY(${productIds})`);
+      await db.delete(schema.medicationIdentifier).where(inArray(schema.medicationIdentifier.catalogProductId, productIds));
+      await db.delete(schema.medicationCatalogProduct).where(inArray(schema.medicationCatalogProduct.id, productIds));
     }
     await pool.end();
   });
@@ -200,12 +201,21 @@ describe.skipIf(!connectionString)("PostgresCatalogProvider — USER_CONFIRMED e
   });
 
   afterAll(async () => {
+    // Real bug found and fixed during the stabilization audit (2026-08-28):
+    // this cleanup had NEVER actually run before (the whole reason these
+    // fixtures were never cleaned up is that this describe block had never
+    // been executed against a real database at all — SYNC_IT_DATABASE_URL
+    // was never set in any prior run). A raw `sql`= ANY(${array})`` does
+    // not parameterize a plain JS array correctly against `pg` ("op
+    // ANY/ALL (array) requires array on right side") — `inArray(...)` is
+    // the correct Drizzle helper for this, used elsewhere in this codebase
+    // (lib/sync/server/changes.ts).
     if (productIds.length > 0) {
-      await db.delete(schema.medicationIdentifier).where(sql`${schema.medicationIdentifier.catalogProductId} = ANY(${productIds})`);
-      await db.delete(schema.medicationCatalogProduct).where(sql`${schema.medicationCatalogProduct.id} = ANY(${productIds})`);
+      await db.delete(schema.medicationIdentifier).where(inArray(schema.medicationIdentifier.catalogProductId, productIds));
+      await db.delete(schema.medicationCatalogProduct).where(inArray(schema.medicationCatalogProduct.id, productIds));
     }
-    await db.delete(schema.profile).where(sql`${schema.profile.id} = ANY(${[profileId, otherProfileId]})`);
-    await db.delete(schema.account).where(sql`${schema.account.id} = ANY(${[accountId, otherAccountId]})`);
+    await db.delete(schema.profile).where(inArray(schema.profile.id, [profileId, otherProfileId]));
+    await db.delete(schema.account).where(inArray(schema.account.id, [accountId, otherAccountId]));
     await pool.end();
   });
 
