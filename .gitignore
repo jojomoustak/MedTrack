@@ -49,3 +49,6 @@ next-env.d.ts
 # Only data/README.md and data/fixtures/ (small, hand-curated) are tracked.
 /data/raw/**
 /data/normalized/**
+
+.vercel
+.env*

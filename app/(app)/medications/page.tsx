@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
+import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 
@@ -24,14 +25,32 @@ function useDisplayNames(medications: UserMedicationRecord[]): Map<string, strin
     let cancelled = false;
     async function resolve() {
       const cache = new DexieCatalogCacheRepository();
+      const offlineIndex = new DexieOfflineIndexRepository();
       const map = new Map<string, string>();
       for (const med of medications) {
         if (med.customName) {
           map.set(med.id, med.customName);
-        } else if (med.catalogProductId) {
-          const product = await cache.get(med.catalogProductId);
-          map.set(med.id, product?.name ?? "Φάρμακο από κατάλογο");
+          continue;
         }
+        if (!med.catalogProductId) continue;
+        // `catalogProductCache` first (cheap, already-seen-on-this-device
+        // products) — falls back to the full compact offline index
+        // (`OfflineIndexRepository.getById`) when it misses, rather than
+        // going straight to the generic placeholder. This self-heals any
+        // medication created before 2026-08-28's cache-write fix (a real
+        // bug: offline-index-resolved scans/OCR confirmations used to
+        // never write into `catalogProductCache` at all, so an
+        // already-created medication's name could be permanently stuck on
+        // the placeholder even after that fix, since the fix only changed
+        // what happens on FUTURE resolutions) — the offline index still
+        // has this product's data by id regardless.
+        const cached = await cache.get(med.catalogProductId);
+        if (cached) {
+          map.set(med.id, cached.name);
+          continue;
+        }
+        const indexed = await offlineIndex.getById(med.catalogProductId);
+        map.set(med.id, indexed?.name ?? "Φάρμακο από κατάλογο");
       }
       if (!cancelled) setNames(map);
     }
