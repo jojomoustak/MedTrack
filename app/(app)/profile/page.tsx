@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
+import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 
 /**
@@ -27,7 +28,20 @@ export default function ProfilePage() {
   const router = useRouter();
 
   async function handleSignOut() {
-    await authClient.signOut();
+    // Cleared locally first, unconditionally: this is what
+    // useCurrentProfile's offline fallback reads, so if the signOut()
+    // network call below fails (offline right after tapping this), a
+    // stale cached profile must not be left behind to render this user's
+    // data to whoever opens the app next on this device (security review,
+    // 2026-08-29 -- see the doc comment on clearCachedProfile).
+    clearCachedProfile();
+    try {
+      await authClient.signOut();
+    } catch {
+      // Best-effort: the server-side session cookie may not get cleared
+      // until the next successful request, but the local state above
+      // already stopped this device from showing this user's data.
+    }
     router.replace("/welcome");
   }
 

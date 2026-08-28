@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
+import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
 import { createNetworkMonitor } from "@/lib/sync/client/network";
 
 /**
@@ -64,11 +65,22 @@ export function DeleteAccountFlow() {
       const res = await fetch("/api/account/delete", { method: "POST" });
       if (!res.ok) throw new Error("delete request failed");
       setStep("done");
+      // Security review (2026-08-29): cleared BEFORE the redirect and
+      // regardless of signOut()'s own outcome below -- the account (and
+      // its data) is already gone server-side at this point, so a stale
+      // cached profileId surviving on this device would let a later
+      // offline session render a deleted user's local IndexedDB data to
+      // whoever opens the app next (see clearCachedProfile's doc comment).
+      clearCachedProfile();
       // Forced sign-out (Phase 3 §2.9 step 5) — the server has already
       // deleted every account_session row as part of the same atomic
       // deletion step, so this is client-side cookie/local-state cleanup,
       // not what actually revokes access.
-      await authClient.signOut();
+      try {
+        await authClient.signOut();
+      } catch {
+        // Best-effort -- the deletion itself already succeeded above.
+      }
       router.replace("/welcome");
     } catch {
       // Security review (2026-08-22), item 6: NOT connectivity-specific
