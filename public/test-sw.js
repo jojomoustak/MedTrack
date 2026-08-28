@@ -3053,32 +3053,16 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
 
   // scripts/tmp-sw-src.ts
   var serwist = new Serwist({
-    precacheEntries: [{ url: "/offline.html", revision: "test-rev-1" }],
+    precacheEntries: [{ "url": "/_next/static/jEY52G16YVsejkp-BpDh1/_ssgManifest.js", "revision": null }, { "url": "/_next/static/jEY52G16YVsejkp-BpDh1/_clientMiddlewareManifest.js", "revision": null }, { "url": "/_next/static/jEY52G16YVsejkp-BpDh1/_buildManifest.js", "revision": null }, { "url": "/_next/static/immutable/media/favicon.3fpu2ql9ns1a0.ico", "revision": null }, { "url": "/_next/static/immutable/chunks/turbopack-0u4cwrwdzqxj1.js", "revision": null }, { "url": "/_next/static/immutable/chunks/44hc0079y3tyc.js", "revision": null }, { "url": "/_next/static/immutable/chunks/3zllqrpsn4-vc.css", "revision": null }, { "url": "/_next/static/immutable/chunks/3pmdma9srsy7r.js", "revision": null }, { "url": "/_next/static/immutable/chunks/3fi-dt7r8-4bc.js", "revision": null }, { "url": "/_next/static/immutable/chunks/3ekzqnr16qwxu.js", "revision": null }, { "url": "/_next/static/immutable/chunks/3be9xpda35k15.js", "revision": null }, { "url": "/_next/static/immutable/chunks/35fhgj6440a-d.js", "revision": null }, { "url": "/_next/static/immutable/chunks/30svul8e8ql_5.js", "revision": null }, { "url": "/_next/static/immutable/chunks/2txvvjpa67os1.js", "revision": null }, { "url": "/_next/static/immutable/chunks/2rw0m54da9vjv.js", "revision": null }, { "url": "/_next/static/immutable/chunks/2ibvdx_1y7zqf.js", "revision": null }, { "url": "/_next/static/immutable/chunks/2g9c5xdthb7j9.js", "revision": null }, { "url": "/_next/static/immutable/chunks/2_z2-r7csf38t.js", "revision": null }, { "url": "/_next/static/immutable/chunks/29b3-e0_8c-bx.js", "revision": null }, { "url": "/_next/static/immutable/chunks/27klsmqr588-6.js", "revision": null }, { "url": "/_next/static/immutable/chunks/1tk_ibguiivlf.js", "revision": null }, { "url": "/_next/static/immutable/chunks/1ijzizgrnkii5.js", "revision": null }, { "url": "/_next/static/immutable/chunks/1dw2bky0t2vj3.js", "revision": null }, { "url": "/_next/static/immutable/chunks/109cvbdl0ssg0.js", "revision": null }, { "url": "/_next/static/immutable/chunks/0qco1_wxsystr.js", "revision": null }, { "url": "/_next/static/immutable/chunks/0c0hxoamwjsbw.js", "revision": null }, { "url": "/_next/static/immutable/chunks/04ked0qjxvdea.js", "revision": null }, { "url": "/window.svg", "revision": "a2760511c65806022ad20adf74370ff3" }, { "url": "/vercel.svg", "revision": "c0af2f507b369b085b35ef4bbe3bcf1e" }, { "url": "/test-sw.js", "revision": "72ffc8baf224d0161c4fb4c8611158ca" }, { "url": "/success.mp3", "revision": "fef5693a5a3ec76100c30a7aed3a445d" }, { "url": "/offline.html", "revision": "f2c4965fb464033c91fcae4c1d7e8810" }, { "url": "/next.svg", "revision": "8e061864f388b47f33a1c3780831193e" }, { "url": "/globe.svg", "revision": "2aaafa6a49b6563925fe440891e32717" }, { "url": "/file.svg", "revision": "d09f95206c3fa0bb9bd9fefabfd0ea71" }, { "url": "/button.mp3", "revision": "e7671496dbff9848bf84cf9a601b7a97" }, { "revision": "5de64e5ec378bf62d86353400c1593b5a1f06f20", "url": "/offline.html" }],
     skipWaiting: true,
     clientsClaim: true,
     navigationPreload: true,
     runtimeCaching: [
-      {
-        matcher: ({ url }) => url.pathname.startsWith("/api/"),
-        handler: new NetworkOnly()
-      },
-      {
-        matcher: ({ url }) => url.pathname.startsWith("/_next/static/"),
-        handler: new NetworkFirst({ cacheName: "next-static-assets" })
-      },
-      {
-        matcher: ({ request, url, sameOrigin }) => sameOrigin && request.mode === "navigate" && !url.pathname.startsWith("/api/") && !url.pathname.startsWith("/serwist/"),
-        handler: new NetworkFirst({ cacheName: "app-shell", networkTimeoutSeconds: 4 })
-      }
+      { matcher: ({ url }) => url.pathname.startsWith("/api/"), handler: new NetworkOnly() },
+      { matcher: ({ url }) => url.pathname.startsWith("/_next/static/"), handler: new NetworkFirst({ cacheName: "next-static-assets" }) },
+      { matcher: ({ request, url, sameOrigin }) => sameOrigin && request.mode === "navigate" && !url.pathname.startsWith("/api/") && !url.pathname.startsWith("/serwist/"), handler: new NetworkFirst({ cacheName: "app-shell", networkTimeoutSeconds: 4 }) }
     ],
-    fallbacks: {
-      entries: [
-        {
-          url: "/offline.html",
-          matcher: ({ request }) => request.destination === "document"
-        }
-      ]
-    }
+    fallbacks: { entries: [{ url: "/offline.html", matcher: ({ request }) => request.destination === "document" }] }
   });
   serwist.addEventListeners();
 })();
