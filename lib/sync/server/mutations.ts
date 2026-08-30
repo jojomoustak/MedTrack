@@ -28,7 +28,7 @@ import { withProfileScope } from "@/lib/db/rls";
 import * as schema from "@/lib/db/schema";
 import type { Db, TestableDb } from "@/lib/db/client";
 import type { SyncMutationRequest, SyncMutationResult } from "@/lib/sync/protocol";
-import { ConflictError, ValidationError } from "@/lib/errors/app-error";
+import { ConflictError, ValidationError, toAppError } from "@/lib/errors/app-error";
 import { deriveTimeAnchor, type ScheduleKind } from "@/lib/domain/medication-schedule";
 import { logger } from "@/lib/logging/logger";
 
@@ -887,7 +887,35 @@ export async function applyMutations(
 
   const results: SyncMutationResult[] = [];
   for (const mutation of mutations) {
-    results.push(await applyOneMutation(ctx, mutation));
+    try {
+      results.push(await applyOneMutation(ctx, mutation));
+    } catch (err) {
+      // A real bug found via live-device testing (2026-08-30, Phase 10):
+      // one mutation throwing (a genuine validation failure, or --
+      // before `listPending`'s creation-order fix,
+      // `lib/db-client/outbox-repository.ts` -- a DoseEvent create
+      // whose MedicationSchedule hadn't landed yet within THIS SAME
+      // batch) used to propagate uncaught, aborting the ENTIRE request
+      // with one HTTP-level error. The client then had no way to tell
+      // which mutations in the batch had actually succeeded before the
+      // failure, and marked every one of them `failed` -- including
+      // ones the server had already committed. Isolating each
+      // mutation's failure here means the rest of an otherwise-valid
+      // batch still applies, and the client gets an accurate per-
+      // mutation result instead of one opaque batch-level failure.
+      const appError = toAppError(err);
+      logger.warn("sync.mutation.isolated_failure", {
+        entityType: mutation.entityType,
+        operation: mutation.operation,
+        code: appError.code,
+        httpStatus: appError.httpStatus,
+      });
+      results.push({
+        clientMutationId: mutation.clientMutationId,
+        result: "rejected",
+        error: appError.isOperational ? appError.message : "Κάτι πήγε στραβά. Δοκιμάστε ξανά.",
+      });
+    }
   }
   return results;
 }

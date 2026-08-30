@@ -40,6 +40,24 @@ describe("DexieOutboxRepository", () => {
     expect(pending[0].clientMutationId).toBe(entry.clientMutationId);
   });
 
+  it("listPending orders entries by createdAt ascending, regardless of their (random-UUID) primary key order", async () => {
+    // Real bug (2026-08-30, Phase 10): without an explicit order, Dexie
+    // iterates in primary-key order, and clientMutationId (the primary
+    // key) is a random UUID -- so a later-created entry could sort
+    // BEFORE an earlier one that it actually depends on server-side
+    // (e.g. a DoseEvent create before its own MedicationSchedule's
+    // create). Deliberately enqueues out of createdAt order here to
+    // prove the fix doesn't just accidentally work because of insertion
+    // order.
+    const early = makeEntry({ createdAt: "2026-01-01T00:00:00.000Z" });
+    const late = makeEntry({ createdAt: "2026-01-02T00:00:00.000Z" });
+    await repo.enqueue(late);
+    await repo.enqueue(early);
+
+    const pending = await repo.listPending(new Date().toISOString());
+    expect(pending.map((e) => e.clientMutationId)).toEqual([early.clientMutationId, late.clientMutationId]);
+  });
+
   it("listPending excludes entries whose nextAttemptAt is still in the future (backoff)", async () => {
     const future = new Date(Date.now() + 60_000).toISOString();
     await repo.enqueue(makeEntry({ nextAttemptAt: future }));

@@ -18,10 +18,27 @@ export class DexieOutboxRepository implements OutboxRepository {
    * requirement that background retry stop) — the persistent `failed`
    * chip is driven by the entity's own `syncState`, not by this method
    * refusing to retry.
+   *
+   * Ordered by `createdAt` ascending — a real bug found via live-device
+   * testing (2026-08-30, Phase 10): with no explicit order, Dexie's
+   * `.toArray()` iterates in primary-key order, and `clientMutationId`
+   * (the primary key) is a random UUID, so a batch could send a
+   * DoseEvent's create BEFORE its own just-created MedicationSchedule's
+   * create within the SAME request. The server processes a batch
+   * sequentially (`applyMutations`'s for-loop) but doesn't currently
+   * isolate one mutation's failure from the rest of the batch, so the
+   * dose event's foreign-key violation (`schedule_id` not found yet)
+   * aborted the whole request — every entry in the batch, including the
+   * schedule itself, came back marked `failed`, even once the schedule
+   * genuinely had succeeded. Ordering by creation time makes the send
+   * order match local creation order, which naturally respects
+   * intra-batch dependencies for any entity relationship, not just this
+   * one (a schedule is always created, and thus enqueued, before the
+   * dose events generated from it).
    */
   async listPending(now: string): Promise<OutboxEntry[]> {
     const entries = await this.db.outbox.where("status").notEqual("syncing").toArray();
-    return entries.filter((e) => e.nextAttemptAt <= now);
+    return entries.filter((e) => e.nextAttemptAt <= now).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
   async markSyncing(clientMutationId: string): Promise<void> {

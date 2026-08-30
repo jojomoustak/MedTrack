@@ -207,34 +207,33 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     expect(record.version).toBe(1);
   });
 
-  it("userMedication: create rejects a payload with neither catalogProductId nor customName (chk_catalog_or_manual, defense-in-depth)", async () => {
+  it("userMedication: create rejects a payload with neither catalogProductId nor customName (chk_catalog_or_manual, defense-in-depth) -- isolated as a per-mutation 'rejected' result, not a thrown request-level error (2026-08-30 batch-isolation fix)", async () => {
     const { accountId, profileId } = await seedAccountAndProfile();
-    await expect(
-      applyMutations({ profileId, accountId, db }, [
-        {
-          clientMutationId: randomUUID(),
-          entityType: "userMedication",
-          entityId: randomUUID(),
-          operation: "create",
-          payload: { catalogProductId: null, customName: null, inventoryUnit: "tablet" },
-        },
-      ]),
-    ).rejects.toThrow();
+    const result = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "userMedication",
+        entityId: randomUUID(),
+        operation: "create",
+        payload: { catalogProductId: null, customName: null, inventoryUnit: "tablet" },
+      },
+    ]);
+    expect(result[0].result).toBe("rejected");
+    expect(result[0].error).toBeTruthy();
   });
 
-  it("userMedication: create rejects a catalogProductId that doesn't reference a real catalog product", async () => {
+  it("userMedication: create rejects a catalogProductId that doesn't reference a real catalog product -- isolated, not thrown", async () => {
     const { accountId, profileId } = await seedAccountAndProfile();
-    await expect(
-      applyMutations({ profileId, accountId, db }, [
-        {
-          clientMutationId: randomUUID(),
-          entityType: "userMedication",
-          entityId: randomUUID(),
-          operation: "create",
-          payload: { catalogProductId: randomUUID(), customName: null, inventoryUnit: "tablet" },
-        },
-      ]),
-    ).rejects.toThrow();
+    const result = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "userMedication",
+        entityId: randomUUID(),
+        operation: "create",
+        payload: { catalogProductId: randomUUID(), customName: null, inventoryUnit: "tablet" },
+      },
+    ]);
+    expect(result[0].result).toBe("rejected");
   });
 
   it("userMedication (optimistic concurrency): update with the correct baseVersion succeeds; a stale one is a genuine conflict", async () => {
@@ -490,7 +489,7 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     expect(record.status).toBe("skipped"); // the first terminal write wins; the racing device converges to it
   });
 
-  it("doseEvent: transition to 'taken' without takenAt is rejected (defense-in-depth on top of chk_taken_has_timestamp)", async () => {
+  it("doseEvent: transition to 'taken' without takenAt is rejected (defense-in-depth on top of chk_taken_has_timestamp) -- isolated, not thrown", async () => {
     const { accountId, profileId } = await seedAccountAndProfile();
     const userMedicationId = await seedUserMedication(profileId);
     const id = randomUUID();
@@ -499,10 +498,50 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
       { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "create", payload: { userMedicationId, scheduleId: null, scheduledAt: new Date().toISOString(), source: "manual_prn" } },
     ]);
 
-    await expect(
-      applyMutations({ profileId, accountId, db }, [
-        { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "taken" } },
-      ]),
-    ).rejects.toThrow();
+    const result = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "taken" } },
+    ]);
+    expect(result[0].result).toBe("rejected");
+  });
+
+  it("batch isolation (2026-08-30 fix): a DoseEvent create sent BEFORE its own MedicationSchedule's create in the SAME batch fails only that one mutation -- the schedule (later in the array, but otherwise valid) still applies", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const scheduleId = randomUUID();
+    const doseEventId = randomUUID();
+
+    const results = await applyMutations({ profileId, accountId, db }, [
+      // Deliberately out of dependency order -- exactly the real bug
+      // `lib/db-client/outbox-repository.ts`'s `listPending` ordering
+      // fix prevents client-side, but this proves the server itself is
+      // now resilient to it regardless (defense in depth).
+      {
+        clientMutationId: randomUUID(),
+        entityType: "doseEvent",
+        entityId: doseEventId,
+        operation: "create",
+        payload: { userMedicationId, scheduleId, scheduledAt: new Date().toISOString(), source: "schedule_generated" },
+      },
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationSchedule",
+        entityId: scheduleId,
+        operation: "create",
+        payload: {
+          userMedicationId,
+          scheduleKind: "daily",
+          startDate: "2026-01-01",
+          endDate: null,
+          timezone: "Europe/Athens",
+          doseQuantityValue: "1",
+          doseQuantityUnit: "tablet",
+          timesOfDay: ["08:00:00"],
+        },
+      },
+    ]);
+
+    expect(results).toHaveLength(2);
+    expect(results[0].result).toBe("rejected"); // the out-of-order dose event
+    expect(results[1].result).toBe("applied"); // the schedule, unaffected by its sibling's failure
   });
 });
