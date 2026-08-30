@@ -53,7 +53,7 @@
  * history being independently correct.
  */
 import { NetworkFirst, NetworkOnly, Serwist } from "serwist";
-import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
+import type { PrecacheEntry, RouteHandlerObject, SerwistGlobalConfig } from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -64,6 +64,81 @@ declare global {
 declare const self: ServiceWorkerGlobalScope;
 
 const OFFLINE_FALLBACK_URL = "/offline.html";
+const APP_SHELL_CACHE = "app-shell";
+const NETWORK_TIMEOUT_MS = 4000;
+
+function fetchWithTimeout(request: Request, timeoutMs: number): Promise<Response> {
+  return Promise.race([
+    fetch(request),
+    new Promise<Response>((_, reject) => setTimeout(() => reject(new Error("network timeout")), timeoutMs)),
+  ]);
+}
+
+/**
+ * `/medications/[id]/photo` (and any future route shaped the same way —
+ * a fully client-rendered detail screen keyed by a dynamic id segment)
+ * has one URL PER MEDICATION, so the plain per-URL app-shell cache below
+ * only ever helps a medication whose exact photo page was opened online
+ * before — a real, reported gap (2026-08-30): a user who'd viewed
+ * Flagyl's photo page online could open it offline, but a different,
+ * never-individually-visited medication's photo page fell all the way
+ * through to the generic `/offline.html` fallback, even though the app
+ * itself was otherwise fully working offline.
+ *
+ * The fix: since this page has no server-rendered PER-MEDICATION content
+ * in its initial shell (`MedicationPhotoAttach` reads the real id
+ * client-side from the actual URL via `useParams()` and resolves that
+ * medication's own data from local IndexedDB/cache), a cached response
+ * from ANY previously-visited medication's photo page is a valid
+ * substitute shell for a DIFFERENT, never-visited one — the client boots
+ * and renders the correct medication regardless of which cached HTML
+ * bytes it was served. Only applied to genuine document navigations
+ * (`request.destination === "document"`, matching the existing
+ * `fallbacks` matcher below) — an RSC-fragment request from a
+ * client-side transition expects that exact format back, not a
+ * substituted full HTML document, so those are left to the generic
+ * catch-all/offline-fallback behavior unchanged.
+ */
+const medicationDetailShellHandler: RouteHandlerObject = {
+  async handle({ request }) {
+    const cache = await self.caches.open(APP_SHELL_CACHE);
+    try {
+      const response = await fetchWithTimeout(request, NETWORK_TIMEOUT_MS);
+      if (response.ok) {
+        void cache.put(request, response.clone());
+      }
+      return response;
+    } catch {
+      const exact = await cache.match(request);
+      if (exact) return exact;
+
+      const keys = await cache.keys();
+      const fallbackKey = keys.find((cached) => {
+        const cachedUrl = new URL(cached.url);
+        return !cachedUrl.search && /^\/medications\/[^/]+\/photo$/.test(cachedUrl.pathname);
+      });
+      if (fallbackKey) {
+        const fallback = await cache.match(fallbackKey);
+        if (fallback) return fallback;
+      }
+
+      // Serwist's automatic `fallbacks` option only attaches its
+      // handlerDidError plugin to `Strategy` instances (NetworkFirst,
+      // etc, see Serwist.ts's constructor) -- a plain custom
+      // RouteHandlerObject like this one never gets it, so the
+      // last-resort /offline.html fallback has to be applied by hand
+      // here rather than relying on the same mechanism the generic
+      // catch-all below gets automatically. `caches.match` (unqualified,
+      // not `cache.match`) searches every cache, so this finds
+      // /offline.html regardless of which cache Serwist's own
+      // precache-entries machinery put it in.
+      const offlineFallback = await self.caches.match(OFFLINE_FALLBACK_URL);
+      if (offlineFallback) return offlineFallback;
+
+      throw new Error("medicationDetailShellHandler: no network, no cached shell, and no offline.html fallback available");
+    }
+  },
+};
 
 const serwist = new Serwist({
   // Populated at request/build time by `createSerwistRoute`
@@ -88,6 +163,15 @@ const serwist = new Serwist({
       matcher: ({ url }) => url.pathname.startsWith("/_next/static/"),
       handler: new NetworkFirst({ cacheName: "next-static-assets" }),
     },
+    // Dynamic per-medication detail screens (today: the photo page) —
+    // must come before the generic catch-all below so its own
+    // cross-medication substitute-shell fallback applies instead of
+    // falling all the way through to the generic offline.html. See
+    // medicationDetailShellHandler's doc comment.
+    {
+      matcher: ({ url, sameOrigin, request }) => sameOrigin && request.destination === "document" && /^\/medications\/[^/]+\/photo$/.test(url.pathname),
+      handler: medicationDetailShellHandler,
+    },
     // Page navigations — the actual "app shell" this file exists for.
     // Deliberately NOT gated on `request.mode === "navigate"` (a real
     // bug, found 2026-08-28 by comparing against a sibling project's
@@ -110,7 +194,7 @@ const serwist = new Serwist({
     {
       matcher: ({ url, sameOrigin }) => sameOrigin && !url.pathname.startsWith("/api/") && !url.pathname.startsWith("/serwist/"),
       handler: new NetworkFirst({
-        cacheName: "app-shell",
+        cacheName: APP_SHELL_CACHE,
         networkTimeoutSeconds: 4,
       }),
     },
