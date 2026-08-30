@@ -1,5 +1,6 @@
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { OutboxEntry } from "@/lib/domain/outbox";
+import { nextOutboxSeq } from "@/lib/domain/outbox";
 import type { CreateUserMedicationInput, OutboxRepository, UserMedicationRepository } from "@/lib/domain/repositories";
 import { getClientDb, type MedTrackingDexie } from "@/lib/db-client/dexie";
 import { DexieOutboxRepository } from "@/lib/db-client/outbox-repository";
@@ -61,6 +62,7 @@ export class DexieUserMedicationRepository implements UserMedicationRepository {
       payload: record,
       baseVersion: undefined,
       createdAt: now,
+      seq: nextOutboxSeq(),
       status: "pending",
       attempts: 0,
       nextAttemptAt: now,

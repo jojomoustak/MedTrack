@@ -1,6 +1,7 @@
 import type { MedicationScheduleRecord, MedicationSchedulePatch, CreateMedicationScheduleInput } from "@/lib/domain/medication-schedule";
 import { deriveTimeAnchor } from "@/lib/domain/medication-schedule";
 import type { OutboxEntry } from "@/lib/domain/outbox";
+import { nextOutboxSeq } from "@/lib/domain/outbox";
 import type { MedicationScheduleRepository, OutboxRepository } from "@/lib/domain/repositories";
 import { getClientDb, type MedTrackingDexie } from "@/lib/db-client/dexie";
 import { DexieOutboxRepository } from "@/lib/db-client/outbox-repository";
@@ -56,6 +57,7 @@ export class DexieMedicationScheduleRepository implements MedicationScheduleRepo
       payload: record,
       baseVersion: undefined,
       createdAt: now,
+      seq: nextOutboxSeq(),
       status: "pending",
       attempts: 0,
       nextAttemptAt: now,
@@ -86,6 +88,7 @@ export class DexieMedicationScheduleRepository implements MedicationScheduleRepo
       payload: patch,
       baseVersion: existing.version,
       createdAt: now,
+      seq: nextOutboxSeq(),
       status: "pending",
       attempts: 0,
       nextAttemptAt: now,
@@ -112,6 +115,7 @@ export class DexieMedicationScheduleRepository implements MedicationScheduleRepo
       payload: {},
       baseVersion: existing.version,
       createdAt: now,
+      seq: nextOutboxSeq(),
       status: "pending",
       attempts: 0,
       nextAttemptAt: now,

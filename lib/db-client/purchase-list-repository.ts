@@ -1,6 +1,7 @@
 import { newId } from "@/lib/domain/ids";
 import type { PurchaseListRecord } from "@/lib/domain/entities";
 import type { OutboxEntry } from "@/lib/domain/outbox";
+import { nextOutboxSeq } from "@/lib/domain/outbox";
 import type { OutboxRepository, PurchaseListRepository } from "@/lib/domain/repositories";
 import { getClientDb, type MedTrackingDexie } from "@/lib/db-client/dexie";
 import { DexieOutboxRepository } from "@/lib/db-client/outbox-repository";
@@ -51,6 +52,7 @@ export class DexiePurchaseListRepository implements PurchaseListRepository {
       payload: record,
       baseVersion: undefined, // no prior version — this IS version 1
       createdAt: now,
+      seq: nextOutboxSeq(),
       status: "pending",
       attempts: 0,
       nextAttemptAt: now,
@@ -89,6 +91,7 @@ export class DexiePurchaseListRepository implements PurchaseListRepository {
       payload: updated,
       baseVersion,
       createdAt: now,
+      seq: nextOutboxSeq(),
       status: "pending",
       attempts: 0,
       nextAttemptAt: now,

@@ -1,6 +1,7 @@
 import { newId } from "@/lib/domain/ids";
 import { DEFAULT_USER_PREFERENCES, type UserPreferencesRecord } from "@/lib/domain/entities";
 import type { OutboxEntry } from "@/lib/domain/outbox";
+import { nextOutboxSeq } from "@/lib/domain/outbox";
 import type { OutboxRepository, UserPreferencesRepository } from "@/lib/domain/repositories";
 import { getClientDb, type MedTrackingDexie } from "@/lib/db-client/dexie";
 import { DexieOutboxRepository } from "@/lib/db-client/outbox-repository";
@@ -45,6 +46,7 @@ export class DexiePreferencesRepository implements UserPreferencesRepository {
       operation: "update",
       payload: updated,
       createdAt: now,
+      seq: nextOutboxSeq(),
       status: "pending",
       attempts: 0,
       nextAttemptAt: now,

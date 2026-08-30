@@ -19,26 +19,31 @@ export class DexieOutboxRepository implements OutboxRepository {
    * chip is driven by the entity's own `syncState`, not by this method
    * refusing to retry.
    *
-   * Ordered by `createdAt` ascending — a real bug found via live-device
-   * testing (2026-08-30, Phase 10): with no explicit order, Dexie's
-   * `.toArray()` iterates in primary-key order, and `clientMutationId`
-   * (the primary key) is a random UUID, so a batch could send a
-   * DoseEvent's create BEFORE its own just-created MedicationSchedule's
-   * create within the SAME request. The server processes a batch
-   * sequentially (`applyMutations`'s for-loop) but doesn't currently
-   * isolate one mutation's failure from the rest of the batch, so the
-   * dose event's foreign-key violation (`schedule_id` not found yet)
-   * aborted the whole request — every entry in the batch, including the
-   * schedule itself, came back marked `failed`, even once the schedule
-   * genuinely had succeeded. Ordering by creation time makes the send
-   * order match local creation order, which naturally respects
-   * intra-batch dependencies for any entity relationship, not just this
-   * one (a schedule is always created, and thus enqueued, before the
-   * dose events generated from it).
+   * Ordered by `seq` ascending (falling back to `createdAt` when `seq` is
+   * missing — pre-existing installs' already-stored `failed` entries) — a
+   * real bug found via live-device testing (2026-08-30, Phase 10): with no
+   * explicit order, Dexie's `.toArray()` iterates in primary-key order,
+   * and `clientMutationId` (the primary key) is a random UUID, so a batch
+   * could send a DoseEvent's create BEFORE its own just-created
+   * MedicationSchedule's create within the SAME request. The server
+   * processes a batch sequentially (`applyMutations`'s for-loop) but
+   * doesn't currently isolate one mutation's failure from the rest of the
+   * batch, so the dose event's foreign-key violation (`schedule_id` not
+   * found yet) aborted the whole request — every entry in the batch,
+   * including the schedule itself, came back marked `failed`, even once
+   * the schedule genuinely had succeeded. An initial fix sorted by
+   * `createdAt` (a wall-clock string) instead, which matches local
+   * creation order in general — but a follow-up live-device test caught
+   * that `createdAt`'s millisecond resolution isn't fine enough for the
+   * real `AddMedicationFlow` shape (a schedule immediately followed by
+   * several generated dose events, easily colliding on the same
+   * millisecond), which silently degraded the sort back to the same
+   * random primary-key order for those ties. `seq` (`nextOutboxSeq()`) is
+   * a locally-assigned strictly-increasing counter with no such collision.
    */
   async listPending(now: string): Promise<OutboxEntry[]> {
     const entries = await this.db.outbox.where("status").notEqual("syncing").toArray();
-    return entries.filter((e) => e.nextAttemptAt <= now).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return entries.filter((e) => e.nextAttemptAt <= now).sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0) || a.createdAt.localeCompare(b.createdAt));
   }
 
   async markSyncing(clientMutationId: string): Promise<void> {

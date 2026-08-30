@@ -58,6 +58,28 @@ describe("DexieOutboxRepository", () => {
     expect(pending.map((e) => e.clientMutationId)).toEqual([early.clientMutationId, late.clientMutationId]);
   });
 
+  it("listPending orders same-millisecond entries by seq, not primary-key order", async () => {
+    // Follow-up bug (2026-08-30, Phase 10, found re-verifying the fix
+    // above on a real device): AddMedicationFlow creates a
+    // MedicationSchedule immediately followed by several generated
+    // DoseEvents, easily landing on the SAME millisecond -- a createdAt
+    // string sort degrades back to primary-key order on that tie,
+    // reproducing the exact bug the createdAt sort was meant to fix.
+    // `seq` (a locally-assigned strictly-increasing counter) doesn't tie.
+    const sameMs = "2026-01-01T00:00:00.000Z";
+    const first = makeEntry({ createdAt: sameMs, seq: 100 });
+    const second = makeEntry({ createdAt: sameMs, seq: 101 });
+    const third = makeEntry({ createdAt: sameMs, seq: 102 });
+    // Enqueue in reverse seq order so a primary-key/insertion-order sort
+    // would get this wrong.
+    await repo.enqueue(third);
+    await repo.enqueue(first);
+    await repo.enqueue(second);
+
+    const pending = await repo.listPending(new Date().toISOString());
+    expect(pending.map((e) => e.clientMutationId)).toEqual([first.clientMutationId, second.clientMutationId, third.clientMutationId]);
+  });
+
   it("listPending excludes entries whose nextAttemptAt is still in the future (backoff)", async () => {
     const future = new Date(Date.now() + 60_000).toISOString();
     await repo.enqueue(makeEntry({ nextAttemptAt: future }));

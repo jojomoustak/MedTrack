@@ -25,13 +25,39 @@ export interface OutboxEntry<TPayload = Record<string, unknown>> {
   payload: TPayload;
   /** For optimistic-concurrency entities (Phase 2 §5): the version this mutation was built against, so the server can detect a real conflict. Undefined for LWW/ledger/idempotent-by-id entities. */
   baseVersion?: number;
-  /** Device clock at the moment of the local write — used for LWW comparison (Phase 2 §2.3/§2.10) and for ordering retries. Never authoritative on the server (that's `sync_change_log.occurred_at`, server-set). */
+  /** Device clock at the moment of the local write — used for LWW comparison (Phase 2 §2.3/§2.10). Never authoritative on the server (that's `sync_change_log.occurred_at`, server-set). Deliberately NOT the send-ordering key (see `seq`) — a wall-clock string only has millisecond resolution, too coarse for a burst of same-tick writes (e.g. a schedule immediately followed by several generated dose events). */
   createdAt: string;
+  /**
+   * Local send-ordering key (`nextOutboxSeq()`) — strictly increasing even
+   * for multiple entries enqueued within the same millisecond, unlike
+   * `createdAt`. A real bug found via live-device testing (2026-08-30,
+   * Phase 10, after `listPending`'s `createdAt`-sort fix landed):
+   * `AddMedicationFlow` creates a `UserMedication`, then a
+   * `MedicationSchedule`, then several generated `DoseEvent`s in quick
+   * synchronous succession — easily within the same millisecond on a real
+   * device — so a `createdAt` string sort still degraded to Dexie's
+   * primary-key (random UUID) iteration order on those ties, reproducing
+   * the exact same intra-batch ordering bug the `createdAt` sort was
+   * meant to fix. Optional (existing installs' already-stored `failed`
+   * outbox entries predate this field) — `listPending` treats a missing
+   * `seq` as "send first," which is safe since such entries are already
+   * in-flight/transient.
+   */
+  seq?: number;
   status: OutboxStatus;
   attempts: number;
   /** Backoff scheduling — the worker skips entries whose `nextAttemptAt` is in the future. */
   nextAttemptAt: string;
   lastError?: string;
+}
+
+let lastOutboxSeq = 0;
+
+/** Strictly increasing across calls, even within the same millisecond — see `OutboxEntry.seq`'s doc for why `createdAt` alone isn't enough. */
+export function nextOutboxSeq(): number {
+  const now = Date.now();
+  lastOutboxSeq = now > lastOutboxSeq ? now : lastOutboxSeq + 1;
+  return lastOutboxSeq;
 }
 
 /** Exponential backoff with a cap, plus jitter to avoid a thundering herd of retries all firing at once after a reconnect. */

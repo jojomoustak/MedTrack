@@ -1,6 +1,7 @@
 import type { CreateDoseEventInput, DoseEventRecord, DoseEventTransitionPatch } from "@/lib/domain/dose-event";
 import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
 import type { OutboxEntry } from "@/lib/domain/outbox";
+import { nextOutboxSeq } from "@/lib/domain/outbox";
 import type { DoseEventRepository, OutboxRepository } from "@/lib/domain/repositories";
 import { getClientDb, type MedTrackingDexie } from "@/lib/db-client/dexie";
 import { DexieOutboxRepository } from "@/lib/db-client/outbox-repository";
@@ -70,6 +71,7 @@ export class DexieDoseEventRepository implements DoseEventRepository {
       payload: record,
       baseVersion: undefined,
       createdAt: now,
+      seq: nextOutboxSeq(),
       status: "pending",
       attempts: 0,
       nextAttemptAt: now,
@@ -124,6 +126,7 @@ export class DexieDoseEventRepository implements DoseEventRepository {
       payload: patch,
       baseVersion: undefined,
       createdAt: now,
+      seq: nextOutboxSeq(),
       status: "pending",
       attempts: 0,
       nextAttemptAt: now,
