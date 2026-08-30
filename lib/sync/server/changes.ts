@@ -8,6 +8,7 @@ import { withProfileScope } from "@/lib/db/rls";
 import * as schema from "@/lib/db/schema";
 import type { Db, TestableDb } from "@/lib/db/client";
 import type { SyncChangeEntry, SyncChangesResponseBody } from "@/lib/sync/protocol";
+import { toCamelCaseRecord } from "@/lib/sync/server/snake-case";
 
 export async function pullChanges(
   profileId: string,
@@ -94,7 +95,10 @@ export async function pullChanges(
         )[0]
       : undefined;
   const scheduleRows = (scheduleRecords as { rows?: Record<string, unknown>[] } | undefined)?.rows ?? [];
-  const scheduleById = new Map(scheduleRows.map((r) => [r.id as string, r]));
+  // Raw SQL result -- snake_case column names, unlike every other entity
+  // in this file (which reads via Drizzle's query builder and is already
+  // camelCase). See snake-case.ts's doc for why this matters.
+  const scheduleById = new Map(scheduleRows.map((r) => [r.id as string, toCamelCaseRecord(r)]));
 
   const doseEventIds = logRows.filter((r) => r.entityType === "doseEvent").map((r) => r.entityId);
   const doseEventRecords =

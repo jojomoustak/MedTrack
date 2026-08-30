@@ -186,7 +186,7 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
   // sync pattern, proving it generalizes to an entity with an optional
   // FK (ADR-004). ---
 
-  it("userMedication (manual entry): create with catalogProductId null and a customName", async () => {
+  it("userMedication (manual entry): create with catalogProductId null and a customName -- serverRecord is camelCase (2026-08-30 snake_case fix), not raw Postgres column names", async () => {
     const { accountId, profileId } = await seedAccountAndProfile();
     const id = randomUUID();
 
@@ -201,9 +201,9 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     ]);
 
     expect(result[0].result).toBe("applied");
-    const record = result[0].serverRecord as { catalog_product_id: unknown; custom_name: string; version: number };
-    expect(record.catalog_product_id).toBeNull();
-    expect(record.custom_name).toBe("Παρακεταμόλη");
+    const record = result[0].serverRecord as { catalogProductId: unknown; customName: string; version: number };
+    expect(record.catalogProductId).toBeNull();
+    expect(record.customName).toBe("Παρακεταμόλη");
     expect(record.version).toBe(1);
   });
 
@@ -274,9 +274,9 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     ]);
 
     expect(result[0].result).toBe("applied");
-    const record = result[0].serverRecord as { catalog_product_id: string; custom_name: string | null };
-    expect(record.catalog_product_id).toBe(catalogProductId);
-    expect(record.custom_name).toBeNull();
+    const record = result[0].serverRecord as { catalogProductId: string; customName: string | null };
+    expect(record.catalogProductId).toBe(catalogProductId);
+    expect(record.customName).toBeNull();
   });
 
   // --- Phase 10: medicationSchedule + doseEvent ---
@@ -316,9 +316,9 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     ]);
 
     expect(result[0].result).toBe("applied");
-    const record = result[0].serverRecord as { time_anchor: string; times_of_day: string[]; version: number };
-    expect(record.time_anchor).toBe("wall_clock");
-    expect(record.times_of_day).toEqual(["08:00:00"]);
+    const record = result[0].serverRecord as { timeAnchor: string; timesOfDay: string[]; version: number };
+    expect(record.timeAnchor).toBe("wall_clock");
+    expect(record.timesOfDay).toEqual(["08:00:00"]);
     expect(record.version).toBe(1);
   });
 
@@ -349,9 +349,9 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     ]);
 
     expect(result[0].result).toBe("applied");
-    const record = result[0].serverRecord as { time_anchor: string; interval_hours: number };
-    expect(record.time_anchor).toBe("elapsed");
-    expect(record.interval_hours).toBe(8);
+    const record = result[0].serverRecord as { timeAnchor: string; intervalHours: number };
+    expect(record.timeAnchor).toBe("elapsed");
+    expect(record.intervalHours).toBe(8);
   });
 
   it("medicationSchedule (prn): create has a null time_anchor and no subtype row", async () => {
@@ -370,10 +370,10 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     ]);
 
     expect(result[0].result).toBe("applied");
-    const record = result[0].serverRecord as { time_anchor: string | null; times_of_day: unknown; interval_hours: unknown };
-    expect(record.time_anchor).toBeNull();
-    expect(record.times_of_day).toBeNull();
-    expect(record.interval_hours).toBeNull();
+    const record = result[0].serverRecord as { timeAnchor: string | null; timesOfDay: unknown; intervalHours: unknown };
+    expect(record.timeAnchor).toBeNull();
+    expect(record.timesOfDay).toBeNull();
+    expect(record.intervalHours).toBeNull();
   });
 
   it("medicationSchedule (optimistic concurrency): update with the correct baseVersion succeeds and updates the wall-clock subtype; a stale baseVersion is a genuine conflict", async () => {
@@ -395,8 +395,8 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
       { clientMutationId: randomUUID(), entityType: "medicationSchedule", entityId: id, operation: "update", payload: { timesOfDay: ["09:00:00"] }, baseVersion: 1 },
     ]);
     expect(updateResult[0].result).toBe("applied");
-    const updated = updateResult[0].serverRecord as { times_of_day: string[]; version: number };
-    expect(updated.times_of_day).toEqual(["09:00:00"]);
+    const updated = updateResult[0].serverRecord as { timesOfDay: string[]; version: number };
+    expect(updated.timesOfDay).toEqual(["09:00:00"]);
     expect(updated.version).toBe(2);
 
     const staleResult = await applyMutations({ profileId, accountId, db }, [
@@ -424,8 +424,8 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
       { clientMutationId: randomUUID(), entityType: "medicationSchedule", entityId: id, operation: "delete", payload: {}, baseVersion: 1 },
     ]);
     expect(deleteResult[0].result).toBe("applied");
-    const deleted = deleteResult[0].serverRecord as { deleted_at: string | null };
-    expect(deleted.deleted_at).not.toBeNull();
+    const deleted = deleteResult[0].serverRecord as { deletedAt: string | null };
+    expect(deleted.deletedAt).not.toBeNull();
   });
 
   it("doseEvent: create is idempotent on id — a second create with the SAME id (e.g. deterministic schedule-generated id) never duplicates the row", async () => {
@@ -462,9 +462,9 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     ]);
 
     expect(result[0].result).toBe("applied");
-    const record = result[0].serverRecord as { status: string; taken_at: string };
+    const record = result[0].serverRecord as { status: string; takenAt: string };
     expect(record.status).toBe("taken");
-    expect(new Date(record.taken_at).toISOString()).toBe(new Date(takenAt).toISOString());
+    expect(new Date(record.takenAt).toISOString()).toBe(new Date(takenAt).toISOString());
   });
 
   it("doseEvent: a transition on an already-terminal row is a silent no-op that still returns 'applied' with the current row, never 'conflict' (designing-offline-sync: converge, not conflict)", async () => {
