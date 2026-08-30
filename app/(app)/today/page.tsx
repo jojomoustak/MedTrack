@@ -1,25 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { useProfileId } from "@/components/shell/CurrentProfileContext";
+import { useProfileId, useAccountId } from "@/components/shell/CurrentProfileContext";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
+import { useDisplayNames } from "@/lib/medications/client/use-display-names";
+import { useTodayDoseEvents, allTodayDosesResolved } from "@/components/today/use-today-dose-events";
+import { DoseCard } from "@/components/today/DoseCard";
+import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
+import { DexiePreferencesRepository } from "@/lib/db-client/user-preferences-repository";
+import { newId } from "@/lib/domain/ids";
 
 /**
- * Today (Phase 3 §2.2). Dose scheduling is Phase 10 — not built yet, so
- * there are never any real dose events to show. Rather than fabricate a
- * populated timeline or a dishonest "all done, well done today!"
- * affirmation (which would imply doses were due and completed), this
- * shows two honest states only:
- *   - no medications at all -> Phase 3's own "empty state, CTA to Add
- *     Medication" (journey 1's onboarding framing).
- *   - has medications, nothing schedulable yet -> a calm, accurate note
- *     that scheduling is coming, not a claim that today is "done."
+ * Today (Phase 3 §2.2) — the daily adherence loop's home screen. Real
+ * dose data now that Phase 10's schedule/dose-event domain exists (was a
+ * permanent placeholder before, per this file's own prior history).
  */
 export default function TodayPage() {
   const profileId = useProfileId();
-  const { status, medications } = useMedicationsList(profileId);
+  const accountId = useAccountId();
+  const { status: medsStatus, medications } = useMedicationsList(profileId);
+  const names = useDisplayNames(medications);
+  const { status: dosesStatus, todayDoses, needsAttention, refresh } = useTodayDoseEvents(profileId);
 
-  if (status === "loading") {
+  async function handleTaken(doseId: string) {
+    const repo = new DexieDoseEventRepository();
+    await repo.transition(doseId, { status: "taken", takenAt: new Date().toISOString() }, newId());
+    refresh();
+  }
+
+  async function handleSkipped(doseId: string) {
+    const repo = new DexieDoseEventRepository();
+    await repo.transition(doseId, { status: "skipped" }, newId());
+    refresh();
+  }
+
+  async function handleSnoozed(doseId: string) {
+    const preferences = await new DexiePreferencesRepository().get(accountId);
+    const snoozeMinutes = preferences?.reminderDefaultSnoozeMinutes ?? 10;
+    const reminderAt = new Date(Date.now() + snoozeMinutes * 60_000).toISOString();
+    const repo = new DexieDoseEventRepository();
+    await repo.transition(doseId, { status: "snoozed", reminderAt }, newId());
+    refresh();
+  }
+
+  if (medsStatus === "loading" || dosesStatus === "loading") {
     return (
       <p role="status" className="p-6 text-sm text-zinc-600 dark:text-zinc-400">
         Φόρτωση…
@@ -42,15 +66,65 @@ export default function TodayPage() {
     );
   }
 
+  if (todayDoses.length === 0 && needsAttention.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-3 p-8 text-center">
+        <h1 className="text-xl font-semibold">Σήμερα</h1>
+        <p className="max-w-sm text-zinc-600 dark:text-zinc-400">Δεν έχετε προγραμματισμένες δόσεις για σήμερα.</p>
+        <p className="max-w-sm text-sm text-zinc-500 dark:text-zinc-500">
+          Μπορείτε να προσθέσετε πρόγραμμα δόσεων όταν προσθέτετε ένα φάρμακο.
+        </p>
+        <Link href="/medications" className="min-h-12 text-sm font-medium underline">
+          Δείτε τα φάρμακά σας
+        </Link>
+      </div>
+    );
+  }
+
+  const allResolved = allTodayDosesResolved(todayDoses);
+
   return (
-    <div className="flex flex-col items-center gap-3 p-8 text-center">
+    <div className="flex flex-col gap-4 p-4">
       <h1 className="text-xl font-semibold">Σήμερα</h1>
-      <p className="max-w-sm text-zinc-600 dark:text-zinc-400">
-        Δεν υπάρχουν προγραμματισμένες δόσεις για σήμερα — ο προγραμματισμός δόσεων έρχεται σύντομα.
-      </p>
-      <Link href="/medications" className="min-h-12 text-sm font-medium underline">
-        Δείτε τα φάρμακά σας
-      </Link>
+
+      {needsAttention.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-medium text-amber-800 dark:text-amber-300">Χρειάζεται προσοχή</h2>
+          <div className="flex flex-col gap-2">
+            {needsAttention.map((dose) => (
+              <DoseCard
+                key={dose.id}
+                dose={dose}
+                medicationName={names.get(dose.userMedicationId) ?? "…"}
+                actionable={false}
+                onTaken={handleTaken}
+                onSkipped={handleSkipped}
+                onSnoozed={handleSnoozed}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {allResolved && (
+        <p role="status" className="rounded-lg bg-zinc-100 px-4 py-3 text-sm dark:bg-zinc-900">
+          Όλες οι σημερινές δόσεις έχουν καταγραφεί.
+        </p>
+      )}
+
+      <div className="flex flex-col gap-2" aria-label="Σημερινές δόσεις">
+        {todayDoses.map((dose) => (
+          <DoseCard
+            key={dose.id}
+            dose={dose}
+            medicationName={names.get(dose.userMedicationId) ?? "…"}
+            actionable
+            onTaken={handleTaken}
+            onSkipped={handleSkipped}
+            onSnoozed={handleSnoozed}
+          />
+        ))}
+      </div>
     </div>
   );
 }

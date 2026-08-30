@@ -204,7 +204,7 @@ export interface MedicationScheduleRepository {
   listByUserMedication(userMedicationId: string): Promise<MedicationScheduleRecord[]>;
   get(id: string): Promise<MedicationScheduleRecord | null>;
   /** Local create + outbox entry, same transaction — mirrors `UserMedicationRepository.create`. */
-  create(input: CreateMedicationScheduleInput, clientMutationId: string): Promise<MedicationScheduleRecord>;
+  create(input: CreateMedicationScheduleInput): Promise<MedicationScheduleRecord>;
   /** Bumps local `version` optimistically, enqueues an update mutation carrying `baseVersion`. */
   update(id: string, patch: MedicationSchedulePatch, clientMutationId: string): Promise<MedicationScheduleRecord>;
   softDelete(id: string, clientMutationId: string): Promise<void>;

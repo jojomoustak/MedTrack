@@ -2,7 +2,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AddMedicationFlow } from "@/components/medications/AddMedicationFlow";
-import type { CatalogCacheRepository, CreateUserMedicationInput, OfflineIndexRepository, UserMedicationRepository } from "@/lib/domain/repositories";
+import type {
+  CatalogCacheRepository,
+  CreateUserMedicationInput,
+  DoseEventRepository,
+  MedicationScheduleRepository,
+  OfflineIndexRepository,
+  UserMedicationRepository,
+} from "@/lib/domain/repositories";
+import type { CreateMedicationScheduleInput, MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MobilePlatform } from "@/lib/platform/mobile-platform";
 import type { CatalogProduct } from "@/lib/domain/catalog";
@@ -50,7 +58,10 @@ describe("AddMedicationFlow — manual entry path end to end", () => {
     fireEvent.change(screen.getByLabelText(/μονάδα περιεκτικότητας/i), { target: { value: "mg" } });
     fireEvent.click(screen.getByRole("button", { name: /συνέχεια/i }));
 
-    // 4. Review & finish
+    // 4. Schedule step — skip for this test (covered separately)
+    fireEvent.click(screen.getByRole("button", { name: /παράλειψη/i }));
+
+    // 5. Review & finish
     expect(screen.getByText("Ιβουπροφένη")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /ολοκλήρωση/i }));
 
@@ -84,11 +95,117 @@ describe("AddMedicationFlow — manual entry path end to end", () => {
     fireEvent.change(screen.getByLabelText(/όνομα φαρμάκου/i), { target: { value: "X" } });
     fireEvent.click(screen.getByRole("button", { name: /συνέχεια/i }));
     fireEvent.click(screen.getByRole("button", { name: /συνέχεια/i }));
+    fireEvent.click(screen.getByRole("button", { name: /παράλειψη/i }));
     fireEvent.click(screen.getByRole("button", { name: /ολοκλήρωση/i }));
 
     await vi.waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     // Never a raw error code shown to the user (CLAUDE.md rule 8 / Phase 3 §8).
     expect(screen.getByRole("alert").textContent).not.toMatch(/boom/i);
+  });
+
+  it("walks entry chooser -> manual form -> details -> schedule (daily) -> review -> creates the schedule and generates dose events, using the SAME clientMutationId as the outbox entry", async () => {
+    const { repository } = makeFakeRepository();
+    const createSchedule = vi.fn(async (input: CreateMedicationScheduleInput): Promise<MedicationScheduleRecord> => ({
+      ...input,
+      timeAnchor: "wall_clock",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      version: 1,
+      deletedAt: null,
+      syncState: "pending",
+    }));
+    const scheduleRepository: MedicationScheduleRepository = {
+      list: vi.fn().mockResolvedValue([]),
+      listByUserMedication: vi.fn().mockResolvedValue([]),
+      get: vi.fn().mockResolvedValue(null),
+      create: createSchedule,
+      update: vi.fn(),
+      softDelete: vi.fn(),
+      applyRemote: vi.fn(),
+      markConflict: vi.fn(),
+      markFailed: vi.fn(),
+    };
+    const createDoseEvent = vi.fn().mockResolvedValue(undefined);
+    const doseEventRepository: DoseEventRepository = {
+      listForProfileInRange: vi.fn().mockResolvedValue([]),
+      listByUserMedication: vi.fn().mockResolvedValue([]),
+      listByScheduleId: vi.fn().mockResolvedValue([]),
+      listNonTerminalBefore: vi.fn().mockResolvedValue([]),
+      get: vi.fn().mockResolvedValue(null),
+      createIfMissing: createDoseEvent,
+      transition: vi.fn(),
+      applyRemote: vi.fn(),
+      markFailed: vi.fn(),
+    };
+    const onCreated = vi.fn();
+    render(
+      <AddMedicationFlow
+        profileId="profile-1"
+        repository={repository}
+        scheduleRepository={scheduleRepository}
+        doseEventRepository={doseEventRepository}
+        onCreated={onCreated}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /χειροκίνητη/i }));
+    fireEvent.change(screen.getByLabelText(/όνομα φαρμάκου/i), { target: { value: "Ασπιρίνη" } });
+    fireEvent.click(screen.getByRole("button", { name: /συνέχεια/i }));
+    fireEvent.click(screen.getByRole("button", { name: /συνέχεια/i }));
+
+    // Schedule step: pick "Σταθερές ώρες", set one time, keep "Κάθε μέρα".
+    fireEvent.click(screen.getByRole("button", { name: /σταθερές ώρες/i }));
+    fireEvent.change(screen.getByLabelText(/ώρα δόσης 1/i), { target: { value: "08:00" } });
+    fireEvent.click(screen.getByRole("button", { name: /συνέχεια/i }));
+
+    // Dates review: keep defaults (today, no end date), set quantity.
+    fireEvent.change(screen.getByLabelText(/ποσότητα δόσης/i), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: /συνέχεια/i }));
+
+    // Review: schedule summary shown, then finish.
+    expect(screen.getByText(/08:00.*κάθε μέρα/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /ολοκλήρωση/i }));
+
+    await vi.waitFor(() => expect(createSchedule).toHaveBeenCalledTimes(1));
+    const scheduleInput = createSchedule.mock.calls[0][0] as CreateMedicationScheduleInput;
+    expect(scheduleInput.scheduleKind).toBe("daily");
+    expect(scheduleInput.timesOfDay).toEqual(["08:00"]);
+    expect(scheduleInput.weekdaysMask).toBeNull();
+
+    // The 72h generation window at one dose/day produces 2-3 instances
+    // depending on what time of day the test itself runs — assert "at
+    // least one", not an exact count tied to wall-clock time.
+    await vi.waitFor(() => expect(createDoseEvent).toHaveBeenCalled());
+    await vi.waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
+  });
+
+  it("skipping the schedule step creates no MedicationSchedule and generates no dose events", async () => {
+    const { repository } = makeFakeRepository();
+    const createSchedule = vi.fn();
+    const scheduleRepository: MedicationScheduleRepository = {
+      list: vi.fn().mockResolvedValue([]),
+      listByUserMedication: vi.fn().mockResolvedValue([]),
+      get: vi.fn().mockResolvedValue(null),
+      create: createSchedule,
+      update: vi.fn(),
+      softDelete: vi.fn(),
+      applyRemote: vi.fn(),
+      markConflict: vi.fn(),
+      markFailed: vi.fn(),
+    };
+    render(<AddMedicationFlow profileId="profile-1" repository={repository} scheduleRepository={scheduleRepository} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /χειροκίνητη/i }));
+    fireEvent.change(screen.getByLabelText(/όνομα φαρμάκου/i), { target: { value: "Ασπιρίνη" } });
+    fireEvent.click(screen.getByRole("button", { name: /συνέχεια/i }));
+    fireEvent.click(screen.getByRole("button", { name: /συνέχεια/i }));
+    fireEvent.click(screen.getByRole("button", { name: /παράλειψη/i }));
+
+    expect(screen.getByText(/χωρίς πρόγραμμα ακόμα/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /ολοκλήρωση/i }));
+
+    await vi.waitFor(() => expect(repository.create).toHaveBeenCalledTimes(1));
+    expect(createSchedule).not.toHaveBeenCalled();
   });
 });
 
@@ -154,7 +271,8 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /επιβεβαίωση/i }));
 
-    // Details is skipped entirely for a confirmed catalog match — straight to Review & finish.
+    // Details is skipped entirely for a confirmed catalog match — straight to the schedule step, skipped here (covered separately), then Review & finish.
+    fireEvent.click(await screen.findByRole("button", { name: /παράλειψη/i }));
     fireEvent.click(await screen.findByRole("button", { name: /ολοκλήρωση/i }));
 
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
@@ -198,9 +316,8 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     fireEvent.click(screen.getByRole("button", { name: /σάρωση/i }));
     fireEvent.click(await screen.findByRole("button", { name: /επιβεβαίωση/i }));
 
-    // Straight to Review: no "Μορφή" fieldset (DetailsStep-only), the
-    // finish button is right there.
-    expect(await screen.findByRole("button", { name: /ολοκλήρωση/i })).toBeTruthy();
+    // Straight to the schedule step: no "Μορφή" fieldset (DetailsStep-only).
+    expect(await screen.findByRole("heading", { name: /πρόγραμμα δόσεων/i })).toBeTruthy();
     expect(screen.queryByRole("radiogroup", { name: /μορφή φαρμάκου/i })).toBeNull();
   });
 

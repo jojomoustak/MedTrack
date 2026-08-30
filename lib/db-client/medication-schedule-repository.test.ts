@@ -42,8 +42,7 @@ describe("DexieMedicationScheduleRepository (optimistic concurrency)", () => {
 
   it("create() derives timeAnchor from scheduleKind and writes a create outbox entry", async () => {
     const input = dailyInput();
-    const clientMutationId = crypto.randomUUID();
-    const record = await repo.create(input, clientMutationId);
+    const record = await repo.create(input);
 
     expect(record.timeAnchor).toBe("wall_clock");
     expect(record.version).toBe(1);
@@ -59,18 +58,17 @@ describe("DexieMedicationScheduleRepository (optimistic concurrency)", () => {
   it("create() for every_n_hours derives timeAnchor 'elapsed'", async () => {
     const record = await repo.create(
       dailyInput({ scheduleKind: "every_n_hours", timesOfDay: null, intervalHours: 8, anchorAt: new Date().toISOString() }),
-      crypto.randomUUID(),
     );
     expect(record.timeAnchor).toBe("elapsed");
   });
 
   it("create() for prn derives timeAnchor null", async () => {
-    const record = await repo.create(dailyInput({ scheduleKind: "prn", timesOfDay: null }), crypto.randomUUID());
+    const record = await repo.create(dailyInput({ scheduleKind: "prn", timesOfDay: null }));
     expect(record.timeAnchor).toBeNull();
   });
 
   it("update() bumps version locally and enqueues an update mutation carrying baseVersion", async () => {
-    const created = await repo.create(dailyInput(), crypto.randomUUID());
+    const created = await repo.create(dailyInput());
     const updated = await repo.update(created.id, { timesOfDay: ["09:00:00"] }, crypto.randomUUID());
 
     expect(updated.version).toBe(2);
@@ -82,7 +80,7 @@ describe("DexieMedicationScheduleRepository (optimistic concurrency)", () => {
   });
 
   it("softDelete() sets deletedAt and excludes the row from list()", async () => {
-    const created = await repo.create(dailyInput(), crypto.randomUUID());
+    const created = await repo.create(dailyInput());
     await repo.softDelete(created.id, crypto.randomUUID());
 
     const list = await repo.list("profile-1");
@@ -93,8 +91,8 @@ describe("DexieMedicationScheduleRepository (optimistic concurrency)", () => {
   });
 
   it("listByUserMedication() scopes correctly", async () => {
-    await repo.create(dailyInput({ userMedicationId: "med-a" }), crypto.randomUUID());
-    await repo.create(dailyInput({ userMedicationId: "med-b" }), crypto.randomUUID());
+    await repo.create(dailyInput({ userMedicationId: "med-a" }));
+    await repo.create(dailyInput({ userMedicationId: "med-b" }));
 
     const forA = await repo.listByUserMedication("med-a");
     expect(forA).toHaveLength(1);
@@ -102,7 +100,7 @@ describe("DexieMedicationScheduleRepository (optimistic concurrency)", () => {
   });
 
   it("applyRemote()/markConflict()/markFailed() update syncState", async () => {
-    const created = await repo.create(dailyInput(), crypto.randomUUID());
+    const created = await repo.create(dailyInput());
 
     await repo.markConflict(created.id);
     expect((await repo.get(created.id))?.syncState).toBe("conflict");

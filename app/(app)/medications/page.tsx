@@ -1,13 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
-import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
-import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
-import { onOfflineIndexUpdated } from "@/lib/catalog/client/offline-index-signal";
-import type { UserMedicationRecord } from "@/lib/domain/user-medication";
+import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 
 type Segment = "all" | "active" | "favorites" | "recent";
@@ -18,60 +15,6 @@ const SEGMENTS: { key: Segment; label: string }[] = [
   { key: "favorites", label: "Αγαπημένα" },
   { key: "recent", label: "Πρόσφατα" },
 ];
-
-function useDisplayNames(medications: UserMedicationRecord[]): Map<string, string> {
-  const [names, setNames] = useState<Map<string, string>>(new Map());
-  const [refreshNonce, setRefreshNonce] = useState(0);
-
-  // Real bug (2026-08-28, see offline-index-signal.ts's doc): re-resolves
-  // when the offline index finishes syncing in the background, not just
-  // when `medications` itself changes — otherwise a name resolved before
-  // that sync completed (the common case right after a fresh reinstall +
-  // login) is stuck on the placeholder forever, even though the real data
-  // arrives moments later.
-  useEffect(() => onOfflineIndexUpdated(() => setRefreshNonce((n) => n + 1)), []);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function resolve() {
-      const cache = new DexieCatalogCacheRepository();
-      const offlineIndex = new DexieOfflineIndexRepository();
-      const map = new Map<string, string>();
-      for (const med of medications) {
-        if (med.customName) {
-          map.set(med.id, med.customName);
-          continue;
-        }
-        if (!med.catalogProductId) continue;
-        // `catalogProductCache` first (cheap, already-seen-on-this-device
-        // products) — falls back to the full compact offline index
-        // (`OfflineIndexRepository.getById`) when it misses, rather than
-        // going straight to the generic placeholder. This self-heals any
-        // medication created before 2026-08-28's cache-write fix (a real
-        // bug: offline-index-resolved scans/OCR confirmations used to
-        // never write into `catalogProductCache` at all, so an
-        // already-created medication's name could be permanently stuck on
-        // the placeholder even after that fix, since the fix only changed
-        // what happens on FUTURE resolutions) — the offline index still
-        // has this product's data by id regardless.
-        const cached = await cache.get(med.catalogProductId);
-        if (cached) {
-          map.set(med.id, cached.name);
-          continue;
-        }
-        const indexed = await offlineIndex.getById(med.catalogProductId);
-        map.set(med.id, indexed?.name ?? "Φάρμακο από κατάλογο");
-      }
-      if (!cancelled) setNames(map);
-    }
-    void resolve();
-    return () => {
-      cancelled = true;
-    };
-  }, [medications, refreshNonce]);
-
-  return names;
-}
 
 /** Phase 3 §2.3 Medications list — All/Active/Favorites/Recent segments (§1 refinement 1). Favorites/Recent are Phase 13 — shown as real, selectable segments with an honest "not built yet" state, not omitted or fake-populated. */
 export default function MedicationsPage() {

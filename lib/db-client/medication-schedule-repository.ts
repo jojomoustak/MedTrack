@@ -36,7 +36,7 @@ export class DexieMedicationScheduleRepository implements MedicationScheduleRepo
     return record ?? null;
   }
 
-  async create(input: CreateMedicationScheduleInput, clientMutationId: string): Promise<MedicationScheduleRecord> {
+  async create(input: CreateMedicationScheduleInput): Promise<MedicationScheduleRecord> {
     const now = new Date().toISOString();
     const record: MedicationScheduleRecord = {
       ...input,
@@ -49,7 +49,7 @@ export class DexieMedicationScheduleRepository implements MedicationScheduleRepo
     };
 
     const outboxEntry: OutboxEntry<MedicationScheduleRecord> = {
-      clientMutationId,
+      clientMutationId: input.clientMutationId,
       entityType: "medicationSchedule",
       entityId: record.id,
       operation: "create",

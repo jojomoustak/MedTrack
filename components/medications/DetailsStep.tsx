@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
-const FORM_OPTIONS: MedicationForm[] = [
+export const FORM_OPTIONS: MedicationForm[] = [
   "tablet",
   "capsule",
   "ml",
@@ -20,7 +20,7 @@ const FORM_OPTIONS: MedicationForm[] = [
   "other",
 ];
 
-const FORM_LABELS: Record<MedicationForm, string> = {
+export const FORM_LABELS: Record<MedicationForm, string> = {
   tablet: "Δισκίο",
   capsule: "Κάψουλα",
   ml: "ml",

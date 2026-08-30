@@ -6,17 +6,29 @@ import { SearchStep } from "@/components/medications/SearchStep";
 import { ScanStep } from "@/components/medications/ScanStep";
 import { ManualEntryForm, type ManualEntryValues } from "@/components/medications/ManualEntryForm";
 import { DetailsStep, type DetailsStepValues } from "@/components/medications/DetailsStep";
+import { ScheduleStep } from "@/components/medications/ScheduleStep";
 import { ReviewStep } from "@/components/medications/ReviewStep";
 import { newId } from "@/lib/domain/ids";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { ParsedBarcode } from "@/lib/domain/gs1";
+import type { ScheduleDraft } from "@/lib/domain/schedule-draft";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
-import type { CatalogCacheRepository, OfflineIndexRepository, UnresolvedScanRepository, UserMedicationRepository } from "@/lib/domain/repositories";
+import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
+import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
+import { generateDoseEventsForSchedule } from "@/lib/scheduling/client/dose-event-generator";
+import type {
+  CatalogCacheRepository,
+  DoseEventRepository,
+  MedicationScheduleRepository,
+  OfflineIndexRepository,
+  UnresolvedScanRepository,
+  UserMedicationRepository,
+} from "@/lib/domain/repositories";
 import type { MedicationForm, UserMedicationRecord } from "@/lib/domain/user-medication";
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import type { MobilePlatform } from "@/lib/platform/mobile-platform";
 
-type FlowStep = "entry" | "scan" | "search" | "manual" | "details" | "review";
+type FlowStep = "entry" | "scan" | "search" | "manual" | "details" | "schedule" | "review";
 
 export interface AddMedicationFlowProps {
   profileId: string;
@@ -28,6 +40,10 @@ export interface AddMedicationFlowProps {
   cacheRepository?: CatalogCacheRepository;
   offlineIndex?: OfflineIndexRepository;
   unresolvedScanRepository?: UnresolvedScanRepository;
+  /** Test/DI seam — defaults to a real Dexie-backed repository. */
+  scheduleRepository?: MedicationScheduleRepository;
+  /** Test/DI seam — defaults to a real Dexie-backed repository. Used only for schedule-generated dose-event materialization right after a schedule is created. */
+  doseEventRepository?: DoseEventRepository;
 }
 
 /** No `Package`/inventory schema exists yet to hold GS1-parsed expiry/batch as structured fields (`lib/domain/ids.ts`'s reserved `MedicationPackageId` is for a future phase). Folded into the free-text `notes` field so a scan's data is preserved and visible rather than silently discarded — a deliberate stopgap, not a modeling decision, until that entity ships. */
@@ -58,12 +74,17 @@ export function AddMedicationFlow({
   cacheRepository,
   offlineIndex,
   unresolvedScanRepository,
+  scheduleRepository,
+  doseEventRepository,
 }: AddMedicationFlowProps) {
   const [step, setStep] = useState<FlowStep>("entry");
   const [catalogProduct, setCatalogProduct] = useState<CatalogProduct | null>(null);
   const [manualName, setManualName] = useState<string | null>(null);
   const [details, setDetails] = useState<DetailsStepValues | null>(null);
   const [notes, setNotes] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState<ScheduleDraft | null>(null);
+  /** Which step "Πίσω" from the schedule step's kind chooser returns to — "review" only once Review has actually been reached at least once (editing an already-set schedule), "details" otherwise. */
+  const [scheduleStepBackTarget, setScheduleStepBackTarget] = useState<"details" | "review">("details");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scanAvailable] = useState(() => (platform ?? getDefaultMobilePlatform()).isAvailable());
@@ -103,7 +124,7 @@ export function AddMedicationFlow({
       strengthUnit: product.strengthUnit ?? "",
       inventoryUnit: (product.form as MedicationForm | null) ?? "tablet",
     });
-    setStep("review");
+    setStep("schedule");
   }
 
   /** Scan → "couldn't identify automatically" → "Continue manually," pre-filled with whatever GS1 fields were parsed (Phase 3 Journey 3). */
@@ -121,9 +142,24 @@ export function AddMedicationFlow({
 
   function handleDetailsSubmit(values: DetailsStepValues) {
     setDetails(values);
+    setStep("schedule");
+  }
+
+  function handleScheduleContinue(draft: ScheduleDraft | null) {
+    setSchedule(draft);
+    setScheduleStepBackTarget("review");
     setStep("review");
   }
 
+  /**
+   * `MedicationScheduleRecord.userMedicationId` is a required FK — the
+   * schedule *form* is filled in before Review (matching Phase 3 §2.5's
+   * screen order), but the schedule *write* (+ dose-event generation)
+   * only happens here, right after the medication itself gets a real
+   * `id`, as a second step in the same `handleFinish` (ux-accessibility-
+   * designer design, 2026-08-30). Keeps "one Finish tap, no blocking
+   * spinner" true while respecting the FK.
+   */
   async function handleFinish() {
     if (!details) return;
     setSubmitting(true);
@@ -144,6 +180,28 @@ export function AddMedicationFlow({
         expiryWarningDays: 30,
         notes,
       });
+
+      if (schedule) {
+        const scheduleRepo = scheduleRepository ?? new DexieMedicationScheduleRepository();
+        const createdSchedule = await scheduleRepo.create({
+          id: newId(),
+          profileId,
+          userMedicationId: record.id,
+          clientMutationId: newId(),
+          scheduleKind: schedule.scheduleKind,
+          startDate: schedule.startDate,
+          endDate: schedule.endDate,
+          timezone: schedule.timezone,
+          doseQuantityValue: schedule.doseQuantityValue,
+          doseQuantityUnit: schedule.doseQuantityUnit,
+          timesOfDay: schedule.timesOfDay,
+          weekdaysMask: schedule.weekdaysMask,
+          intervalHours: schedule.intervalHours,
+          anchorAt: schedule.anchorAt,
+        });
+        await generateDoseEventsForSchedule(createdSchedule, doseEventRepository ?? new DexieDoseEventRepository());
+      }
+
       onCreated?.(record);
     } catch {
       setError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
@@ -176,6 +234,9 @@ export function AddMedicationFlow({
         <ManualEntryForm onSubmit={handleManualSubmit} initialExpiry={manualPrefill.expiry} initialBatch={manualPrefill.batch} />
       )}
       {step === "details" && <DetailsStep catalogProduct={catalogProduct} manualName={manualName} onSubmit={handleDetailsSubmit} />}
+      {step === "schedule" && (
+        <ScheduleStep onContinue={handleScheduleContinue} onBack={() => setStep(scheduleStepBackTarget)} initialDraft={schedule} />
+      )}
       {step === "review" && details && (
         <ReviewStep
           name={displayName}
@@ -183,6 +244,8 @@ export function AddMedicationFlow({
           strengthValue={details.strengthValue}
           strengthUnit={details.strengthUnit}
           inventoryUnit={details.inventoryUnit}
+          schedule={schedule}
+          onEditSchedule={() => setStep("schedule")}
           onFinish={handleFinish}
           submitting={submitting}
           error={error}

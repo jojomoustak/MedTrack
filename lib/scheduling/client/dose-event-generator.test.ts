@@ -51,7 +51,7 @@ describe("dose-event-generator", () => {
   });
 
   it("generateDoseEventsForSchedule materializes one DoseEvent per instant in the window", async () => {
-    const schedule = await scheduleRepo.create(dailyInput(), crypto.randomUUID());
+    const schedule = await scheduleRepo.create(dailyInput());
     const now = new Date("2026-09-01T00:00:00Z");
 
     const result = await generateDoseEventsForSchedule(schedule, doseEventRepo, now, 3 * 24 * 3_600_000);
@@ -63,7 +63,7 @@ describe("dose-event-generator", () => {
   });
 
   it("generateDoseEventsForSchedule is idempotent — calling it again creates nothing new", async () => {
-    const schedule = await scheduleRepo.create(dailyInput(), crypto.randomUUID());
+    const schedule = await scheduleRepo.create(dailyInput());
     const now = new Date("2026-09-01T00:00:00Z");
 
     await generateDoseEventsForSchedule(schedule, doseEventRepo, now);
@@ -73,13 +73,13 @@ describe("dose-event-generator", () => {
   });
 
   it("generateDoseEventsForSchedule generates nothing for a PRN schedule", async () => {
-    const schedule = await scheduleRepo.create(dailyInput({ scheduleKind: "prn", timesOfDay: null }), crypto.randomUUID());
+    const schedule = await scheduleRepo.create(dailyInput({ scheduleKind: "prn", timesOfDay: null }));
     const result = await generateDoseEventsForSchedule(schedule, doseEventRepo, new Date("2026-09-01T00:00:00Z"));
     expect(result.created).toBe(0);
   });
 
   it("reconcileDoseEventsForSchedule cancels a future non-terminal instance no longer produced by an edited recurrence", async () => {
-    const schedule = await scheduleRepo.create(dailyInput({ timesOfDay: ["08:00:00", "20:00:00"] }), crypto.randomUUID());
+    const schedule = await scheduleRepo.create(dailyInput({ timesOfDay: ["08:00:00", "20:00:00"] }));
     const now = new Date("2026-09-01T00:00:00Z");
     await generateDoseEventsForSchedule(schedule, doseEventRepo, now, 24 * 3_600_000);
 
@@ -99,7 +99,7 @@ describe("dose-event-generator", () => {
   });
 
   it("reconcileDoseEventsForSchedule never touches an already-terminal instance", async () => {
-    const schedule = await scheduleRepo.create(dailyInput({ timesOfDay: ["08:00:00", "20:00:00"] }), crypto.randomUUID());
+    const schedule = await scheduleRepo.create(dailyInput({ timesOfDay: ["08:00:00", "20:00:00"] }));
     const now = new Date("2026-09-01T00:00:00Z");
     await generateDoseEventsForSchedule(schedule, doseEventRepo, now, 24 * 3_600_000);
 
@@ -114,7 +114,7 @@ describe("dose-event-generator", () => {
   });
 
   it("generateDoseEventsForSchedule generates nothing for a soft-deleted schedule", async () => {
-    const schedule = await scheduleRepo.create(dailyInput(), crypto.randomUUID());
+    const schedule = await scheduleRepo.create(dailyInput());
     await scheduleRepo.softDelete(schedule.id, crypto.randomUUID());
     const deleted = await scheduleRepo.get(schedule.id);
 
@@ -123,7 +123,7 @@ describe("dose-event-generator", () => {
   });
 
   it("reconcileDoseEventsForSchedule cancels every future non-terminal instance and generates nothing for a soft-deleted schedule", async () => {
-    const schedule = await scheduleRepo.create(dailyInput(), crypto.randomUUID());
+    const schedule = await scheduleRepo.create(dailyInput());
     const now = new Date("2026-09-01T00:00:00Z");
     await generateDoseEventsForSchedule(schedule, doseEventRepo, now, 3 * 24 * 3_600_000);
     expect(await doseEventRepo.listByScheduleId(schedule.id)).toHaveLength(3);
@@ -137,8 +137,8 @@ describe("dose-event-generator", () => {
   });
 
   it("topUpDoseEventWindow generates ahead for every active schedule belonging to the profile", async () => {
-    await scheduleRepo.create(dailyInput({ userMedicationId: "med-a" }), crypto.randomUUID());
-    await scheduleRepo.create(dailyInput({ userMedicationId: "med-b" }), crypto.randomUUID());
+    await scheduleRepo.create(dailyInput({ userMedicationId: "med-a" }));
+    await scheduleRepo.create(dailyInput({ userMedicationId: "med-b" }));
 
     const now = new Date("2026-09-01T00:00:00Z");
     await topUpDoseEventWindow(PROFILE_ID, scheduleRepo, doseEventRepo, now, 2 * 24 * 3_600_000);
@@ -150,7 +150,7 @@ describe("dose-event-generator", () => {
   });
 
   it("sweepMissedDoseEvents transitions an overdue non-terminal dose to 'missed'", async () => {
-    const schedule = await scheduleRepo.create(dailyInput(), crypto.randomUUID());
+    const schedule = await scheduleRepo.create(dailyInput());
     const now = new Date("2026-09-01T09:00:00Z"); // well after the 05:00 UTC (08:00 local) dose
     await generateDoseEventsForSchedule(schedule, doseEventRepo, new Date("2026-09-01T00:00:00Z"), 24 * 3_600_000);
 
@@ -162,7 +162,7 @@ describe("dose-event-generator", () => {
   });
 
   it("sweepMissedDoseEvents leaves a dose within its grace window alone", async () => {
-    const schedule = await scheduleRepo.create(dailyInput(), crypto.randomUUID());
+    const schedule = await scheduleRepo.create(dailyInput());
     // Dose at 05:00 UTC; "now" is only 10 minutes later, well within a 60-minute grace window.
     const now = new Date("2026-09-01T05:10:00Z");
     await generateDoseEventsForSchedule(schedule, doseEventRepo, new Date("2026-09-01T00:00:00Z"), 24 * 3_600_000);

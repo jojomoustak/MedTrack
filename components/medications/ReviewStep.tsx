@@ -1,18 +1,37 @@
 "use client";
 
+import { FORM_LABELS } from "@/components/medications/DetailsStep";
+import type { ScheduleDraft } from "@/lib/domain/schedule-draft";
+import type { MedicationForm } from "@/lib/domain/user-medication";
+
 export interface ReviewStepProps {
   name: string;
   form: string | null;
   strengthValue: string;
   strengthUnit: string;
   inventoryUnit: string;
+  schedule: ScheduleDraft | null;
+  onEditSchedule: () => void;
   onFinish: () => void;
   submitting: boolean;
   error: string | null;
 }
 
-/** Phase 3 §2.4 "Add Medication — review & finish": summary before creating the `UserMedication` row. */
-export function ReviewStep({ name, form, strengthValue, strengthUnit, inventoryUnit, onFinish, submitting, error }: ReviewStepProps) {
+function describeSchedule(schedule: ScheduleDraft): string {
+  const quantity = `${schedule.doseQuantityValue} ${FORM_LABELS[schedule.doseQuantityUnit as MedicationForm] ?? schedule.doseQuantityUnit}`;
+  if (schedule.scheduleKind === "prn") {
+    return `Όποτε χρειάζεται — ${quantity}`;
+  }
+  if (schedule.scheduleKind === "every_n_hours") {
+    return `Κάθε ${schedule.intervalHours} ώρες — ${quantity}`;
+  }
+  const times = (schedule.timesOfDay ?? []).join(", ");
+  const days = schedule.scheduleKind === "specific_weekdays" ? "συγκεκριμένες ημέρες" : "κάθε μέρα";
+  return `${times} (${days}) — ${quantity}`;
+}
+
+/** Phase 3 §2.4 "Add Medication — review & finish": summary before creating the `UserMedication` (+ optional `MedicationSchedule`) rows. */
+export function ReviewStep({ name, form, strengthValue, strengthUnit, inventoryUnit, schedule, onEditSchedule, onFinish, submitting, error }: ReviewStepProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-zinc-300 p-4 dark:border-zinc-700">
@@ -35,6 +54,18 @@ export function ReviewStep({ name, form, strengthValue, strengthUnit, inventoryU
           <dt className="text-zinc-500">Μονάδα αποθέματος</dt>
           <dd>{inventoryUnit}</dd>
         </dl>
+      </div>
+
+      <div className="rounded-xl border border-zinc-300 p-4 dark:border-zinc-700">
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium">Πρόγραμμα δόσεων</h3>
+          <button type="button" onClick={onEditSchedule} className="min-h-12 text-sm font-medium underline">
+            {schedule ? "Επεξεργασία" : "Προσθήκη"}
+          </button>
+        </div>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          {schedule ? describeSchedule(schedule) : "Χωρίς πρόγραμμα ακόμα — μπορείτε να προσθέσετε αργότερα."}
+        </p>
       </div>
 
       {error && (

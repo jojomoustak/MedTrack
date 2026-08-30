@@ -39,7 +39,7 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
   }
 
   return (
-    <CurrentProfileProvider profileId={session.profileId}>
+    <CurrentProfileProvider profileId={session.profileId} accountId={session.accountId}>
       <div className="flex min-h-screen flex-col">
         <AppBar />
         <OfflineBanner />
