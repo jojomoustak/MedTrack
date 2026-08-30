@@ -22,10 +22,24 @@
  * its own in-flight guard and its own signal (`onPhotoOutboxWrite`,
  * separate from `onOutboxWrite`) since it's a deliberately independent
  * queue (see `lib/medications/client/photo-outbox-worker.ts`).
+ *
+ * Phase 10 (Scheduling) adds a periodic tick — not event-driven like the
+ * others, since there's no "write" to react to for "an hour has passed
+ * and a dose is now overdue" — that runs `topUpDoseEventWindow` (extend
+ * every active schedule's materialized DoseEvent horizon) and
+ * `sweepMissedDoseEvents` (transition overdue non-terminal doses) on
+ * startup and every `SCHEDULING_TICK_INTERVAL_MS` while the app stays
+ * foregrounded (data-architect design triggers #5/#6,
+ * `lib/scheduling/client/dose-event-generator.ts`). Both need a
+ * `profileId`, read via `getCachedProfileId()` (no React tree here) —
+ * a no-op before first login, same graceful-degradation shape as every
+ * other tick in this file.
  */
 import { DexieOutboxRepository } from "@/lib/db-client/outbox-repository";
 import { DexiePreferencesRepository } from "@/lib/db-client/user-preferences-repository";
 import { DexiePurchaseListRepository } from "@/lib/db-client/purchase-list-repository";
+import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
+import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import { createApplyResult } from "@/lib/sync/client/apply-result";
 import { drainOutboxFully, type DrainSummary } from "@/lib/sync/client/worker";
 import { createNetworkMonitor, type NetworkMonitor, type NetworkState } from "@/lib/sync/client/network";
@@ -36,7 +50,12 @@ import { DexiePhotoOutboxRepository } from "@/lib/medications/client/photo-outbo
 import { DexiePhotoCacheRepository } from "@/lib/medications/client/photo-cache-repository";
 import { drainPhotoOutbox, type PhotoDrainSummary } from "@/lib/medications/client/photo-outbox-worker";
 import { onPhotoOutboxWrite } from "@/lib/medications/client/photo-outbox-signal";
+import { getCachedProfileId } from "@/lib/auth/client/use-current-profile";
+import { sweepMissedDoseEvents, topUpDoseEventWindow } from "@/lib/scheduling/client/dose-event-generator";
 import { logger } from "@/lib/logging/logger";
+
+/** How often the scheduling tick re-runs while the app stays foregrounded (data-architect design: "every 30-60 min"). */
+const SCHEDULING_TICK_INTERVAL_MS = 45 * 60_000;
 
 export interface SyncManager {
   network: NetworkMonitor;
@@ -46,13 +65,18 @@ export interface SyncManager {
   syncOfflineIndexNow(): Promise<SyncOfflineIndexOutcome | null>;
   syncLearnedMappingsNow(): Promise<SyncLearnedMappingsOutcome | null>;
   drainPhotoOutboxNow(): Promise<PhotoDrainSummary | null>;
+  runSchedulingTickNow(): Promise<void>;
 }
 
 export function createSyncManager(): SyncManager {
   const outbox = new DexieOutboxRepository();
+  const medicationSchedule = new DexieMedicationScheduleRepository();
+  const doseEvent = new DexieDoseEventRepository();
   const applyResult = createApplyResult({
     userPreferences: new DexiePreferencesRepository(),
     purchaseList: new DexiePurchaseListRepository(),
+    medicationSchedule,
+    doseEvent,
   });
   const network = createNetworkMonitor();
   const photoOutbox = new DexiePhotoOutboxRepository();
@@ -62,9 +86,11 @@ export function createSyncManager(): SyncManager {
   let syncingOfflineIndex = false;
   let syncingLearnedMappings = false;
   let drainingPhotoOutbox = false;
+  let runningSchedulingTick = false;
   let unsubscribeNetwork: (() => void) | undefined;
   let unsubscribeOutbox: (() => void) | undefined;
   let unsubscribePhotoOutbox: (() => void) | undefined;
+  let schedulingTickTimer: ReturnType<typeof setInterval> | undefined;
 
   async function drainNow(): Promise<DrainSummary | null> {
     if (draining) return null;
@@ -124,6 +150,24 @@ export function createSyncManager(): SyncManager {
     }
   }
 
+  async function runSchedulingTickNow(): Promise<void> {
+    if (runningSchedulingTick) return;
+    const profileId = getCachedProfileId();
+    if (!profileId) return; // no-op before first login, same as every other tick here
+    runningSchedulingTick = true;
+    try {
+      await topUpDoseEventWindow(profileId, medicationSchedule, doseEvent);
+      const missed = await sweepMissedDoseEvents(profileId, doseEvent);
+      if (missed > 0) {
+        logger.info("sync.manager.doses_swept_missed", { count: missed });
+      }
+    } catch (err) {
+      logger.warn("sync.manager.scheduling_tick_failed", { message: err instanceof Error ? err.message : String(err) });
+    } finally {
+      runningSchedulingTick = false;
+    }
+  }
+
   return {
     network,
     start() {
@@ -142,16 +186,20 @@ export function createSyncManager(): SyncManager {
       void syncOfflineIndexNow();
       void syncLearnedMappingsNow();
       void drainPhotoOutboxNow();
+      void runSchedulingTickNow();
+      schedulingTickTimer = setInterval(() => void runSchedulingTickNow(), SCHEDULING_TICK_INTERVAL_MS);
     },
     stop() {
       network.stop();
       unsubscribeNetwork?.();
       unsubscribeOutbox?.();
       unsubscribePhotoOutbox?.();
+      if (schedulingTickTimer) clearInterval(schedulingTickTimer);
     },
     drainNow,
     syncOfflineIndexNow,
     syncLearnedMappingsNow,
     drainPhotoOutboxNow,
+    runSchedulingTickNow,
   };
 }

@@ -3,7 +3,7 @@
  * §5 / Phase 2 §5.1: the device pulls from `sync_change_log` (one
  * monotonic cursor) instead of polling every entity table.
  */
-import { and, asc, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import { withProfileScope } from "@/lib/db/rls";
 import * as schema from "@/lib/db/schema";
 import type { Db, TestableDb } from "@/lib/db/client";
@@ -60,6 +60,49 @@ export async function pullChanges(
       : [];
   const userMedicationById = new Map(userMedicationRecords.map((r) => [r.id, r]));
 
+  // medicationSchedule: hydrated record needs the same flattened
+  // wall-clock/elapsed shape the mutation payload/response uses (see
+  // lib/sync/server/mutations.ts's applyMedicationScheduleMutation doc).
+  // Builds the id list as `sql.join(...)` rather than interpolating a
+  // bare JS array into `= ANY(${array}::uuid[])` -- that exact pattern
+  // was found to not parameterize correctly against the `pg` driver
+  // during this project's own stabilization pass (postgres-provider
+  // integration test cleanup code); `sql.join` produces individually
+  // bound parameters instead of relying on a driver's native array-type
+  // serialization, which works correctly against both the Neon HTTP
+  // driver (production) and `pg` (integration tests, `TestableDb`).
+  const scheduleIds = logRows.filter((r) => r.entityType === "medicationSchedule").map((r) => r.entityId);
+  const scheduleRecords =
+    scheduleIds.length > 0
+      ? (
+          await withProfileScope(
+            profileId,
+            (db) => [
+              db.execute(sql`
+                SELECT s.*, wc.times_of_day, wc.weekdays_mask, el.interval_hours, el.anchor_at
+                FROM medication_schedule s
+                LEFT JOIN medication_schedule_wall_clock wc ON wc.schedule_id = s.id
+                LEFT JOIN medication_schedule_elapsed el ON el.schedule_id = s.id
+                WHERE s.id IN (${sql.join(
+                  scheduleIds.map((id) => sql`${id}::uuid`),
+                  sql`, `,
+                )})
+              `),
+            ],
+            { db },
+          )
+        )[0]
+      : undefined;
+  const scheduleRows = (scheduleRecords as { rows?: Record<string, unknown>[] } | undefined)?.rows ?? [];
+  const scheduleById = new Map(scheduleRows.map((r) => [r.id as string, r]));
+
+  const doseEventIds = logRows.filter((r) => r.entityType === "doseEvent").map((r) => r.entityId);
+  const doseEventRecords =
+    doseEventIds.length > 0
+      ? (await withProfileScope(profileId, (db) => [db.select().from(schema.doseEvent).where(inArray(schema.doseEvent.id, doseEventIds))], { db }))[0]
+      : [];
+  const doseEventById = new Map(doseEventRecords.map((r) => [r.id, r]));
+
   const userPreferencesRecords =
     logRows.some((r) => r.entityType === "userPreferences")
       ? (
@@ -79,6 +122,10 @@ export async function pullChanges(
       record = userMedicationById.get(row.entityId) as Record<string, unknown> | undefined;
     } else if (row.entityType === "userPreferences") {
       record = preferencesRecord as Record<string, unknown> | undefined;
+    } else if (row.entityType === "medicationSchedule") {
+      record = scheduleById.get(row.entityId);
+    } else if (row.entityType === "doseEvent") {
+      record = doseEventById.get(row.entityId) as Record<string, unknown> | undefined;
     }
     return {
       id: Number(row.id),

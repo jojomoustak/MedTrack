@@ -14,6 +14,8 @@ import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
 import type { LearnedGtinMapping } from "@/lib/domain/learned-mapping";
+import type { CreateMedicationScheduleInput, MedicationSchedulePatch, MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
+import type { CreateDoseEventInput, DoseEventRecord, DoseEventTransitionPatch } from "@/lib/domain/dose-event";
 
 export interface OutboxRepository {
   enqueue(entry: OutboxEntry): Promise<void>;
@@ -189,6 +191,51 @@ export interface LearnedMappingRepository {
   /** Every row not yet confirmed synced server-side (`syncedAt === null`) — the background sync worker's retry queue. */
   listUnsynced(): Promise<LearnedGtinMapping[]>;
   markSynced(gtin: string, syncedAt: string): Promise<void>;
+}
+
+/**
+ * `MedicationSchedule` (Phase 2 §2.6, Phase 10). Optimistic concurrency,
+ * same pattern as `UserMedicationRepository`. `scheduleKind` is immutable
+ * post-creation (see `MedicationSchedulePatch`'s doc), so `update` never
+ * takes it.
+ */
+export interface MedicationScheduleRepository {
+  list(profileId: string): Promise<MedicationScheduleRecord[]>;
+  listByUserMedication(userMedicationId: string): Promise<MedicationScheduleRecord[]>;
+  get(id: string): Promise<MedicationScheduleRecord | null>;
+  /** Local create + outbox entry, same transaction — mirrors `UserMedicationRepository.create`. */
+  create(input: CreateMedicationScheduleInput, clientMutationId: string): Promise<MedicationScheduleRecord>;
+  /** Bumps local `version` optimistically, enqueues an update mutation carrying `baseVersion`. */
+  update(id: string, patch: MedicationSchedulePatch, clientMutationId: string): Promise<MedicationScheduleRecord>;
+  softDelete(id: string, clientMutationId: string): Promise<void>;
+  /** Applies a record pulled/acked from the server — never generates a new outbox entry. */
+  applyRemote(record: MedicationScheduleRecord): Promise<void>;
+  markConflict(id: string): Promise<void>;
+  markFailed(id: string): Promise<void>;
+}
+
+/**
+ * `DoseEvent` (Phase 2 §2.7, Phase 10). Idempotent-by-id, never
+ * optimistic concurrency (`designing-offline-sync`) — no `markConflict`:
+ * a losing local transition is silently superseded by whatever
+ * `serverRecord` the sync API returns instead (see
+ * `lib/sync/client/apply-result.ts`).
+ */
+export interface DoseEventRepository {
+  /** The Today/Calendar query — every dose event whose `scheduledAt` (or `createdAt`, for PRN with no `scheduledAt`) falls in range. */
+  listForProfileInRange(profileId: string, fromIso: string, toIso: string): Promise<DoseEventRecord[]>;
+  listByUserMedication(userMedicationId: string): Promise<DoseEventRecord[]>;
+  listByScheduleId(scheduleId: string): Promise<DoseEventRecord[]>;
+  /** Every non-terminal row whose `scheduledAt` is before `cutoffIso` — the missed-dose sweep query. */
+  listNonTerminalBefore(profileId: string, cutoffIso: string): Promise<DoseEventRecord[]>;
+  get(id: string): Promise<DoseEventRecord | null>;
+  /** Idempotent by design (`put`, never `add`) — schedule generation may legitimately race a pulled `applyRemote` for the SAME deterministic id. */
+  createIfMissing(input: CreateDoseEventInput): Promise<DoseEventRecord>;
+  /** Local status transition + outbox entry. Throws (enqueues nothing) if the LOCAL row is already terminal — mirrors the server's own guard, so a stale action-sheet tap can't even produce a pointless network round trip. */
+  transition(id: string, patch: DoseEventTransitionPatch, clientMutationId: string): Promise<DoseEventRecord>;
+  /** Applies a record pulled/acked from the server — never generates a new outbox entry. */
+  applyRemote(record: DoseEventRecord): Promise<void>;
+  markFailed(id: string): Promise<void>;
 }
 
 export interface PhotoCacheEntry {

@@ -23,26 +23,10 @@ import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { UnresolvedScanRecord } from "@/lib/domain/repositories";
 import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
 import type { LearnedGtinMapping } from "@/lib/domain/learned-mapping";
+import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
+import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { notifyOutboxWrite } from "@/lib/sync/client/outbox-signal";
 import { notifyPhotoOutboxWrite } from "@/lib/medications/client/photo-outbox-signal";
-
-export interface LocalMedicationSchedule {
-  id: string;
-  profileId: string;
-  userMedicationId: string;
-  scheduleKind: string;
-  syncState: string;
-  deletedAt: string | null;
-}
-
-export interface LocalDoseEvent {
-  id: string;
-  profileId: string;
-  userMedicationId: string;
-  scheduledAt: string | null;
-  status: string;
-  syncState: string;
-}
 
 export interface LocalFavorite {
   id: string;
@@ -171,8 +155,8 @@ export class MedTrackingDexie extends Dexie {
   purchaseList!: EntityTable<PurchaseListRecord, "id">;
   purchaseListItem!: EntityTable<LocalPurchaseListItem, "id">;
   userMedication!: EntityTable<UserMedicationRecord, "id">;
-  medicationSchedule!: EntityTable<LocalMedicationSchedule, "id">;
-  doseEvent!: EntityTable<LocalDoseEvent, "id">;
+  medicationSchedule!: EntityTable<MedicationScheduleRecord, "id">;
+  doseEvent!: EntityTable<DoseEventRecord, "id">;
   favorite!: EntityTable<LocalFavorite, "id">;
   recentlyUsedEvent!: EntityTable<LocalRecentlyUsedEvent, "id">;
   catalogProductCache!: EntityTable<LocalCatalogProductCache, "id">;
@@ -262,6 +246,20 @@ export class MedTrackingDexie extends Dexie {
     this.version(6).stores({
       medicationPhotoCache: "userMedicationId, lastViewedAt",
       photoOutboxEntry: "userMedicationId, status, nextAttemptAt",
+    });
+
+    // v7 (Phase 10 — Scheduling): real indexes for medicationSchedule and
+    // doseEvent, replacing the thinner placeholder indexes v1 declared
+    // for these two tables back when they were schema-only stubs with no
+    // real repository (see git history — `LocalMedicationSchedule`/
+    // `LocalDoseEvent` were minimal interfaces, not the full Phase 2
+    // shape). `scheduleId` indexed on doseEvent for the reconciliation
+    // sweep (`lib/db-client/dose-event-repository.ts`'s
+    // `listByScheduleId`, used when a schedule edit needs to find every
+    // materialized instance to reconcile against the new recurrence).
+    this.version(7).stores({
+      medicationSchedule: "id, profileId, userMedicationId, syncState, deletedAt",
+      doseEvent: "id, profileId, userMedicationId, scheduleId, scheduledAt, status, syncState",
     });
 
     // Single choke point for "a new outbox entry was durably written" —

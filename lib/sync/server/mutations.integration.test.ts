@@ -279,4 +279,230 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     expect(record.catalog_product_id).toBe(catalogProductId);
     expect(record.custom_name).toBeNull();
   });
+
+  // --- Phase 10: medicationSchedule + doseEvent ---
+
+  async function seedUserMedication(profileId: string): Promise<string> {
+    const id = randomUUID();
+    await adminPool.query(
+      "INSERT INTO user_medication (id, profile_id, custom_name, inventory_unit, client_mutation_id) VALUES ($1, $2, 'Test Med', 'tablet', $3)",
+      [id, profileId, randomUUID()],
+    );
+    return id;
+  }
+
+  it("medicationSchedule (wall-clock, daily): create derives time_anchor and writes the flattened wall-clock subtype fields", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    const result = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationSchedule",
+        entityId: id,
+        operation: "create",
+        payload: {
+          userMedicationId,
+          scheduleKind: "daily",
+          startDate: "2026-01-01",
+          endDate: null,
+          timezone: "Europe/Athens",
+          doseQuantityValue: "1",
+          doseQuantityUnit: "tablet",
+          timesOfDay: ["08:00:00"],
+          weekdaysMask: null,
+        },
+      },
+    ]);
+
+    expect(result[0].result).toBe("applied");
+    const record = result[0].serverRecord as { time_anchor: string; times_of_day: string[]; version: number };
+    expect(record.time_anchor).toBe("wall_clock");
+    expect(record.times_of_day).toEqual(["08:00:00"]);
+    expect(record.version).toBe(1);
+  });
+
+  it("medicationSchedule (elapsed, every_n_hours): create derives time_anchor and writes the flattened elapsed subtype fields", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+    const anchorAt = new Date().toISOString();
+
+    const result = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationSchedule",
+        entityId: id,
+        operation: "create",
+        payload: {
+          userMedicationId,
+          scheduleKind: "every_n_hours",
+          startDate: "2026-01-01",
+          endDate: null,
+          timezone: "Europe/Athens",
+          doseQuantityValue: "1",
+          doseQuantityUnit: "tablet",
+          intervalHours: 8,
+          anchorAt,
+        },
+      },
+    ]);
+
+    expect(result[0].result).toBe("applied");
+    const record = result[0].serverRecord as { time_anchor: string; interval_hours: number };
+    expect(record.time_anchor).toBe("elapsed");
+    expect(record.interval_hours).toBe(8);
+  });
+
+  it("medicationSchedule (prn): create has a null time_anchor and no subtype row", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    const result = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationSchedule",
+        entityId: id,
+        operation: "create",
+        payload: { userMedicationId, scheduleKind: "prn", startDate: "2026-01-01", endDate: null, timezone: "Europe/Athens", doseQuantityValue: "1", doseQuantityUnit: "tablet" },
+      },
+    ]);
+
+    expect(result[0].result).toBe("applied");
+    const record = result[0].serverRecord as { time_anchor: string | null; times_of_day: unknown; interval_hours: unknown };
+    expect(record.time_anchor).toBeNull();
+    expect(record.times_of_day).toBeNull();
+    expect(record.interval_hours).toBeNull();
+  });
+
+  it("medicationSchedule (optimistic concurrency): update with the correct baseVersion succeeds and updates the wall-clock subtype; a stale baseVersion is a genuine conflict", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationSchedule",
+        entityId: id,
+        operation: "create",
+        payload: { userMedicationId, scheduleKind: "daily", startDate: "2026-01-01", endDate: null, timezone: "Europe/Athens", doseQuantityValue: "1", doseQuantityUnit: "tablet", timesOfDay: ["08:00:00"] },
+      },
+    ]);
+
+    const updateResult = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "medicationSchedule", entityId: id, operation: "update", payload: { timesOfDay: ["09:00:00"] }, baseVersion: 1 },
+    ]);
+    expect(updateResult[0].result).toBe("applied");
+    const updated = updateResult[0].serverRecord as { times_of_day: string[]; version: number };
+    expect(updated.times_of_day).toEqual(["09:00:00"]);
+    expect(updated.version).toBe(2);
+
+    const staleResult = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "medicationSchedule", entityId: id, operation: "update", payload: { timesOfDay: ["10:00:00"] }, baseVersion: 1 },
+    ]);
+    expect(staleResult[0].result).toBe("conflict");
+  });
+
+  it("medicationSchedule: delete soft-deletes (deleted_at set) with optimistic concurrency", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationSchedule",
+        entityId: id,
+        operation: "create",
+        payload: { userMedicationId, scheduleKind: "daily", startDate: "2026-01-01", endDate: null, timezone: "Europe/Athens", doseQuantityValue: "1", doseQuantityUnit: "tablet", timesOfDay: ["08:00:00"] },
+      },
+    ]);
+
+    const deleteResult = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "medicationSchedule", entityId: id, operation: "delete", payload: {}, baseVersion: 1 },
+    ]);
+    expect(deleteResult[0].result).toBe("applied");
+    const deleted = deleteResult[0].serverRecord as { deleted_at: string | null };
+    expect(deleted.deleted_at).not.toBeNull();
+  });
+
+  it("doseEvent: create is idempotent on id — a second create with the SAME id (e.g. deterministic schedule-generated id) never duplicates the row", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+    const scheduledAt = new Date().toISOString();
+
+    const first = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "create", payload: { userMedicationId, scheduleId: null, scheduledAt, source: "manual_prn" } },
+    ]);
+    const second = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "create", payload: { userMedicationId, scheduleId: null, scheduledAt, source: "manual_prn" } },
+    ]);
+
+    expect(first[0].result).toBe("applied");
+    expect(second[0].result).toBe("applied");
+    const countResult = await adminPool.query<{ count: string }>("SELECT COUNT(*) FROM dose_event WHERE id = $1", [id]);
+    expect(Number(countResult.rows[0].count)).toBe(1);
+  });
+
+  it("doseEvent: transition to 'taken' sets taken_at and status", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "create", payload: { userMedicationId, scheduleId: null, scheduledAt: new Date().toISOString(), source: "manual_prn" } },
+    ]);
+
+    const takenAt = new Date().toISOString();
+    const result = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "taken", takenAt } },
+    ]);
+
+    expect(result[0].result).toBe("applied");
+    const record = result[0].serverRecord as { status: string; taken_at: string };
+    expect(record.status).toBe("taken");
+    expect(new Date(record.taken_at).toISOString()).toBe(new Date(takenAt).toISOString());
+  });
+
+  it("doseEvent: a transition on an already-terminal row is a silent no-op that still returns 'applied' with the current row, never 'conflict' (designing-offline-sync: converge, not conflict)", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "create", payload: { userMedicationId, scheduleId: null, scheduledAt: new Date().toISOString(), source: "manual_prn" } },
+    ]);
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "skipped" } },
+    ]);
+
+    // A second device races in with 'taken' after the dose was already skipped.
+    const raceResult = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "taken", takenAt: new Date().toISOString() } },
+    ]);
+
+    expect(raceResult[0].result).toBe("applied");
+    const record = raceResult[0].serverRecord as { status: string };
+    expect(record.status).toBe("skipped"); // the first terminal write wins; the racing device converges to it
+  });
+
+  it("doseEvent: transition to 'taken' without takenAt is rejected (defense-in-depth on top of chk_taken_has_timestamp)", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "create", payload: { userMedicationId, scheduleId: null, scheduledAt: new Date().toISOString(), source: "manual_prn" } },
+    ]);
+
+    await expect(
+      applyMutations({ profileId, accountId, db }, [
+        { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "taken" } },
+      ]),
+    ).rejects.toThrow();
+  });
 });

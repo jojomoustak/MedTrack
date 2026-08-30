@@ -12,7 +12,13 @@ import type { SyncEntityType } from "@/lib/domain/sync";
 
 export const syncMutationRequestSchema = z.object({
   clientMutationId: clientMutationIdSchema,
-  entityType: z.enum(["userPreferences", "purchaseList", "userMedication"] as const satisfies readonly SyncEntityType[]),
+  entityType: z.enum([
+    "userPreferences",
+    "purchaseList",
+    "userMedication",
+    "medicationSchedule",
+    "doseEvent",
+  ] as const satisfies readonly SyncEntityType[]),
   entityId: z.string().min(1),
   operation: z.enum(["create", "update", "delete"]),
   payload: z.record(z.string(), z.unknown()),

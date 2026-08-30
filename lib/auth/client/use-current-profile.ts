@@ -56,6 +56,18 @@ function writeCachedProfile(profile: CachedProfile): void {
   }
 }
 
+/**
+ * Plain, non-React read of the currently cached profile id — for
+ * background/module-scope code (`lib/sync/client/sync-manager.ts`'s
+ * schedule top-up/missed-dose sweep) that needs "which profile's local
+ * data am I operating on" outside a component tree. Same non-security-
+ * boundary caveat as the rest of this file: only ever used to scope
+ * which LOCAL rows a query touches, never to grant server-side access.
+ */
+export function getCachedProfileId(): string | null {
+  return readCachedProfile()?.profileId ?? null;
+}
+
 export function clearCachedProfile(): void {
   try {
     localStorage.removeItem(CACHED_PROFILE_KEY);
