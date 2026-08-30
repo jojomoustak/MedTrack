@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
+import { clearAllLocalProfileData } from "@/lib/db-client/clear-local-profile-data";
 import { createNetworkMonitor } from "@/lib/sync/client/network";
 
 /**
@@ -72,6 +73,13 @@ export function DeleteAccountFlow() {
       // offline session render a deleted user's local IndexedDB data to
       // whoever opens the app next (see clearCachedProfile's doc comment).
       clearCachedProfile();
+      // Offline audit (2026-08-29): unlike plain sign-out, it's always
+      // safe to wipe every local table unconditionally here -- the
+      // account no longer exists server-side, so nothing still queued
+      // locally could ever be delivered anywhere regardless of whether
+      // it's kept around (see clearAllLocalProfileData's "IMPORTANT for
+      // callers" doc comment for the sign-out case where that's NOT true).
+      await clearAllLocalProfileData();
       // Forced sign-out (Phase 3 §2.9 step 5) — the server has already
       // deleted every account_session row as part of the same atomic
       // deletion step, so this is client-side cookie/local-state cleanup,

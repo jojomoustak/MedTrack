@@ -17,6 +17,11 @@
  * redownload the catalog on every application start" — the manifest
  * *check* is not the same cost as the full download, and only a version
  * mismatch triggers the latter).
+ *
+ * Same lifecycle again for the photo outbox (2026-08-29 offline audit) —
+ * its own in-flight guard and its own signal (`onPhotoOutboxWrite`,
+ * separate from `onOutboxWrite`) since it's a deliberately independent
+ * queue (see `lib/medications/client/photo-outbox-worker.ts`).
  */
 import { DexieOutboxRepository } from "@/lib/db-client/outbox-repository";
 import { DexiePreferencesRepository } from "@/lib/db-client/user-preferences-repository";
@@ -27,6 +32,10 @@ import { createNetworkMonitor, type NetworkMonitor, type NetworkState } from "@/
 import { onOutboxWrite } from "@/lib/sync/client/outbox-signal";
 import { syncOfflineIndex, type SyncOfflineIndexOutcome } from "@/lib/catalog/client/sync-offline-index";
 import { syncLearnedMappings, type SyncLearnedMappingsOutcome } from "@/lib/catalog/client/sync-learned-mappings";
+import { DexiePhotoOutboxRepository } from "@/lib/medications/client/photo-outbox-repository";
+import { DexiePhotoCacheRepository } from "@/lib/medications/client/photo-cache-repository";
+import { drainPhotoOutbox, type PhotoDrainSummary } from "@/lib/medications/client/photo-outbox-worker";
+import { onPhotoOutboxWrite } from "@/lib/medications/client/photo-outbox-signal";
 import { logger } from "@/lib/logging/logger";
 
 export interface SyncManager {
@@ -36,6 +45,7 @@ export interface SyncManager {
   drainNow(): Promise<DrainSummary | null>;
   syncOfflineIndexNow(): Promise<SyncOfflineIndexOutcome | null>;
   syncLearnedMappingsNow(): Promise<SyncLearnedMappingsOutcome | null>;
+  drainPhotoOutboxNow(): Promise<PhotoDrainSummary | null>;
 }
 
 export function createSyncManager(): SyncManager {
@@ -45,12 +55,16 @@ export function createSyncManager(): SyncManager {
     purchaseList: new DexiePurchaseListRepository(),
   });
   const network = createNetworkMonitor();
+  const photoOutbox = new DexiePhotoOutboxRepository();
+  const photoCache = new DexiePhotoCacheRepository();
 
   let draining = false;
   let syncingOfflineIndex = false;
   let syncingLearnedMappings = false;
+  let drainingPhotoOutbox = false;
   let unsubscribeNetwork: (() => void) | undefined;
   let unsubscribeOutbox: (() => void) | undefined;
+  let unsubscribePhotoOutbox: (() => void) | undefined;
 
   async function drainNow(): Promise<DrainSummary | null> {
     if (draining) return null;
@@ -96,6 +110,20 @@ export function createSyncManager(): SyncManager {
     }
   }
 
+  async function drainPhotoOutboxNow(): Promise<PhotoDrainSummary | null> {
+    if (drainingPhotoOutbox) return null;
+    drainingPhotoOutbox = true;
+    try {
+      const summary = await drainPhotoOutbox({ outbox: photoOutbox, cache: photoCache });
+      if (summary.attempted > 0) {
+        logger.info("sync.manager.photo_outbox_drained", { ...summary });
+      }
+      return summary;
+    } finally {
+      drainingPhotoOutbox = false;
+    }
+  }
+
   return {
     network,
     start() {
@@ -104,21 +132,26 @@ export function createSyncManager(): SyncManager {
           void drainNow();
           void syncOfflineIndexNow();
           void syncLearnedMappingsNow();
+          void drainPhotoOutboxNow();
         }
       });
       unsubscribeOutbox = onOutboxWrite(() => void drainNow());
+      unsubscribePhotoOutbox = onPhotoOutboxWrite(() => void drainPhotoOutboxNow());
       network.start();
       void drainNow();
       void syncOfflineIndexNow();
       void syncLearnedMappingsNow();
+      void drainPhotoOutboxNow();
     },
     stop() {
       network.stop();
       unsubscribeNetwork?.();
       unsubscribeOutbox?.();
+      unsubscribePhotoOutbox?.();
     },
     drainNow,
     syncOfflineIndexNow,
     syncLearnedMappingsNow,
+    drainPhotoOutboxNow,
   };
 }

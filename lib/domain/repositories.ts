@@ -190,3 +190,62 @@ export interface LearnedMappingRepository {
   listUnsynced(): Promise<LearnedGtinMapping[]>;
   markSynced(gtin: string, syncedAt: string): Promise<void>;
 }
+
+export interface PhotoCacheEntry {
+  userMedicationId: string;
+  blob: Blob;
+  contentType: string;
+}
+
+/**
+ * Local view cache for offline medication-photo viewing (2026-08-29
+ * offline audit) — NOT part of the outbox/sync pattern (see
+ * `lib/db-client/dexie.ts`'s `LocalMedicationPhotoCache` doc). Bounded by
+ * a byte budget and a count cap, enforced on every `put`, so it degrades
+ * gracefully under the storage pressure this codebase has confirmed is a
+ * real risk on real devices — this is a cache, never the durable copy
+ * (the server + Vercel Blob remain that).
+ */
+export interface PhotoCacheRepository {
+  get(userMedicationId: string): Promise<PhotoCacheEntry | null>;
+  /** Bumps `lastViewedAt` without re-fetching — call whenever a cached entry is actually displayed, so LRU eviction reflects real usage. */
+  touch(userMedicationId: string): Promise<void>;
+  /** Writes/replaces the cached blob and enforces the byte/count budget afterward, evicting the least-recently-viewed entries first. */
+  put(entry: PhotoCacheEntry): Promise<void>;
+  remove(userMedicationId: string): Promise<void>;
+}
+
+export type PhotoOutboxOperation = "upload" | "delete";
+
+export interface PhotoOutboxEnqueueInput {
+  userMedicationId: string;
+  operation: PhotoOutboxOperation;
+  /** Required iff `operation === "upload"`. */
+  blob?: Blob;
+  contentType?: string;
+}
+
+/**
+ * Queued photo upload/delete for while offline (2026-08-29 offline
+ * audit) — deliberately parallel to, not part of, `OutboxRepository`
+ * (see `lib/medications/client/photo-outbox-worker.ts`'s header doc).
+ * Keyed by `userMedicationId`: `enqueue` always supersedes any
+ * not-yet-synced prior entry for the same medication ("last enqueued
+ * wins" — no separate cancel/merge step needed).
+ */
+export interface PhotoOutboxRepository {
+  /** Writes/replaces the queued entry for this medication (`status` reset to `pending`). */
+  enqueue(input: PhotoOutboxEnqueueInput): Promise<void>;
+  get(userMedicationId: string): Promise<{ operation: PhotoOutboxOperation; enqueuedAt: string } | null>;
+  listPending(now: string): Promise<{ userMedicationId: string; operation: PhotoOutboxOperation; blob: Blob | null; contentType: string | null; enqueuedAt: string; attempts: number }[]>;
+  markSyncing(userMedicationId: string): Promise<void>;
+  markFailed(userMedicationId: string, error: string, nextAttemptAt: string): Promise<void>;
+  /**
+   * Clears the entry ONLY if it still matches `enqueuedAt` — guards
+   * against a race where a new enqueue supersedes this one (`put()`
+   * overwrites the row) while a sync attempt for the OLD blob is still in
+   * flight; that in-flight attempt must not clear the newer, not-yet-sent
+   * entry out from under it. Returns whether the clear actually happened.
+   */
+  clearIfUnchanged(userMedicationId: string, enqueuedAt: string): Promise<boolean>;
+}

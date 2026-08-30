@@ -24,6 +24,7 @@ import type { UnresolvedScanRecord } from "@/lib/domain/repositories";
 import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
 import type { LearnedGtinMapping } from "@/lib/domain/learned-mapping";
 import { notifyOutboxWrite } from "@/lib/sync/client/outbox-signal";
+import { notifyPhotoOutboxWrite } from "@/lib/medications/client/photo-outbox-signal";
 
 export interface LocalMedicationSchedule {
   id: string;
@@ -107,6 +108,63 @@ export interface OfflineIndexMetaRecord {
   syncedAt: string;
 }
 
+/**
+ * Local view cache for offline medication-photo viewing (2026-08-29
+ * offline audit, data-architect design). Keyed by `userMedicationId`
+ * (one cached photo per medication, mirroring the server's replace-not-
+ * ledger model — `lib/medications/server/photo.ts` never versions a
+ * photo either). Deliberately holds the `Blob` directly rather than a
+ * Cache API entry: consolidates into the one storage system (IndexedDB)
+ * this codebase already treats as authoritative for offline data
+ * (ADR-008), and gives LRU-by-`lastViewedAt` eviction a real index to
+ * query instead of hand-rolled bookkeeping alongside a second storage
+ * system — relevant given the confirmed live-device finding that
+ * Chromium evicts non-persisted origin storage under Android disk
+ * pressure (`components/shell/SyncManagerBootstrap.tsx`'s
+ * `navigator.storage.persist()` call doc). Bounded (see
+ * `lib/medications/client/photo-cache-repository.ts`) rather than
+ * cached forever, for the same reason.
+ */
+export interface LocalMedicationPhotoCache {
+  userMedicationId: string;
+  blob: Blob;
+  contentType: string;
+  byteSize: number;
+  /** Last time this blob was confirmed fresh (successful live fetch or a local upload actually reaching the server). */
+  cachedAt: string;
+  /** Bumped on every local read — the LRU eviction key. */
+  lastViewedAt: string;
+}
+
+export type PhotoOutboxOperation = "upload" | "delete";
+export type PhotoOutboxStatus = "pending" | "syncing" | "failed";
+
+/**
+ * A queued-while-offline photo upload/delete — deliberately NOT the
+ * generic `outbox` table/`syncMutationRequestSchema` sync protocol (see
+ * `lib/medications/client/photo-outbox-worker.ts`'s header doc for why:
+ * no `SyncEntityType`/`ENTITY_CONFLICT_STRATEGY` entry exists for photos
+ * on purpose, since a photo write has no version/conflict strategy to
+ * plug into — adding one would misrepresent what's actually enforced
+ * server-side). Keyed by `userMedicationId` rather than a generated id,
+ * unlike every other table in this file — deliberate: at most one queued
+ * operation per medication, so a new enqueue is a plain `put()` that
+ * naturally supersedes any not-yet-synced prior one ("last enqueued
+ * wins") with no separate cancel/merge logic needed.
+ */
+export interface LocalPhotoOutboxEntry {
+  userMedicationId: string;
+  operation: PhotoOutboxOperation;
+  /** Present iff `operation === "upload"`. */
+  blob: Blob | null;
+  contentType: string | null;
+  enqueuedAt: string;
+  status: PhotoOutboxStatus;
+  attempts: number;
+  nextAttemptAt: string;
+  lastError?: string;
+}
+
 export class MedTrackingDexie extends Dexie {
   outbox!: EntityTable<OutboxEntry, "clientMutationId">;
   userPreferences!: EntityTable<UserPreferencesRecord, "accountId">;
@@ -122,6 +180,8 @@ export class MedTrackingDexie extends Dexie {
   offlineIndexEntry!: EntityTable<LocalOfflineIndexEntry, "id">;
   offlineIndexMeta!: EntityTable<OfflineIndexMetaRecord, "id">;
   learnedGtinMapping!: EntityTable<LearnedGtinMapping, "gtin">;
+  medicationPhotoCache!: EntityTable<LocalMedicationPhotoCache, "userMedicationId">;
+  photoOutboxEntry!: EntityTable<LocalPhotoOutboxEntry, "userMedicationId">;
 
   constructor(name = "medtracking") {
     super(name);
@@ -194,6 +254,16 @@ export class MedTrackingDexie extends Dexie {
       learnedGtinMapping: "gtin",
     });
 
+    // v6: offline support for medication photos (2026-08-29 offline
+    // audit) — a local view cache (medicationPhotoCache) and a
+    // purpose-built queue (photoOutboxEntry). See both interfaces' doc
+    // comments above for why these are deliberately separate from the
+    // generic outbox/sync-mutation machinery rather than folded into it.
+    this.version(6).stores({
+      medicationPhotoCache: "userMedicationId, lastViewedAt",
+      photoOutboxEntry: "userMedicationId, status, nextAttemptAt",
+    });
+
     // Single choke point for "a new outbox entry was durably written" —
     // every repository's write path (direct `enqueue()`, or a raw
     // `outbox.put()` inside a larger multi-table transaction) passes
@@ -205,6 +275,25 @@ export class MedTrackingDexie extends Dexie {
     // abort. See `lib/sync/client/outbox-signal.ts` for why this exists.
     this.outbox.hook("creating", (_primKey, _obj, transaction) => {
       transaction.on("complete", () => notifyOutboxWrite());
+    });
+
+    // Same choke-point pattern, mirrored for the photo outbox — `put()`
+    // on an existing key (the "last enqueued wins" supersede case, see
+    // `LocalPhotoOutboxEntry`'s doc comment) fires Dexie's `updating`
+    // hook instead of `creating`, so both are wired to the same signal.
+    this.photoOutboxEntry.hook("creating", (_primKey, _obj, transaction) => {
+      transaction.on("complete", () => notifyPhotoOutboxWrite());
+    });
+    this.photoOutboxEntry.hook("updating", (_mods, _primKey, _obj, transaction) => {
+      transaction.on("complete", () => notifyPhotoOutboxWrite());
+    });
+    // Also fired on a successful drain (`clearIfUnchanged` deletes the
+    // row) so `MedicationPhotoAttach` can notice its pending badge should
+    // clear even though it isn't the tab that ran the drain — the same
+    // signal already covers "something in the photo outbox changed",
+    // deletion included.
+    this.photoOutboxEntry.hook("deleting", (_primKey, _obj, transaction) => {
+      transaction.on("complete", () => notifyPhotoOutboxWrite());
     });
   }
 }

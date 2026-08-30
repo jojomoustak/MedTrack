@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
+import { clearAllLocalProfileData, hasPendingLocalWork } from "@/lib/db-client/clear-local-profile-data";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 
 /**
@@ -33,8 +34,23 @@ export default function ProfilePage() {
     // network call below fails (offline right after tapping this), a
     // stale cached profile must not be left behind to render this user's
     // data to whoever opens the app next on this device (security review,
-    // 2026-08-29 -- see the doc comment on clearCachedProfile).
+    // 2026-08-29 -- see the doc comment on clearCachedProfile). This
+    // alone is what actually gates the app shell from ever rendering
+    // again without a fresh login (see use-current-profile.ts) --
+    // wiping Dexie below is a second, best-effort layer on top of that,
+    // not the thing doing the real work.
     clearCachedProfile();
+
+    // Offline audit (2026-08-29): wiping local medication/dose/etc. data
+    // here unconditionally would silently discard any not-yet-synced
+    // local write -- and once signOut() below succeeds, the session
+    // cookie every sync call depends on is gone, so anything still
+    // queued could NEVER be delivered anyway. Only wipe when nothing is
+    // actually at risk of being lost (see hasPendingLocalWork's doc).
+    if (!(await hasPendingLocalWork())) {
+      await clearAllLocalProfileData();
+    }
+
     try {
       await authClient.signOut();
     } catch {

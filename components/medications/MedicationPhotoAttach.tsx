@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
-import type { UserMedicationRepository } from "@/lib/domain/repositories";
+import { DexiePhotoCacheRepository } from "@/lib/medications/client/photo-cache-repository";
+import { DexiePhotoOutboxRepository } from "@/lib/medications/client/photo-outbox-repository";
+import { onPhotoOutboxWrite } from "@/lib/medications/client/photo-outbox-signal";
+import type { PhotoCacheRepository, PhotoOutboxOperation, PhotoOutboxRepository, UserMedicationRepository } from "@/lib/domain/repositories";
 import {
   MedicationPhotoApiError,
   deleteMedicationPhoto as deletePhotoRequest,
@@ -21,6 +24,10 @@ export interface MedicationPhotoAttachProps {
   repository?: UserMedicationRepository;
   /** Test/DI seam — defaults to the global `fetch`. */
   fetchImpl?: typeof fetch;
+  /** Test/DI seam — defaults to a real Dexie-backed local view cache (2026-08-29 offline audit). */
+  photoCache?: PhotoCacheRepository;
+  /** Test/DI seam — defaults to a real Dexie-backed queue for offline upload/delete. */
+  photoOutbox?: PhotoOutboxRepository;
   className?: string;
 }
 
@@ -34,6 +41,11 @@ function isAllowedClientSide(file: File): string | null {
     return "Μη υποστηριζόμενος τύπος αρχείου. Χρησιμοποιήστε φωτογραφία JPEG, PNG ή WEBP.";
   }
   return null;
+}
+
+/** True only for `fetchOrThrowOffline`'s network-failure sentinel (`photo-api.ts`) — a real HTTP error response always carries a `status`. */
+function isOfflineError(err: unknown): boolean {
+  return err instanceof MedicationPhotoApiError && err.status === undefined;
 }
 
 /**
@@ -50,10 +62,23 @@ function isAllowedClientSide(file: File): string | null {
  * record's local `syncState` and only shows upload controls once it's
  * `"synced"`, rather than letting an upload attempt fail with a confusing
  * "not found" for a device that's simply still catching up (or offline).
+ *
+ * Offline behavior (2026-08-29 audit, data-architect design): viewing
+ * shows a locally-cached copy instantly, then revalidates against the
+ * server in the background when online — see `photo-cache-repository.ts`.
+ * Uploading/removing while offline queues the operation
+ * (`photo-outbox-repository.ts`/`photo-outbox-worker.ts`) instead of just
+ * failing; the picked photo (or its removal) is reflected immediately,
+ * but ALWAYS with a visible pending label — never silently presented as
+ * saved before the server has actually confirmed it (see this codebase's
+ * `designing-offline-sync` rule: a critical change must never disappear
+ * from the UI, or claim success, silently).
  */
-export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl, className }: MedicationPhotoAttachProps) {
+export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl, photoCache, photoOutbox, className }: MedicationPhotoAttachProps) {
   const repo = repository ?? new DexieUserMedicationRepository();
   const fetcher = fetchImpl ?? fetch;
+  const cache = photoCache ?? new DexiePhotoCacheRepository();
+  const outbox = photoOutbox ?? new DexiePhotoOutboxRepository();
 
   const [synced, setSynced] = useState(false);
   const [pollExhausted, setPollExhausted] = useState(false);
@@ -61,11 +86,28 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
 
   const [photoStatus, setPhotoStatus] = useState<PhotoStatus>("checking");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [pendingOp, setPendingOp] = useState<PhotoOutboxOperation | null>(null);
+  const [offlineNote, setOfflineNote] = useState(false);
   const [refreshNonce, setRefreshNonce] = useState(0);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+
+  function showBlob(blob: Blob) {
+    const url = URL.createObjectURL(blob);
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    objectUrlRef.current = url;
+    setPhotoUrl(url);
+  }
+
+  function clearBlob() {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    setPhotoUrl(null);
+  }
 
   // Poll local sync state until the server-side row is confirmed to exist.
   useEffect(() => {
@@ -96,29 +138,62 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `repo` is stable per render tree (default constructed once via module-level DI convention used throughout this codebase).
   }, [userMedicationId, pollNonce]);
 
-  // Once synced, load whatever photo (if any) already exists.
+  // A background drain elsewhere (this same reconnect, or another tab)
+  // may have just cleared this medication's queued entry — re-check so
+  // the pending badge doesn't outlive the thing it was describing.
+  useEffect(() => onPhotoOutboxWrite(() => setRefreshNonce((n) => n + 1)), []);
+
+  // Once synced: show whatever's queued/cached immediately, then — only
+  // when nothing is queued — revalidate against the server in the
+  // background. Skipping the live fetch entirely while something is
+  // queued avoids a stale server response fighting the optimistic local
+  // state that was written at enqueue time.
   useEffect(() => {
     if (!synced) return;
     let cancelled = false;
 
     async function load() {
-      setPhotoStatus("checking");
       setError(null);
+      setOfflineNote(false);
+
+      const queued = await outbox.get(userMedicationId);
+      if (cancelled) return;
+      setPendingOp(queued?.operation ?? null);
+
+      const cached = await cache.get(userMedicationId);
+      if (cancelled) return;
+      if (cached) {
+        showBlob(cached.blob);
+        setPhotoStatus("present");
+        void cache.touch(userMedicationId);
+      } else if (queued?.operation === "delete") {
+        clearBlob();
+        setPhotoStatus("absent");
+      } else {
+        setPhotoStatus("checking");
+      }
+
+      if (queued) return;
+
       try {
         const result = await fetchMedicationPhoto(userMedicationId, fetcher);
         if (cancelled) return;
         if (!result) {
+          clearBlob();
           setPhotoStatus("absent");
+          await cache.remove(userMedicationId);
           return;
         }
-        const url = URL.createObjectURL(result.blob);
-        if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-        objectUrlRef.current = url;
-        setPhotoUrl(url);
+        showBlob(result.blob);
         setPhotoStatus("present");
-      } catch {
-        if (!cancelled) {
-          setPhotoStatus("absent");
+        await cache.put({ userMedicationId, blob: result.blob, contentType: result.blob.type || "application/octet-stream" });
+      } catch (err) {
+        if (cancelled) return;
+        if (cached) return; // already showing a good cached copy — degrade silently
+        setPhotoStatus("absent");
+        if (isOfflineError(err)) {
+          setOfflineNote(true);
+        } else {
           setError("Δεν ήταν δυνατή η φόρτωση της φωτογραφίας.");
         }
       }
@@ -148,9 +223,20 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     setError(null);
     try {
       await uploadPhotoRequest(userMedicationId, file, fetcher);
+      await cache.put({ userMedicationId, blob: file, contentType: file.type });
+      setPendingOp(null);
       setRefreshNonce((n) => n + 1);
     } catch (err) {
-      setError(err instanceof MedicationPhotoApiError ? err.message : "Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+      if (isOfflineError(err)) {
+        await outbox.enqueue({ userMedicationId, operation: "upload", blob: file, contentType: file.type });
+        // Optimistic local display — but the pending badge below is what
+        // keeps this honest rather than silently claiming "saved".
+        await cache.put({ userMedicationId, blob: file, contentType: file.type });
+        setPendingOp("upload");
+        setRefreshNonce((n) => n + 1);
+      } else {
+        setError(err instanceof MedicationPhotoApiError ? err.message : "Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+      }
     } finally {
       setBusy(false);
     }
@@ -161,14 +247,18 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     setError(null);
     try {
       await deletePhotoRequest(userMedicationId, fetcher);
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
-        objectUrlRef.current = null;
-      }
-      setPhotoUrl(null);
-      setPhotoStatus("absent");
+      await cache.remove(userMedicationId);
+      setPendingOp(null);
+      setRefreshNonce((n) => n + 1);
     } catch (err) {
-      setError(err instanceof MedicationPhotoApiError ? err.message : "Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+      if (isOfflineError(err)) {
+        await outbox.enqueue({ userMedicationId, operation: "delete" });
+        await cache.remove(userMedicationId);
+        setPendingOp("delete");
+        setRefreshNonce((n) => n + 1);
+      } else {
+        setError(err instanceof MedicationPhotoApiError ? err.message : "Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+      }
     } finally {
       setBusy(false);
     }
@@ -204,12 +294,28 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     <div className={className}>
       <div className="flex flex-col gap-3">
         {photoStatus === "present" && photoUrl && (
-          // eslint-disable-next-line @next/next/no-img-element -- `photoUrl` is a local `blob:` object URL from an authenticated fetch, never a remote asset `next/image` can optimize.
+          // eslint-disable-next-line @next/next/no-img-element -- `photoUrl` is a local `blob:` object URL from an authenticated fetch (or a locally-cached/queued copy), never a remote asset `next/image` can optimize.
           <img
             src={photoUrl}
             alt="Φωτογραφία φαρμάκου"
             className="max-h-64 w-full rounded-xl border border-zinc-200 object-contain dark:border-zinc-800"
           />
+        )}
+
+        {pendingOp === "upload" && (
+          <p role="status" className="text-sm text-amber-700 dark:text-amber-400">
+            Θα μεταφορτωθεί μόλις επανασυνδεθείτε στο διαδίκτυο.
+          </p>
+        )}
+        {pendingOp === "delete" && (
+          <p role="status" className="text-sm text-amber-700 dark:text-amber-400">
+            Θα αφαιρεθεί μόλις επανασυνδεθείτε στο διαδίκτυο.
+          </p>
+        )}
+        {offlineNote && !pendingOp && (
+          <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+            Δεν ήταν δυνατή η σύνδεση για έλεγχο φωτογραφίας.
+          </p>
         )}
 
         {error && (
