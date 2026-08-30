@@ -36,6 +36,16 @@ describe("uploadMedicationPhoto", () => {
 
     await expect(uploadMedicationPhoto("med-1", file, fetchImpl)).rejects.toBeInstanceOf(MedicationPhotoApiError);
   });
+
+  it("throws a distinct offline message when fetch itself rejects (no HTTP response at all)", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    const file = new File(["bytes"], "photo.jpg", { type: "image/jpeg" });
+
+    await expect(uploadMedicationPhoto("med-1", file, fetchImpl)).rejects.toMatchObject({
+      message: expect.stringContaining("διαδίκτυο"),
+      status: undefined,
+    });
+  });
 });
 
 describe("fetchMedicationPhoto", () => {
@@ -54,6 +64,13 @@ describe("fetchMedicationPhoto", () => {
   it("throws for a genuine error status other than 404", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(403, { error: { message: "You don't have access to that." } }));
     await expect(fetchMedicationPhoto("med-1", fetchImpl)).rejects.toBeInstanceOf(MedicationPhotoApiError);
+  });
+
+  it("throws a distinct offline message when fetch itself rejects, not the generic load-failure copy", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    await expect(fetchMedicationPhoto("med-1", fetchImpl)).rejects.toMatchObject({
+      message: expect.stringContaining("διαδίκτυο"),
+    });
   });
 });
 
