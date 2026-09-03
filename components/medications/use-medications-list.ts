@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
-import { hydrateUserMedicationsFromServer } from "@/lib/sync/client/hydrate-user-medications";
+import { hydrateLocalDataFromServer } from "@/lib/sync/client/hydrate-local-data";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
 export type MedicationsListStatus = "loading" | "ready";
@@ -32,7 +32,7 @@ export function useMedicationsList(profileId: string | null): MedicationsListSta
       const local = await repo.list(profileId!);
       if (!cancelled) setState({ status: "ready", medications: local });
 
-      await hydrateUserMedicationsFromServer(repo);
+      await hydrateLocalDataFromServer({ userMedication: repo });
       if (cancelled) return;
       const refreshed = await repo.list(profileId!);
       if (!cancelled) setState({ status: "ready", medications: refreshed });

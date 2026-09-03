@@ -5,7 +5,7 @@
  * only re-runs when the `medications` array itself changes — it has no
  * way to know "the offline index (or catalog cache) that resolves a
  * `catalogProductId` to a real name just got populated, try again." A
- * medication pulled back from the server via `hydrateUserMedicationsFromServer`
+ * medication pulled back from the server via `hydrateLocalDataFromServer`
  * arrives correctly, but if `syncOfflineIndexNow()` (a separate,
  * independent background sync — `sync-manager.ts`) hasn't finished yet at
  * that exact moment, the name permanently shows the "Φάρμακο από
