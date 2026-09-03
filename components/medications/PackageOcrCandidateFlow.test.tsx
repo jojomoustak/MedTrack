@@ -32,7 +32,14 @@ function makeParsed(overrides: Partial<ParsedBarcode> = {}): ParsedBarcode {
 }
 
 function fakePlatform(recognizePackageText: () => Promise<OcrCaptureResult>): MobilePlatform {
-  return { isAvailable: () => true, scanBarcode: vi.fn(), recognizePackageText };
+  return {
+    isAvailable: () => true,
+    scanBarcode: vi.fn(),
+    recognizePackageText,
+    requestReminderPermission: vi.fn(),
+    upsertReminder: vi.fn(),
+    cancelRemindersForDoseEvent: vi.fn(),
+  };
 }
 
 function fakeOfflineIndex(overrides: Partial<OfflineIndexRepository> = {}): OfflineIndexRepository {

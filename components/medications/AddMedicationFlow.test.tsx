@@ -39,6 +39,19 @@ function makeFakeRepository() {
   return { repository, create };
 }
 
+/** Full `MobilePlatform` fake — Phase 11 added 3 required reminder methods no test here exercises, so they're stubbed once and spread into each test's literal rather than repeated at every call site. */
+function makeFakePlatform(overrides: Partial<MobilePlatform> = {}): MobilePlatform {
+  return {
+    isAvailable: () => false,
+    scanBarcode: vi.fn(),
+    recognizePackageText: vi.fn(),
+    requestReminderPermission: vi.fn(),
+    upsertReminder: vi.fn(),
+    cancelRemindersForDoseEvent: vi.fn(),
+    ...overrides,
+  };
+}
+
 describe("AddMedicationFlow — manual entry path end to end", () => {
   it("walks entry chooser -> manual form -> details -> review -> creates a UserMedication with catalogProductId null", async () => {
     const { repository, create } = makeFakeRepository();
@@ -235,7 +248,7 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
   }
 
   it("the Scan option is disabled when the platform reports unavailable", () => {
-    const platform: MobilePlatform = { isAvailable: () => false, scanBarcode: vi.fn(), recognizePackageText: vi.fn() };
+    const platform: MobilePlatform = makeFakePlatform();
     render(<AddMedicationFlow profileId="profile-1" platform={platform} />);
     expect(screen.getByRole("button", { name: /σάρωση/i })).toBeDisabled();
   });
@@ -244,11 +257,10 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     const { repository, create } = makeFakeRepository();
     const product = makeProduct();
     const raw = `01${product.gtin}17${"261231"}10${"LOT9"}`;
-    const platform: MobilePlatform = {
+    const platform: MobilePlatform = makeFakePlatform({
       isAvailable: () => true,
       scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: raw, format: "GS1_DATA_MATRIX" }),
-      recognizePackageText: vi.fn(),
-    };
+    });
     const cacheRepository: CatalogCacheRepository = {
       get: vi.fn().mockResolvedValue(null),
       getByGtin: vi.fn().mockResolvedValue(product),
@@ -290,11 +302,10 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     const { repository } = makeFakeRepository();
     const product = makeProduct();
     const raw = `01${product.gtin}17${"261231"}10${"LOT9"}`;
-    const platform: MobilePlatform = {
+    const platform: MobilePlatform = makeFakePlatform({
       isAvailable: () => true,
       scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: raw, format: "GS1_DATA_MATRIX" }),
-      recognizePackageText: vi.fn(),
-    };
+    });
     const cacheRepository: CatalogCacheRepository = {
       get: vi.fn().mockResolvedValue(null),
       getByGtin: vi.fn().mockResolvedValue(product),
@@ -322,11 +333,10 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
   });
 
   it("scan -> cancelled -> returns to the entry chooser (no error, no flow interruption)", async () => {
-    const platform: MobilePlatform = {
+    const platform: MobilePlatform = makeFakePlatform({
       isAvailable: () => true,
       scanBarcode: vi.fn().mockResolvedValue({ status: "cancelled" }),
-      recognizePackageText: vi.fn(),
-    };
+    });
     render(<AddMedicationFlow profileId="profile-1" platform={platform} />);
 
     fireEvent.click(screen.getByRole("button", { name: /σάρωση/i }));
@@ -337,11 +347,10 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
 
   it("scan -> not found -> Continue manually -> ManualEntryForm is pre-filled from the parsed GTIN-less scan", async () => {
     const GS = "\x1d";
-    const platform: MobilePlatform = {
+    const platform: MobilePlatform = makeFakePlatform({
       isAvailable: () => true,
       scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: `10${"BATCHONLY"}${GS}17${"260630"}`, format: "GS1_DATA_MATRIX" }),
-      recognizePackageText: vi.fn(),
-    };
+    });
     const cacheRepository: CatalogCacheRepository = {
       get: vi.fn().mockResolvedValue(null),
       getByGtin: vi.fn().mockResolvedValue(null),

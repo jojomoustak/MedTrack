@@ -18,8 +18,8 @@ function stubLocation() {
  * earlier test in the same file — e.g. one that deliberately never
  * settles — can't be mistaken for the current call's callback.
  */
-function invokeNativeCallback(payload: unknown, asJsonString = false) {
-  const matches = Object.keys(window).filter((key) => key.startsWith("__medtrackingScan_"));
+function invokeNativeCallback(payload: unknown, asJsonString = false, prefix = "Scan") {
+  const matches = Object.keys(window).filter((key) => key.startsWith(`__medtracking${prefix}_`));
   const callbackName = matches[matches.length - 1];
   expect(callbackName).toBeTruthy();
   const fn = (window as unknown as Record<string, (arg: unknown) => void>)[callbackName!];
@@ -116,5 +116,125 @@ describe("MedianMobilePlatform.scanBarcode()", () => {
     const assertion = expect(promise).rejects.toBeInstanceOf(MobilePlatformUnavailableError);
     await vi.advanceTimersByTimeAsync(120_000);
     await assertion;
+  });
+});
+
+describe("MedianMobilePlatform.requestReminderPermission()", () => {
+  beforeEach(() => {
+    (window as unknown as { median?: unknown }).median = {};
+    stubLocation();
+  });
+
+  afterEach(() => {
+    delete (window as unknown as { median?: unknown }).median;
+    vi.useRealTimers();
+  });
+
+  it("navigates to median://medtracking/requestReminderPermission?callback=...", async () => {
+    const location = stubLocation();
+    const promise = new MedianMobilePlatform().requestReminderPermission();
+    expect(location.href).toMatch(/^median:\/\/medtracking\/requestReminderPermission\?callback=__medtrackingRequestReminderPermission_/);
+    invokeNativeCallback({ status: "denied" }, false, "RequestReminderPermission");
+    await promise;
+  });
+
+  it("resolves { status: 'granted' } when the native callback reports granted", async () => {
+    const promise = new MedianMobilePlatform().requestReminderPermission();
+    invokeNativeCallback({ status: "granted" }, false, "RequestReminderPermission");
+    await expect(promise).resolves.toEqual({ status: "granted" });
+  });
+
+  it("resolves { status: 'denied' } — never a rejection — when the user denies", async () => {
+    const promise = new MedianMobilePlatform().requestReminderPermission();
+    invokeNativeCallback({ status: "denied" }, false, "RequestReminderPermission");
+    await expect(promise).resolves.toEqual({ status: "denied" });
+  });
+
+  it("resolves the native error shape on a native-reported error", async () => {
+    const promise = new MedianMobilePlatform().requestReminderPermission();
+    invokeNativeCallback({ status: "error", errorCode: "INTERNAL", message: "boom" }, false, "RequestReminderPermission");
+    await expect(promise).resolves.toEqual({ status: "error", errorCode: "INTERNAL", message: "boom" });
+  });
+
+  it("rejects with MobilePlatformUnavailableError when no native shell is present", async () => {
+    delete (window as unknown as { median?: unknown }).median;
+    Object.defineProperty(window.navigator, "userAgent", { value: "Mozilla/5.0 (plain browser)", configurable: true });
+    await expect(new MedianMobilePlatform().requestReminderPermission()).rejects.toBeInstanceOf(MobilePlatformUnavailableError);
+  });
+});
+
+describe("MedianMobilePlatform.upsertReminder()", () => {
+  beforeEach(() => {
+    (window as unknown as { median?: unknown }).median = {};
+    stubLocation();
+  });
+
+  afterEach(() => {
+    delete (window as unknown as { median?: unknown }).median;
+    vi.useRealTimers();
+  });
+
+  it("navigates with id set equal to doseEventId, plus every other field, url-encoded", async () => {
+    const location = stubLocation();
+    const promise = new MedianMobilePlatform().upsertReminder({
+      doseEventId: "dose-1",
+      scheduleId: "schedule-1",
+      triggerAtEpochMs: 1_700_000_000_000,
+      medicationLabel: "Depon 500mg",
+      doseText: "1 δισκίο",
+    });
+    const url = new URL(location.href);
+    expect(url.protocol + "//" + url.host + url.pathname).toBe("median://medtracking/upsertReminder");
+    expect(url.searchParams.get("id")).toBe("dose-1");
+    expect(url.searchParams.get("doseEventId")).toBe("dose-1");
+    expect(url.searchParams.get("scheduleId")).toBe("schedule-1");
+    expect(url.searchParams.get("triggerAtMillis")).toBe("1700000000000");
+    expect(url.searchParams.get("medicationLabel")).toBe("Depon 500mg");
+    expect(url.searchParams.get("doseText")).toBe("1 δισκίο");
+
+    invokeNativeCallback({ status: "ok" }, false, "UpsertReminder");
+    await expect(promise).resolves.toEqual({ status: "ok" });
+  });
+
+  it("rejects with MobilePlatformUnavailableError when no native shell is present", async () => {
+    delete (window as unknown as { median?: unknown }).median;
+    Object.defineProperty(window.navigator, "userAgent", { value: "Mozilla/5.0 (plain browser)", configurable: true });
+    await expect(
+      new MedianMobilePlatform().upsertReminder({
+        doseEventId: "dose-1",
+        scheduleId: "schedule-1",
+        triggerAtEpochMs: 0,
+        medicationLabel: "x",
+        doseText: "y",
+      }),
+    ).rejects.toBeInstanceOf(MobilePlatformUnavailableError);
+  });
+});
+
+describe("MedianMobilePlatform.cancelRemindersForDoseEvent()", () => {
+  beforeEach(() => {
+    (window as unknown as { median?: unknown }).median = {};
+    stubLocation();
+  });
+
+  afterEach(() => {
+    delete (window as unknown as { median?: unknown }).median;
+    vi.useRealTimers();
+  });
+
+  it("navigates with the doseEventId and resolves the native result", async () => {
+    const location = stubLocation();
+    const promise = new MedianMobilePlatform().cancelRemindersForDoseEvent("dose-1");
+    const url = new URL(location.href);
+    expect(url.searchParams.get("doseEventId")).toBe("dose-1");
+
+    invokeNativeCallback({ status: "ok" }, false, "CancelRemindersForDoseEvent");
+    await expect(promise).resolves.toEqual({ status: "ok" });
+  });
+
+  it("resolves the native error shape on a native-reported error", async () => {
+    const promise = new MedianMobilePlatform().cancelRemindersForDoseEvent("dose-1");
+    invokeNativeCallback({ status: "error", errorCode: "INTERNAL", message: "boom" }, false, "CancelRemindersForDoseEvent");
+    await expect(promise).resolves.toEqual({ status: "error", errorCode: "INTERNAL", message: "boom" });
   });
 });

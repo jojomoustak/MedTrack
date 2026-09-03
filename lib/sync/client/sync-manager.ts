@@ -52,6 +52,11 @@ import { drainPhotoOutbox, type PhotoDrainSummary } from "@/lib/medications/clie
 import { onPhotoOutboxWrite } from "@/lib/medications/client/photo-outbox-signal";
 import { getCachedProfileId } from "@/lib/auth/client/use-current-profile";
 import { sweepMissedDoseEvents, topUpDoseEventWindow } from "@/lib/scheduling/client/dose-event-generator";
+import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
+import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
+import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
+import { MedianMobilePlatform } from "@/lib/platform/median-mobile-platform";
+import { syncNativeRemindersNow } from "@/lib/reminders/client/native-reminder-sync";
 import { logger } from "@/lib/logging/logger";
 
 /** How often the scheduling tick re-runs while the app stays foregrounded (data-architect design: "every 30-60 min"). */
@@ -161,6 +166,16 @@ export function createSyncManager(): SyncManager {
       if (missed > 0) {
         logger.info("sync.manager.doses_swept_missed", { count: missed });
       }
+      // Phase 11: reconcile native reminders against whatever the two
+      // steps above just produced (new dose events to schedule, missed
+      // ones to cancel) — a no-op outside the native shell.
+      await syncNativeRemindersNow(profileId, {
+        doseEvents: doseEvent,
+        userMedications: new DexieUserMedicationRepository(),
+        catalogCache: new DexieCatalogCacheRepository(),
+        offlineIndex: new DexieOfflineIndexRepository(),
+        platform: new MedianMobilePlatform(),
+      });
     } catch (err) {
       logger.warn("sync.manager.scheduling_tick_failed", { message: err instanceof Error ? err.message : String(err) });
     } finally {

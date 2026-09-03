@@ -58,6 +58,56 @@ export interface OcrCaptureResultError {
 export type OcrCaptureResult = OcrCaptureResultOk | OcrCaptureResultCancelled | OcrCaptureResultError;
 
 /**
+ * Phase 11 (native offline reminders, `scheduling-android-reminders`
+ * skill, ADR-009/ADR-011) bridge contract. No "cancelled" shape here —
+ * unlike scan/OCR there is no user-driven capture flow to abandon; a
+ * permission prompt resolves to exactly `granted` or `denied`.
+ */
+export interface ReminderPermissionGranted {
+  status: "granted";
+}
+export interface ReminderPermissionDenied {
+  status: "denied";
+}
+export interface ReminderPermissionError {
+  status: "error";
+  errorCode: string;
+  message: string;
+}
+export type ReminderPermissionResult = ReminderPermissionGranted | ReminderPermissionDenied | ReminderPermissionError;
+
+/** Shared two-shape result for the reminder write commands below — these are background sync calls, not user-facing capture flows, so there's no "cancelled" to represent. */
+export interface NativeReminderCommandOk {
+  status: "ok";
+}
+export interface NativeReminderCommandError {
+  status: "error";
+  errorCode: string;
+  message: string;
+}
+export type NativeReminderCommandResult = NativeReminderCommandOk | NativeReminderCommandError;
+
+/**
+ * One dose event's near-term reminder, as pushed to native. Phase 11
+ * deliberately keeps this 1:1 with a `DoseEvent` from the web side's
+ * perspective — the native `ScheduledLocalReminder.id` is always set equal
+ * to `doseEventId` for a primary reminder (see `ADR-009`'s doc comment on
+ * the entity for why `id`/`doseEventId` are still distinct fields: a
+ * user-triggered Snooze creates a second, natively-generated row for the
+ * same `doseEventId`, entirely on-device, with no bridge round trip —
+ * this shape never represents that row).
+ */
+export interface UpsertNativeReminderInput {
+  doseEventId: string;
+  scheduleId: string;
+  /** Epoch milliseconds (UTC) this reminder should fire at. */
+  triggerAtEpochMs: number;
+  /** Health-adjacent display text (CLAUDE.md rule 8) — never logged raw on either side of the bridge. */
+  medicationLabel: string;
+  doseText: string;
+}
+
+/**
  * Thrown (never resolved as a `ScanResult`) when there's no native shell
  * to actually call — running in a plain browser, or a Median build where
  * the bridge didn't respond at all. Kept distinct from `ScanResultError`
@@ -97,4 +147,37 @@ export interface MobilePlatform {
    * the corresponding `OcrCaptureResult` status instead.
    */
   recognizePackageText(): Promise<OcrCaptureResult>;
+
+  /**
+   * Requests notification permission, contextually — only ever called at
+   * the moment the user turns reminders on (`scheduling-android-reminders`:
+   * "explain why, then request", never at app launch). Below API 33 there
+   * is no runtime dialog to show; native still resolves `granted`/`denied`
+   * from the passive system setting so the caller doesn't need to branch
+   * on Android version. Rejects with `MobilePlatformUnavailableError` only
+   * when there's no native shell to ask at all.
+   */
+  requestReminderPermission(): Promise<ReminderPermissionResult>;
+
+  /**
+   * Idempotently (re)schedules exactly one native reminder for a dose
+   * event — safe to call repeatedly with the same `doseEventId` as its
+   * `triggerAtEpochMs` moves (e.g. a DST recompute, or a schedule edit):
+   * native replaces the prior `AlarmManager` entry rather than stacking a
+   * second one. Callers should call this for every still-`scheduled`
+   * DoseEvent within the near-term push window, not just newly-created
+   * ones — see `lib/reminders/client/native-reminder-sync.ts`.
+   */
+  upsertReminder(input: UpsertNativeReminderInput): Promise<NativeReminderCommandResult>;
+
+  /**
+   * Cancels every native reminder tied to `doseEventId` — the primary one
+   * AND any natively-generated Snooze derivative — and clears their
+   * `AlarmManager` entries. Call this the moment a dose event reaches a
+   * terminal status (Taken/Skipped/Missed/Cancelled) so a status change
+   * made on the web side can never leave a stale native alarm that still
+   * fires. A no-op (still resolves `{status:"ok"}`) if nothing was
+   * scheduled for this id.
+   */
+  cancelRemindersForDoseEvent(doseEventId: string): Promise<NativeReminderCommandResult>;
 }

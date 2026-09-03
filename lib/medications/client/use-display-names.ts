@@ -4,7 +4,37 @@ import { useEffect, useState } from "react";
 import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
 import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
 import { onOfflineIndexUpdated } from "@/lib/catalog/client/offline-index-signal";
+import type { CatalogCacheRepository, OfflineIndexRepository } from "@/lib/domain/repositories";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
+
+/**
+ * The name-resolution rule itself, extracted so a non-React caller (e.g.
+ * `lib/reminders/client/native-reminder-sync.ts`, which needs the same
+ * medication label for a push notification) can reuse it without needing
+ * `useDisplayNames`'s hook lifecycle.
+ */
+export async function resolveMedicationDisplayName(
+  med: UserMedicationRecord,
+  cache: Pick<CatalogCacheRepository, "get">,
+  offlineIndex: Pick<OfflineIndexRepository, "getById">,
+): Promise<string | null> {
+  if (med.customName) return med.customName;
+  if (!med.catalogProductId) return null;
+  // `catalogProductCache` first (cheap, already-seen-on-this-device
+  // products) — falls back to the full compact offline index
+  // (`OfflineIndexRepository.getById`) when it misses, rather than going
+  // straight to the generic placeholder. This self-heals any medication
+  // created before 2026-08-28's cache-write fix (a real bug:
+  // offline-index-resolved scans/OCR confirmations used to never write
+  // into `catalogProductCache` at all, so an already-created medication's
+  // name could be permanently stuck on the placeholder even after that
+  // fix, since the fix only changed what happens on FUTURE resolutions) —
+  // the offline index still has this product's data by id regardless.
+  const cached = await cache.get(med.catalogProductId);
+  if (cached) return cached.name;
+  const indexed = await offlineIndex.getById(med.catalogProductId);
+  return indexed?.name ?? null;
+}
 
 /**
  * Extracted from `app/(app)/medications/page.tsx` (2026-08-30, Phase 10)
@@ -31,29 +61,8 @@ export function useDisplayNames(medications: UserMedicationRecord[]): Map<string
       const offlineIndex = new DexieOfflineIndexRepository();
       const map = new Map<string, string>();
       for (const med of medications) {
-        if (med.customName) {
-          map.set(med.id, med.customName);
-          continue;
-        }
-        if (!med.catalogProductId) continue;
-        // `catalogProductCache` first (cheap, already-seen-on-this-device
-        // products) — falls back to the full compact offline index
-        // (`OfflineIndexRepository.getById`) when it misses, rather than
-        // going straight to the generic placeholder. This self-heals any
-        // medication created before 2026-08-28's cache-write fix (a real
-        // bug: offline-index-resolved scans/OCR confirmations used to
-        // never write into `catalogProductCache` at all, so an
-        // already-created medication's name could be permanently stuck on
-        // the placeholder even after that fix, since the fix only changed
-        // what happens on FUTURE resolutions) — the offline index still
-        // has this product's data by id regardless.
-        const cached = await cache.get(med.catalogProductId);
-        if (cached) {
-          map.set(med.id, cached.name);
-          continue;
-        }
-        const indexed = await offlineIndex.getById(med.catalogProductId);
-        map.set(med.id, indexed?.name ?? "Φάρμακο από κατάλογο");
+        const name = await resolveMedicationDisplayName(med, cache, offlineIndex);
+        map.set(med.id, name ?? "Φάρμακο από κατάλογο");
       }
       if (!cancelled) setNames(map);
     }

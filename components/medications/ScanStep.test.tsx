@@ -19,6 +19,9 @@ function fakePlatform(overrides: Partial<MobilePlatform> = {}): MobilePlatform {
     isAvailable: () => true,
     scanBarcode: vi.fn().mockResolvedValue({ status: "cancelled" } satisfies ScanResult),
     recognizePackageText: vi.fn(),
+    requestReminderPermission: vi.fn(),
+    upsertReminder: vi.fn(),
+    cancelRemindersForDoseEvent: vi.fn(),
     ...overrides,
   };
 }

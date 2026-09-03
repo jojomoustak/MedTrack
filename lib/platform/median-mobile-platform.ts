@@ -3,8 +3,11 @@
 import {
   MobilePlatformUnavailableError,
   type MobilePlatform,
+  type NativeReminderCommandResult,
   type OcrCaptureResult,
+  type ReminderPermissionResult,
   type ScanResult,
+  type UpsertNativeReminderInput,
 } from "@/lib/platform/mobile-platform";
 import type { BarcodeFormat } from "@/lib/domain/gs1";
 import { logger } from "@/lib/logging/logger";
@@ -20,6 +23,12 @@ import { logger } from "@/lib/logging/logger";
  * respond.
  */
 const SCAN_TIMEOUT_MS = 120_000;
+
+/** Same defense-in-depth reasoning as `SCAN_TIMEOUT_MS`, but a permission dialog is expected to resolve faster than a user aiming a camera. */
+const REMINDER_PERMISSION_TIMEOUT_MS = 60_000;
+
+/** Reminder write commands (`upsertReminder`/`cancelRemindersForDoseEvent`) are background sync calls with no user waiting on them — a local Room write + AlarmManager call, so a much tighter backstop than the user-paced commands above is correct here. */
+const REMINDER_COMMAND_TIMEOUT_MS = 10_000;
 
 const KNOWN_FORMATS: readonly BarcodeFormat[] = ["GS1_DATA_MATRIX", "EAN_13", "EAN_8", "CODE_128", "UNKNOWN"];
 
@@ -63,6 +72,7 @@ function callBridgeCommand<T>(
   callbackPrefix: string,
   normalize: (payload: unknown) => T,
   timeoutMs = SCAN_TIMEOUT_MS,
+  extraParams?: Record<string, string>,
 ): Promise<T> {
   if (!hasMedianBridge()) {
     return Promise.reject(new MobilePlatformUnavailableError());
@@ -98,7 +108,8 @@ function callBridgeCommand<T>(
       }
     };
 
-    window.location.href = `median://medtracking/${command}?callback=${encodeURIComponent(callbackName)}`;
+    const params = new URLSearchParams({ callback: callbackName, ...extraParams });
+    window.location.href = `median://medtracking/${command}?${params.toString()}`;
   });
 }
 
@@ -159,6 +170,45 @@ function normalizeScanResult(payload: unknown): ScanResult {
   throw new Error(`Scan callback returned an unrecognized status: ${String(status)}`);
 }
 
+function normalizeReminderPermissionResult(payload: unknown): ReminderPermissionResult {
+  const data = typeof payload === "string" ? (JSON.parse(payload) as unknown) : payload;
+  if (typeof data !== "object" || data === null || !("status" in data)) {
+    throw new Error("Reminder permission callback payload is missing 'status'.");
+  }
+  const status = (data as { status: unknown }).status;
+
+  if (status === "granted") return { status: "granted" };
+  if (status === "denied") return { status: "denied" };
+  if (status === "error") {
+    const { errorCode, message } = data as { errorCode?: unknown; message?: unknown };
+    return {
+      status: "error",
+      errorCode: typeof errorCode === "string" ? errorCode : "UNKNOWN_ERROR",
+      message: typeof message === "string" ? message : "Unknown reminder-permission error.",
+    };
+  }
+  throw new Error(`Reminder permission callback returned an unrecognized status: ${String(status)}`);
+}
+
+function normalizeNativeReminderCommandResult(payload: unknown): NativeReminderCommandResult {
+  const data = typeof payload === "string" ? (JSON.parse(payload) as unknown) : payload;
+  if (typeof data !== "object" || data === null || !("status" in data)) {
+    throw new Error("Reminder command callback payload is missing 'status'.");
+  }
+  const status = (data as { status: unknown }).status;
+
+  if (status === "ok") return { status: "ok" };
+  if (status === "error") {
+    const { errorCode, message } = data as { errorCode?: unknown; message?: unknown };
+    return {
+      status: "error",
+      errorCode: typeof errorCode === "string" ? errorCode : "UNKNOWN_ERROR",
+      message: typeof message === "string" ? message : "Unknown reminder-command error.",
+    };
+  }
+  throw new Error(`Reminder command callback returned an unrecognized status: ${String(status)}`);
+}
+
 /**
  * `MobilePlatform` implementation over Median's JS bridge (ADR-005). Uses
  * Median's own navigation-URL bridge convention: navigating to
@@ -184,5 +234,29 @@ export class MedianMobilePlatform implements MobilePlatform {
    */
   recognizePackageText(): Promise<OcrCaptureResult> {
     return callBridgeCommand("recognizePackageText", "RecognizePackageText", normalizeOcrResult);
+  }
+
+  requestReminderPermission(): Promise<ReminderPermissionResult> {
+    return callBridgeCommand("requestReminderPermission", "RequestReminderPermission", normalizeReminderPermissionResult, REMINDER_PERMISSION_TIMEOUT_MS);
+  }
+
+  upsertReminder(input: UpsertNativeReminderInput): Promise<NativeReminderCommandResult> {
+    return callBridgeCommand("upsertReminder", "UpsertReminder", normalizeNativeReminderCommandResult, REMINDER_COMMAND_TIMEOUT_MS, {
+      // `id` is always the doseEventId for a primary reminder (see
+      // `UpsertNativeReminderInput`'s doc) — passed explicitly rather than
+      // left for native to assume, so the wire contract stays self-describing.
+      id: input.doseEventId,
+      doseEventId: input.doseEventId,
+      scheduleId: input.scheduleId,
+      triggerAtMillis: String(input.triggerAtEpochMs),
+      medicationLabel: input.medicationLabel,
+      doseText: input.doseText,
+    });
+  }
+
+  cancelRemindersForDoseEvent(doseEventId: string): Promise<NativeReminderCommandResult> {
+    return callBridgeCommand("cancelRemindersForDoseEvent", "CancelRemindersForDoseEvent", normalizeNativeReminderCommandResult, REMINDER_COMMAND_TIMEOUT_MS, {
+      doseEventId,
+    });
   }
 }

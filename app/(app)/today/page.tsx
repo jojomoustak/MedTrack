@@ -8,7 +8,43 @@ import { useTodayDoseEvents, allTodayDosesResolved } from "@/components/today/us
 import { DoseCard } from "@/components/today/DoseCard";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import { DexiePreferencesRepository } from "@/lib/db-client/user-preferences-repository";
+import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
+import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
+import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
+import { MedianMobilePlatform } from "@/lib/platform/median-mobile-platform";
+import { syncNativeRemindersNow } from "@/lib/reminders/client/native-reminder-sync";
 import { newId } from "@/lib/domain/ids";
+import { logger } from "@/lib/logging/logger";
+
+/**
+ * Best-effort, fire-and-forget push to the native reminder layer (Phase
+ * 11) right after a user-driven Taken/Skip/Snooze transition — the
+ * periodic scheduling tick (`sync-manager.ts`) would eventually reconcile
+ * this too, but calling it here as well avoids up to
+ * `SCHEDULING_TICK_INTERVAL_MS` of staleness where a just-actioned dose's
+ * native alarm hasn't been cancelled/rescheduled yet. Never awaited by a
+ * caller — this must not block the optimistic-undo-window UI on a bridge
+ * round trip, and (the try/catch below) must never throw INTO a caller
+ * either: the repository constructors run synchronously, as call
+ * arguments, before `syncNativeRemindersNow`'s own async body even
+ * starts, so a synchronous throw there could otherwise skip the
+ * `refresh()` call right after this in every handler below, leaving the
+ * UI stale even though the actual transition already committed fine.
+ */
+function pushNativeRemindersAfterTransition(profileId: string | null): void {
+  if (!profileId) return;
+  try {
+    void syncNativeRemindersNow(profileId, {
+      doseEvents: new DexieDoseEventRepository(),
+      userMedications: new DexieUserMedicationRepository(),
+      catalogCache: new DexieCatalogCacheRepository(),
+      offlineIndex: new DexieOfflineIndexRepository(),
+      platform: new MedianMobilePlatform(),
+    }).catch((err) => logger.warn("today.native_reminder_sync_failed", { message: err instanceof Error ? err.message : String(err) }));
+  } catch (err) {
+    logger.warn("today.native_reminder_sync_failed", { message: err instanceof Error ? err.message : String(err) });
+  }
+}
 
 /**
  * Today (Phase 3 §2.2) — the daily adherence loop's home screen. Real
@@ -25,12 +61,14 @@ export default function TodayPage() {
   async function handleTaken(doseId: string) {
     const repo = new DexieDoseEventRepository();
     await repo.transition(doseId, { status: "taken", takenAt: new Date().toISOString() }, newId());
+    pushNativeRemindersAfterTransition(profileId);
     refresh();
   }
 
   async function handleSkipped(doseId: string) {
     const repo = new DexieDoseEventRepository();
     await repo.transition(doseId, { status: "skipped" }, newId());
+    pushNativeRemindersAfterTransition(profileId);
     refresh();
   }
 
@@ -40,6 +78,7 @@ export default function TodayPage() {
     const reminderAt = new Date(Date.now() + snoozeMinutes * 60_000).toISOString();
     const repo = new DexieDoseEventRepository();
     await repo.transition(doseId, { status: "snoozed", reminderAt }, newId());
+    pushNativeRemindersAfterTransition(profileId);
     refresh();
   }
 

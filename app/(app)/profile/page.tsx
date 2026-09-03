@@ -6,12 +6,16 @@ import { authClient } from "@/lib/auth/client/auth-client";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
 import { clearAllLocalProfileData, hasPendingLocalWork } from "@/lib/db-client/clear-local-profile-data";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { ReminderPermissionToggle } from "@/components/profile/ReminderPermissionToggle";
+import { useProfileId } from "@/components/shell/CurrentProfileContext";
 
 /**
- * Phase 3 §2.8 Profile/settings — most of it (accessibility,
- * notifications, Sync & Data detail, export) is later-phase UI; sign-out
- * is real and functional since it's needed to demo register/login end to
- * end. "Link Google account" (ADR-003 addendum A.5) is an authenticated
+ * Phase 3 §2.8 Profile/settings — most of it (accessibility, Sync & Data
+ * detail, export) is later-phase UI; sign-out is real and functional
+ * since it's needed to demo register/login end to end. Reminder
+ * notification permission (Phase 11, `ReminderPermissionToggle`) is real
+ * too — a contextual request, not a stored preference (see that
+ * component's doc). "Link Google account" (ADR-003 addendum A.5) is an authenticated
  * `linkSocial()` call, requiring an active `account_session` (same
  * authorization model as every other authenticated mutation in this app)
  * — the *only* way a Google identity can be attached to an existing
@@ -27,6 +31,7 @@ import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 export default function ProfilePage() {
   const { data } = authClient.useSession();
   const router = useRouter();
+  const profileId = useProfileId();
 
   async function handleSignOut() {
     // Cleared locally first, unconditionally: this is what
@@ -66,9 +71,9 @@ export default function ProfilePage() {
       <h1 className="text-xl font-semibold">Προφίλ</h1>
       {data?.user?.email && <p className="text-zinc-600 dark:text-zinc-400">{data.user.email}</p>}
 
-      <p className="text-sm text-zinc-500 dark:text-zinc-500">
-        Ρυθμίσεις, προσβασιμότητα, ειδοποιήσεις και κατάσταση συγχρονισμού έρχονται σύντομα.
-      </p>
+      <p className="text-sm text-zinc-500 dark:text-zinc-500">Ρυθμίσεις, προσβασιμότητα και κατάσταση συγχρονισμού έρχονται σύντομα.</p>
+
+      <ReminderPermissionToggle profileId={profileId} />
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Σύνδεση λογαριασμών</h2>
