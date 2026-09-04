@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
+import { useLowStockMedicationIds } from "@/lib/inventory/client/use-low-stock-medications";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 
 type Segment = "all" | "active" | "favorites" | "recent";
@@ -22,6 +23,7 @@ export default function MedicationsPage() {
   const { status, medications } = useMedicationsList(profileId);
   const [segment, setSegment] = useState<Segment>("all");
   const names = useDisplayNames(medications);
+  const lowStockIds = useLowStockMedicationIds(profileId, medications);
 
   const visible =
     segment === "active"
@@ -87,7 +89,14 @@ export default function MedicationsPage() {
           {visible.map((med) => (
             <li key={med.id} className="flex min-h-12 items-center justify-between rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-800">
               <div>
-                <p className="font-medium">{names.get(med.id) ?? "…"}</p>
+                <Link href={`/medications/${med.id}`} className="font-medium underline-offset-2 hover:underline">
+                  {names.get(med.id) ?? "…"}
+                </Link>
+                {lowStockIds.has(med.id) && (
+                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                    Χαμηλό απόθεμα
+                  </span>
+                )}
                 {med.customStrengthValue && (
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
                     {med.customStrengthValue} {med.customStrengthUnit}

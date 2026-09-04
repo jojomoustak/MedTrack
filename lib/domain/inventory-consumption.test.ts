@@ -3,6 +3,7 @@ import {
   buildDoseReversedConsumption,
   buildDoseTakenConsumption,
   computeCurrentStock,
+  computePackageRemainingStock,
   computeRefillProjection,
   isBelowLowStockThreshold,
   isRunningLowSoon,
@@ -105,6 +106,18 @@ describe("computeCurrentStock", () => {
   it("preserves 3-decimal precision without float drift", () => {
     const transactions = [txn({ quantityDelta: "0.1" }), txn({ quantityDelta: "0.2" })];
     expect(computeCurrentStock(transactions, MED)).toBe("0.3");
+  });
+});
+
+describe("computePackageRemainingStock", () => {
+  it("sums quantityDelta for the given package only", () => {
+    const transactions = [txn({ packageId: "pkg-1", quantityDelta: "30" }), txn({ packageId: "pkg-1", quantityDelta: "-2" }), txn({ packageId: "pkg-2", quantityDelta: "10" })];
+    expect(computePackageRemainingStock(transactions, "pkg-1")).toBe("28");
+  });
+
+  it("never displays negative — clamps to 0", () => {
+    const transactions = [txn({ packageId: "pkg-1", quantityDelta: "1" }), txn({ packageId: "pkg-1", quantityDelta: "-3" })];
+    expect(computePackageRemainingStock(transactions, "pkg-1")).toBe("0");
   });
 });
 
@@ -283,7 +296,7 @@ describe("scheduledOccurrencesPerDay", () => {
 
 describe("computeRefillProjection", () => {
   it("returns basis 'none' with no transactions and no schedule", () => {
-    const result = computeRefillProjection(MED, "tablet", [], [], new Date("2026-01-15T00:00:00.000Z"));
+    const result = computeRefillProjection(MED, [], [], new Date("2026-01-15T00:00:00.000Z"));
     expect(result.basis).toBe("none");
     expect(result.daysRemaining).toBeNull();
   });
@@ -291,7 +304,7 @@ describe("computeRefillProjection", () => {
   it("uses the scheduled rate when there isn't enough observed history", () => {
     const transactions = [txn({ quantityDelta: "30" })];
     const schedules = [schedule({ timesOfDay: ["08:00:00"] })]; // 1/day
-    const result = computeRefillProjection(MED, "tablet", transactions, schedules, new Date("2026-01-15T00:00:00.000Z"));
+    const result = computeRefillProjection(MED, transactions, schedules, new Date("2026-01-15T00:00:00.000Z"));
     expect(result.basis).toBe("scheduled");
     expect(result.daysRemaining).toBe(30);
   });
@@ -306,7 +319,7 @@ describe("computeRefillProjection", () => {
     ];
     // Observed: 10 units over 14 days = 0.714/day -> should win over any schedule.
     const schedules = [schedule({ timesOfDay: ["08:00:00"] })]; // would imply 1/day if used
-    const result = computeRefillProjection(MED, "tablet", transactions, schedules, now);
+    const result = computeRefillProjection(MED, transactions, schedules, now);
     expect(result.basis).toBe("observed");
   });
 
@@ -318,7 +331,7 @@ describe("computeRefillProjection", () => {
         txn({ transactionType: "dose_taken", doseEventId: `old-${i}`, quantityDelta: "-1", occurredAt: "2026-01-02T08:00:00.000Z" }),
       ),
     ];
-    const result = computeRefillProjection(MED, "tablet", transactions, [], now);
+    const result = computeRefillProjection(MED, transactions, [], now);
     // Those 5 doses are outside the 14-day trailing window from 2026-02-01, so basis falls back to none (no schedule either).
     expect(result.basis).toBe("none");
   });
@@ -326,7 +339,7 @@ describe("computeRefillProjection", () => {
   it("floors daysRemaining rather than rounding (conservative)", () => {
     const transactions = [txn({ quantityDelta: "10" })];
     const schedules = [schedule({ timesOfDay: ["08:00:00", "20:00:00", "23:00:00"] })]; // 3/day -> 3.33 days, should floor to 3
-    const result = computeRefillProjection(MED, "tablet", transactions, schedules, new Date("2026-01-15T00:00:00.000Z"));
+    const result = computeRefillProjection(MED, transactions, schedules, new Date("2026-01-15T00:00:00.000Z"));
     expect(result.daysRemaining).toBe(3);
   });
 });

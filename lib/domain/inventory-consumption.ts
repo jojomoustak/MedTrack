@@ -67,6 +67,11 @@ function remainingMilliUnitsForPackage(transactions: readonly InventoryTransacti
   return transactions.filter((t) => t.packageId === packageId).reduce((sum, t) => sum + toMilliUnits(t.quantityDelta), 0);
 }
 
+/** Public wrapper of `remainingMilliUnitsForPackage`, for UI display (e.g. a package list row's "remaining" figure) — never negative-displayed, since a package that's gone below zero is functionally just empty. */
+export function computePackageRemainingStock(transactions: readonly InventoryTransactionRecord[], packageId: string): string {
+  return fromMilliUnits(Math.max(0, remainingMilliUnitsForPackage(transactions, packageId)));
+}
+
 /**
  * FIFO candidate selection: open, non-deleted packages for this medication
  * with remaining stock > 0, soonest expiry first (`NULLS LAST` — a known
@@ -232,7 +237,6 @@ const OBSERVED_MIN_DOSE_COUNT = 5;
  */
 export function computeRefillProjection(
   userMedicationId: string,
-  quantityUnit: string,
   transactions: readonly InventoryTransactionRecord[],
   schedules: readonly MedicationScheduleRecord[],
   now: Date = new Date(),
