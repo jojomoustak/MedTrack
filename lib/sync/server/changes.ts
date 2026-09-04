@@ -107,6 +107,30 @@ export async function pullChanges(
       : [];
   const doseEventById = new Map(doseEventRecords.map((r) => [r.id, r]));
 
+  const packageIds = logRows.filter((r) => r.entityType === "medicationPackage").map((r) => r.entityId);
+  const packageRecords =
+    packageIds.length > 0
+      ? (
+          await withProfileScope(profileId, (db) => [db.select().from(schema.medicationPackage).where(inArray(schema.medicationPackage.id, packageIds))], {
+            db,
+          })
+        )[0]
+      : [];
+  const packageById = new Map(packageRecords.map((r) => [r.id, r]));
+
+  const inventoryTransactionIds = logRows.filter((r) => r.entityType === "medicationInventoryTransaction").map((r) => r.entityId);
+  const inventoryTransactionRecords =
+    inventoryTransactionIds.length > 0
+      ? (
+          await withProfileScope(
+            profileId,
+            (db) => [db.select().from(schema.medicationInventoryTransaction).where(inArray(schema.medicationInventoryTransaction.id, inventoryTransactionIds))],
+            { db },
+          )
+        )[0]
+      : [];
+  const inventoryTransactionById = new Map(inventoryTransactionRecords.map((r) => [r.id, r]));
+
   const userPreferencesRecords =
     logRows.some((r) => r.entityType === "userPreferences")
       ? (
@@ -130,6 +154,10 @@ export async function pullChanges(
       record = scheduleById.get(row.entityId);
     } else if (row.entityType === "doseEvent") {
       record = doseEventById.get(row.entityId) as Record<string, unknown> | undefined;
+    } else if (row.entityType === "medicationPackage") {
+      record = packageById.get(row.entityId) as Record<string, unknown> | undefined;
+    } else if (row.entityType === "medicationInventoryTransaction") {
+      record = inventoryTransactionById.get(row.entityId) as Record<string, unknown> | undefined;
     }
     return {
       id: Number(row.id),

@@ -16,6 +16,8 @@ import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
 import type { LearnedGtinMapping } from "@/lib/domain/learned-mapping";
 import type { CreateMedicationScheduleInput, MedicationSchedulePatch, MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { CreateDoseEventInput, DoseEventRecord, DoseEventTransitionPatch } from "@/lib/domain/dose-event";
+import type { CreateMedicationPackageInput, MedicationPackagePatch, MedicationPackageRecord } from "@/lib/domain/medication-package";
+import type { CreateInventoryTransactionInput, InventoryTransactionRecord } from "@/lib/domain/inventory-transaction";
 
 export interface OutboxRepository {
   enqueue(entry: OutboxEntry): Promise<void>;
@@ -235,6 +237,42 @@ export interface DoseEventRepository {
   transition(id: string, patch: DoseEventTransitionPatch, clientMutationId: string): Promise<DoseEventRecord>;
   /** Applies a record pulled/acked from the server — never generates a new outbox entry. */
   applyRemote(record: DoseEventRecord): Promise<void>;
+  markFailed(id: string): Promise<void>;
+}
+
+/**
+ * `MedicationPackage` (Phase 2 §2.8, Phase 9). Optimistic concurrency,
+ * same pattern as `MedicationScheduleRepository`. Remaining quantity is
+ * deliberately not queryable here — always derive it from
+ * `InventoryTransactionRepository.listByUserMedication` (ADR-010).
+ */
+export interface MedicationPackageRepository {
+  listByUserMedication(userMedicationId: string): Promise<MedicationPackageRecord[]>;
+  get(id: string): Promise<MedicationPackageRecord | null>;
+  /** Local create + outbox entry, same transaction — mirrors `MedicationScheduleRepository.create`. Always creates `status: "unopened"` (the domain layer, not the client, decides when a package becomes `"opened"`). */
+  create(input: CreateMedicationPackageInput): Promise<MedicationPackageRecord>;
+  /** Bumps local `version` optimistically, enqueues an update mutation carrying `baseVersion`. */
+  update(id: string, patch: MedicationPackagePatch, clientMutationId: string): Promise<MedicationPackageRecord>;
+  softDelete(id: string, clientMutationId: string): Promise<void>;
+  applyRemote(record: MedicationPackageRecord): Promise<void>;
+  markConflict(id: string): Promise<void>;
+  markFailed(id: string): Promise<void>;
+}
+
+/**
+ * `MedicationInventoryTransaction` (Phase 2 §2.9, ADR-010, Phase 9) — the
+ * append-only ledger. Idempotent-by-id, never optimistic concurrency, same
+ * pattern as `DoseEventRepository`: there is no `update`/`softDelete` here
+ * because a ledger row is never edited or removed — a correction is a new
+ * offsetting `manual_correction` row.
+ */
+export interface InventoryTransactionRepository {
+  listByUserMedication(userMedicationId: string): Promise<InventoryTransactionRecord[]>;
+  /** Every transaction for every medication this profile has — the shape `lib/domain/inventory-consumption.ts`'s pure functions want, so a caller doesn't need N+1 queries per medication. */
+  listForProfile(profileId: string): Promise<InventoryTransactionRecord[]>;
+  /** Idempotent by design (`put`, never `add`) — same reasoning as `DoseEventRepository.createIfMissing`: a locally-computed row may legitimately race a pulled `applyRemote` for the same id. */
+  createIfMissing(input: CreateInventoryTransactionInput): Promise<InventoryTransactionRecord>;
+  applyRemote(record: InventoryTransactionRecord): Promise<void>;
   markFailed(id: string): Promise<void>;
 }
 

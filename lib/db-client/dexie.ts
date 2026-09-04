@@ -25,6 +25,8 @@ import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
 import type { LearnedGtinMapping } from "@/lib/domain/learned-mapping";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
+import type { MedicationPackageRecord } from "@/lib/domain/medication-package";
+import type { InventoryTransactionRecord } from "@/lib/domain/inventory-transaction";
 import { notifyOutboxWrite } from "@/lib/sync/client/outbox-signal";
 import { notifyPhotoOutboxWrite } from "@/lib/medications/client/photo-outbox-signal";
 
@@ -166,6 +168,8 @@ export class MedTrackingDexie extends Dexie {
   learnedGtinMapping!: EntityTable<LearnedGtinMapping, "gtin">;
   medicationPhotoCache!: EntityTable<LocalMedicationPhotoCache, "userMedicationId">;
   photoOutboxEntry!: EntityTable<LocalPhotoOutboxEntry, "userMedicationId">;
+  medicationPackage!: EntityTable<MedicationPackageRecord, "id">;
+  inventoryTransaction!: EntityTable<InventoryTransactionRecord, "id">;
 
   constructor(name = "medtracking") {
     super(name);
@@ -260,6 +264,18 @@ export class MedTrackingDexie extends Dexie {
     this.version(7).stores({
       medicationSchedule: "id, profileId, userMedicationId, syncState, deletedAt",
       doseEvent: "id, profileId, userMedicationId, scheduleId, scheduledAt, status, syncState",
+    });
+
+    // v8 (Phase 9 — Inventory): medicationPackage and inventoryTransaction
+    // (ADR-010's append-only ledger). `packageId` indexed on
+    // inventoryTransaction for the FIFO remaining-stock query
+    // (`lib/domain/inventory-consumption.ts`'s `selectFifoPackageId`,
+    // which needs every transaction for a candidate package, not just the
+    // medication-wide sum). `expiryDate` indexed on medicationPackage to
+    // match the server's own `ix_package_expiry` index shape.
+    this.version(8).stores({
+      medicationPackage: "id, profileId, userMedicationId, status, expiryDate, syncState, deletedAt",
+      inventoryTransaction: "id, profileId, userMedicationId, packageId, doseEventId, transactionType, occurredAt, syncState",
     });
 
     // Single choke point for "a new outbox entry was durably written" —

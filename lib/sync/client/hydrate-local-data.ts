@@ -24,15 +24,21 @@ import { pullChanges } from "@/lib/sync/client/api";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
+import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-package-repository";
+import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
+import type { MedicationPackageRecord } from "@/lib/domain/medication-package";
+import type { InventoryTransactionRecord } from "@/lib/domain/inventory-transaction";
 import { logger } from "@/lib/logging/logger";
 
 export interface HydrateLocalDataDeps {
   userMedication?: DexieUserMedicationRepository;
   medicationSchedule?: DexieMedicationScheduleRepository;
   doseEvent?: DexieDoseEventRepository;
+  medicationPackage?: DexieMedicationPackageRepository;
+  inventoryTransaction?: DexieInventoryTransactionRepository;
   /** Injectable for tests — defaults to the real `pullChanges` (which calls the network). */
   pullChanges?: typeof pullChanges;
 }
@@ -43,6 +49,8 @@ export async function hydrateLocalDataFromServer(deps: HydrateLocalDataDeps = {}
   const userMedication = deps.userMedication ?? new DexieUserMedicationRepository();
   const medicationSchedule = deps.medicationSchedule ?? new DexieMedicationScheduleRepository();
   const doseEvent = deps.doseEvent ?? new DexieDoseEventRepository();
+  const medicationPackage = deps.medicationPackage ?? new DexieMedicationPackageRepository();
+  const inventoryTransaction = deps.inventoryTransaction ?? new DexieInventoryTransactionRepository();
   const pull = deps.pullChanges ?? pullChanges;
 
   try {
@@ -59,6 +67,10 @@ export async function hydrateLocalDataFromServer(deps: HydrateLocalDataDeps = {}
           await medicationSchedule.applyRemote(change.record as unknown as MedicationScheduleRecord);
         } else if (change.entityType === "doseEvent") {
           await doseEvent.applyRemote(change.record as unknown as DoseEventRecord);
+        } else if (change.entityType === "medicationPackage") {
+          await medicationPackage.applyRemote(change.record as unknown as MedicationPackageRecord);
+        } else if (change.entityType === "medicationInventoryTransaction") {
+          await inventoryTransaction.applyRemote(change.record as unknown as InventoryTransactionRecord);
         }
       }
       if (response.nextCursor === cursor || response.changes.length === 0) break;

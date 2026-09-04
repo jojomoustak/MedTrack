@@ -34,6 +34,34 @@ import { toCamelCaseRecord } from "@/lib/sync/server/snake-case";
 import { logger } from "@/lib/logging/logger";
 
 const POSTGRES_UNIQUE_VIOLATION = "23505";
+const POSTGRES_FOREIGN_KEY_VIOLATION = "23503";
+
+/**
+ * Real Postgres error code, walking the `.cause` chain — a bug found via
+ * live Postgres integration testing (2026-09-04, Phase 9): drizzle-orm's
+ * node-postgres driver (the `TestableDb` path every integration test
+ * uses) wraps the actual `pg` error inside `err.cause` rather than
+ * exposing `code` on the thrown error directly, so every
+ * `isUniqueViolation`/`isForeignKeyViolation` check in this file had
+ * silently never matched against that driver — any handler's "recover
+ * from a genuine constraint collision" branch (e.g.
+ * `applyDoseEventMutation`'s `uq_dose_event_schedule_instance` recovery,
+ * `applyInventoryTransactionMutation`'s `uq_inventory_txn_dose_taken_once`
+ * recovery) fell straight through to the generic `INTERNAL_ERROR` path
+ * instead, for every environment using this driver. Bounded depth (5) as
+ * a defensive backstop against a pathological circular `.cause` chain,
+ * not because a real chain is ever expected to be that deep.
+ */
+function postgresErrorCode(err: unknown, depth = 0): string | undefined {
+  if (depth > 5 || typeof err !== "object" || err === null) return undefined;
+  if ("code" in err && typeof (err as { code?: unknown }).code === "string") {
+    return (err as { code: string }).code;
+  }
+  if ("cause" in err) {
+    return postgresErrorCode((err as { cause?: unknown }).cause, depth + 1);
+  }
+  return undefined;
+}
 
 /**
  * Builds a `time[]` SQL fragment from a JS string array — NEVER a bare
@@ -99,7 +127,7 @@ async function findExistingMutation(
 }
 
 function isUniqueViolation(err: unknown): boolean {
-  return typeof err === "object" && err !== null && "code" in err && (err as { code?: unknown }).code === POSTGRES_UNIQUE_VIOLATION;
+  return postgresErrorCode(err) === POSTGRES_UNIQUE_VIOLATION;
 }
 
 async function applyUserPreferencesMutation(ctx: MutationContext, mutation: SyncMutationRequest): Promise<SyncMutationResult> {
@@ -824,8 +852,297 @@ async function applyDoseEventMutation(ctx: MutationContext, mutation: SyncMutati
   return { clientMutationId: mutation.clientMutationId, result: "applied", serverRecord: record };
 }
 
+/**
+ * `MedicationPackage` (Phase 2 §2.8, Phase 9) — optimistic concurrency,
+ * same pattern as `applyMedicationScheduleMutation`. A package is always
+ * created `status = 'unopened'`, `opened_at = NULL` — never client-
+ * asserted; only an update mutation can transition status/openedAt.
+ */
+async function applyMedicationPackageMutation(ctx: MutationContext, mutation: SyncMutationRequest): Promise<SyncMutationResult> {
+  if (mutation.operation === "delete") {
+    if (mutation.baseVersion === undefined) {
+      throw new ValidationError("medicationPackage delete mutations require `baseVersion`.");
+    }
+    const [rows] = await withProfileScope(
+      ctx.profileId,
+      (db) => [
+        db.execute(sql`
+        WITH updated AS (
+          UPDATE medication_package
+          SET deleted_at = now(), version = version + 1, updated_at = now(), client_mutation_id = ${mutation.clientMutationId}::uuid
+          WHERE id = ${mutation.entityId}::uuid AND version = ${mutation.baseVersion} AND deleted_at IS NULL
+          RETURNING *
+        ),
+        current_row AS (
+          SELECT * FROM updated
+          UNION ALL
+          SELECT * FROM medication_package WHERE id = ${mutation.entityId}::uuid AND NOT EXISTS (SELECT 1 FROM updated)
+        ),
+        recorded AS (
+          INSERT INTO sync_mutation (client_mutation_id, profile_id, entity_type, entity_id, result, response_snapshot)
+          SELECT ${mutation.clientMutationId}::uuid, ${ctx.profileId}::uuid, 'medicationPackage', ${mutation.entityId}::uuid,
+            CASE WHEN EXISTS (SELECT 1 FROM updated) THEN 'applied' ELSE 'conflict' END,
+            to_jsonb(current_row.*)
+          FROM current_row
+          RETURNING result
+        ),
+        logged AS (
+          INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation, server_version, occurred_at)
+          SELECT profile_id, 'medicationPackage', id, 'delete', version, now() FROM updated
+          RETURNING 1
+        )
+        SELECT current_row.*, recorded.result AS mutation_result FROM current_row, recorded;
+      `),
+      ],
+      { db: ctx.db },
+    );
+    const record = (rows as { rows?: Record<string, unknown>[] }).rows?.[0];
+    const outcome = (record?.mutation_result as string | undefined) === "applied" ? "applied" : "conflict";
+    if (record) delete record.mutation_result;
+    return { clientMutationId: mutation.clientMutationId, result: outcome, serverRecord: record };
+  }
+
+  const payload = mutation.payload as {
+    userMedicationId?: string;
+    source?: string;
+    gtin?: string | null;
+    batchNumber?: string | null;
+    serialNumber?: string | null;
+    expiryDate?: string | null;
+    receivedDate?: string;
+    initialQuantityValue?: number;
+    quantityUnit?: string;
+    status?: string;
+    openedAt?: string | null;
+  };
+
+  if (mutation.operation === "create") {
+    if (!payload.userMedicationId || !payload.source || !payload.receivedDate || payload.initialQuantityValue === undefined || !payload.quantityUnit) {
+      throw new ValidationError("medicationPackage create mutation payload is missing required fields.");
+    }
+
+    try {
+      const [rows] = await withProfileScope(
+        ctx.profileId,
+        (db) => [
+          db.execute(sql`
+          WITH inserted AS (
+            INSERT INTO medication_package (
+              id, profile_id, user_medication_id, source, gtin, batch_number, serial_number,
+              expiry_date, received_date, initial_quantity_value, quantity_unit, status,
+              created_at, updated_at, version, client_mutation_id
+            )
+            VALUES (
+              ${mutation.entityId}::uuid, ${ctx.profileId}::uuid, ${payload.userMedicationId}::uuid, ${payload.source},
+              ${payload.gtin ?? null}, ${payload.batchNumber ?? null}, ${payload.serialNumber ?? null},
+              ${payload.expiryDate ?? null}::date, ${payload.receivedDate}::date, ${payload.initialQuantityValue}::numeric, ${payload.quantityUnit},
+              'unopened', now(), now(), 1, ${mutation.clientMutationId}::uuid
+            )
+            ON CONFLICT (id) DO NOTHING
+            RETURNING *
+          ),
+          current_row AS (
+            SELECT * FROM inserted
+            UNION ALL
+            SELECT * FROM medication_package WHERE id = ${mutation.entityId}::uuid AND NOT EXISTS (SELECT 1 FROM inserted)
+          ),
+          recorded AS (
+            INSERT INTO sync_mutation (client_mutation_id, profile_id, entity_type, entity_id, result, response_snapshot)
+            SELECT ${mutation.clientMutationId}::uuid, ${ctx.profileId}::uuid, 'medicationPackage', ${mutation.entityId}::uuid, 'applied', to_jsonb(current_row.*)
+            FROM current_row
+            RETURNING *
+          ),
+          logged AS (
+            INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation, server_version, occurred_at)
+            SELECT profile_id, 'medicationPackage', id, 'create', version, now() FROM inserted
+            RETURNING 1
+          )
+          SELECT current_row.* FROM current_row;
+        `),
+        ],
+        { db: ctx.db },
+      );
+      const record = (rows as { rows?: Record<string, unknown>[] }).rows?.[0];
+      return { clientMutationId: mutation.clientMutationId, result: "applied", serverRecord: record };
+    } catch (err) {
+      if (isForeignKeyViolation(err)) {
+        throw new ValidationError("userMedicationId does not reference a known medication.");
+      }
+      throw err;
+    }
+  }
+
+  // update — optimistic concurrency. `batchNumber`/`serialNumber`/
+  // `expiryDate`/`openedAt` are genuinely nullable, so each uses the
+  // explicit "was the key present in the JSON payload at all" CASE, same
+  // convention as `applyMedicationScheduleMutation`'s `endDate`/
+  // `weekdaysMask` — a plain COALESCE can't tell "not sent, keep existing"
+  // apart from "sent as null, clear it".
+  if (mutation.baseVersion === undefined) {
+    throw new ValidationError("medicationPackage update mutations require `baseVersion`.");
+  }
+
+  const [rows] = await withProfileScope(
+    ctx.profileId,
+    (db) => [
+      db.execute(sql`
+      WITH updated AS (
+        UPDATE medication_package
+        SET batch_number = CASE WHEN ${payload.batchNumber !== undefined} THEN ${payload.batchNumber ?? null} ELSE batch_number END,
+            serial_number = CASE WHEN ${payload.serialNumber !== undefined} THEN ${payload.serialNumber ?? null} ELSE serial_number END,
+            expiry_date = CASE WHEN ${payload.expiryDate !== undefined} THEN ${payload.expiryDate ?? null}::date ELSE expiry_date END,
+            status = COALESCE(${payload.status ?? null}, status),
+            opened_at = CASE WHEN ${payload.openedAt !== undefined} THEN ${payload.openedAt ?? null}::timestamptz ELSE opened_at END,
+            version = version + 1, updated_at = now(), client_mutation_id = ${mutation.clientMutationId}::uuid
+        WHERE id = ${mutation.entityId}::uuid AND version = ${mutation.baseVersion} AND deleted_at IS NULL
+        RETURNING *
+      ),
+      current_row AS (
+        SELECT * FROM updated
+        UNION ALL
+        SELECT * FROM medication_package WHERE id = ${mutation.entityId}::uuid AND NOT EXISTS (SELECT 1 FROM updated)
+      ),
+      recorded AS (
+        INSERT INTO sync_mutation (client_mutation_id, profile_id, entity_type, entity_id, result, response_snapshot)
+        SELECT ${mutation.clientMutationId}::uuid, ${ctx.profileId}::uuid, 'medicationPackage', ${mutation.entityId}::uuid,
+          CASE WHEN EXISTS (SELECT 1 FROM updated) THEN 'applied' ELSE 'conflict' END,
+          to_jsonb(current_row.*)
+        FROM current_row
+        RETURNING result
+      ),
+      logged AS (
+        INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation, server_version, occurred_at)
+        SELECT profile_id, 'medicationPackage', id, 'update', version, now() FROM updated
+        RETURNING 1
+      )
+      SELECT current_row.*, recorded.result AS mutation_result FROM current_row, recorded;
+    `),
+    ],
+    { db: ctx.db },
+  );
+
+  const record = (rows as { rows?: Record<string, unknown>[] }).rows?.[0];
+  const outcome = (record?.mutation_result as string | undefined) === "applied" ? "applied" : "conflict";
+  if (record) delete record.mutation_result;
+  return { clientMutationId: mutation.clientMutationId, result: outcome, serverRecord: record };
+}
+
+/**
+ * `MedicationInventoryTransaction` (Phase 2 §2.9, ADR-010, Phase 9) — the
+ * append-only ledger. Create-only, idempotent-by-id (same as `DoseEvent`);
+ * there is no update/delete mutation for this entity at all (a correction
+ * is a new offsetting row, never an edit). `uq_inventory_txn_dose_taken_once`
+ * is the hard backstop the recovery branch below exists for: a retried
+ * "taken" mutation (different attempt, same `dose_event_id`, but NOT
+ * necessarily the same `id`/`client_mutation_id` if the client regenerated
+ * its outbox entry) collides on that constraint rather than double-
+ * consuming stock — recovered by returning the row that's actually there,
+ * same pattern as `applyDoseEventMutation`'s `uq_dose_event_schedule_instance`
+ * recovery.
+ */
+async function applyInventoryTransactionMutation(ctx: MutationContext, mutation: SyncMutationRequest): Promise<SyncMutationResult> {
+  if (mutation.operation !== "create") {
+    throw new ValidationError(`medicationInventoryTransaction is append-only — "${mutation.operation}" is not a valid operation.`);
+  }
+
+  const payload = mutation.payload as {
+    userMedicationId?: string;
+    packageId?: string | null;
+    transactionType?: string;
+    quantityDelta?: number;
+    quantityUnit?: string;
+    doseEventId?: string | null;
+    occurredAt?: string;
+    source?: string;
+    note?: string | null;
+  };
+
+  if (
+    !payload.userMedicationId ||
+    !payload.transactionType ||
+    payload.quantityDelta === undefined ||
+    !payload.quantityUnit ||
+    !payload.occurredAt ||
+    !payload.source
+  ) {
+    throw new ValidationError("medicationInventoryTransaction create mutation payload is missing required fields.");
+  }
+
+  try {
+    const [rows] = await withProfileScope(
+      ctx.profileId,
+      (db) => [
+        db.execute(sql`
+        WITH inserted AS (
+          INSERT INTO medication_inventory_transaction (
+            id, profile_id, user_medication_id, package_id, transaction_type,
+            quantity_delta, quantity_unit, dose_event_id, occurred_at, recorded_at,
+            source, note, client_mutation_id
+          )
+          VALUES (
+            ${mutation.entityId}::uuid, ${ctx.profileId}::uuid, ${payload.userMedicationId}::uuid, ${payload.packageId ?? null}::uuid,
+            ${payload.transactionType}, ${payload.quantityDelta}::numeric, ${payload.quantityUnit}, ${payload.doseEventId ?? null}::uuid,
+            ${payload.occurredAt}::timestamptz, now(), ${payload.source}, ${payload.note ?? null}, ${mutation.clientMutationId}::uuid
+          )
+          ON CONFLICT (id) DO NOTHING
+          RETURNING *
+        ),
+        current_row AS (
+          SELECT * FROM inserted
+          UNION ALL
+          SELECT * FROM medication_inventory_transaction WHERE id = ${mutation.entityId}::uuid AND NOT EXISTS (SELECT 1 FROM inserted)
+        ),
+        recorded AS (
+          INSERT INTO sync_mutation (client_mutation_id, profile_id, entity_type, entity_id, result, response_snapshot)
+          SELECT ${mutation.clientMutationId}::uuid, ${ctx.profileId}::uuid, 'medicationInventoryTransaction', ${mutation.entityId}::uuid, 'applied', to_jsonb(current_row.*)
+          FROM current_row
+          RETURNING *
+        ),
+        logged AS (
+          INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation, occurred_at)
+          SELECT profile_id, 'medicationInventoryTransaction', id, 'create', now() FROM inserted
+          RETURNING 1
+        )
+        SELECT current_row.* FROM current_row;
+      `),
+      ],
+      { db: ctx.db },
+    );
+    const record = (rows as { rows?: Record<string, unknown>[] }).rows?.[0];
+    return { clientMutationId: mutation.clientMutationId, result: "applied", serverRecord: record };
+  } catch (err) {
+    if (isForeignKeyViolation(err)) {
+      throw new ValidationError("userMedicationId, packageId, or doseEventId does not reference a known record.");
+    }
+    if (isUniqueViolation(err)) {
+      // uq_inventory_txn_dose_taken_once -- a genuine collision on
+      // dose_event_id for transaction_type='dose_taken', but a DIFFERENT
+      // id (the expected deterministic-replay path is already handled by
+      // ON CONFLICT (id) above without ever reaching this catch). Recover
+      // by returning the row that's actually there.
+      const [existingRows] = await withProfileScope(
+        ctx.profileId,
+        (db) => [
+          db.execute(sql`
+            SELECT * FROM medication_inventory_transaction
+            WHERE dose_event_id = ${payload.doseEventId ?? null}::uuid
+              AND transaction_type = 'dose_taken'
+            LIMIT 1
+          `),
+        ],
+        { db: ctx.db },
+      );
+      const record = (existingRows as { rows?: Record<string, unknown>[] }).rows?.[0];
+      if (record) {
+        return { clientMutationId: mutation.clientMutationId, result: "applied", serverRecord: record };
+      }
+    }
+    throw err;
+  }
+}
+
 function isForeignKeyViolation(err: unknown): boolean {
-  return typeof err === "object" && err !== null && "code" in err && (err as { code?: unknown }).code === "23503";
+  return postgresErrorCode(err) === POSTGRES_FOREIGN_KEY_VIOLATION;
 }
 
 async function dispatchMutation(ctx: MutationContext, mutation: SyncMutationRequest): Promise<SyncMutationResult> {
@@ -840,6 +1157,10 @@ async function dispatchMutation(ctx: MutationContext, mutation: SyncMutationRequ
       return applyMedicationScheduleMutation(ctx, mutation);
     case "doseEvent":
       return applyDoseEventMutation(ctx, mutation);
+    case "medicationPackage":
+      return applyMedicationPackageMutation(ctx, mutation);
+    case "medicationInventoryTransaction":
+      return applyInventoryTransactionMutation(ctx, mutation);
     default:
       // Every other Phase 2 entity type is a real, named type (so the
       // outbox/client code stays honest about what exists) but has no

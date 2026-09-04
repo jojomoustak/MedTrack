@@ -13,6 +13,9 @@ import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repos
 import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
 import { MedianMobilePlatform } from "@/lib/platform/median-mobile-platform";
 import { syncNativeRemindersNow } from "@/lib/reminders/client/native-reminder-sync";
+import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-package-repository";
+import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
+import { consumeInventoryForDoseTaken } from "@/lib/inventory/client/consume-dose";
 import { newId } from "@/lib/domain/ids";
 import { logger } from "@/lib/logging/logger";
 
@@ -60,7 +63,15 @@ export default function TodayPage() {
 
   async function handleTaken(doseId: string) {
     const repo = new DexieDoseEventRepository();
-    await repo.transition(doseId, { status: "taken", takenAt: new Date().toISOString() }, newId());
+    const dose = await repo.transition(doseId, { status: "taken", takenAt: new Date().toISOString() }, newId());
+    // Phase 9: decrement inventory (FIFO-attributed to the oldest open
+    // package) the moment a dose is actually marked Taken — best-effort,
+    // never blocks or reverts the dose transition itself (see
+    // consumeInventoryForDoseTaken's own doc).
+    await consumeInventoryForDoseTaken(dose, {
+      medicationPackages: new DexieMedicationPackageRepository(),
+      inventoryTransactions: new DexieInventoryTransactionRepository(),
+    });
     pushNativeRemindersAfterTransition(profileId);
     refresh();
   }

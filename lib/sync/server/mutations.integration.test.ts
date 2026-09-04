@@ -544,4 +544,323 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     expect(results[0].result).toBe("rejected"); // the out-of-order dose event
     expect(results[1].result).toBe("applied"); // the schedule, unaffected by its sibling's failure
   });
+
+  it("medicationPackage: create always lands status='unopened' regardless of what's (not) sent", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    const result = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationPackage",
+        entityId: id,
+        operation: "create",
+        payload: {
+          userMedicationId,
+          source: "manual",
+          gtin: null,
+          batchNumber: "LOT123",
+          serialNumber: null,
+          expiryDate: "2027-01-01",
+          receivedDate: "2026-01-01",
+          initialQuantityValue: 30,
+          quantityUnit: "tablet",
+        },
+      },
+    ]);
+
+    expect(result[0].result).toBe("applied");
+    const record = result[0].serverRecord as { status: string; openedAt: string | null; version: number; batchNumber: string };
+    expect(record.status).toBe("unopened");
+    expect(record.openedAt).toBeNull();
+    expect(record.version).toBe(1);
+    expect(record.batchNumber).toBe("LOT123");
+  });
+
+  it("medicationPackage: create rejects an unknown userMedicationId (foreign key), isolated as a per-mutation failure", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+
+    const results = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationPackage",
+        entityId: randomUUID(),
+        operation: "create",
+        payload: {
+          userMedicationId: randomUUID(),
+          source: "manual",
+          gtin: null,
+          batchNumber: null,
+          serialNumber: null,
+          expiryDate: null,
+          receivedDate: "2026-01-01",
+          initialQuantityValue: 30,
+          quantityUnit: "tablet",
+        },
+      },
+    ]);
+
+    expect(results[0].result).toBe("rejected");
+  });
+
+  it("medicationPackage: update transitions status to 'opened' with the correct baseVersion, and a stale baseVersion is a genuine conflict", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+    const openedAt = new Date().toISOString();
+
+    await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationPackage",
+        entityId: id,
+        operation: "create",
+        payload: {
+          userMedicationId,
+          source: "manual",
+          gtin: null,
+          batchNumber: null,
+          serialNumber: null,
+          expiryDate: null,
+          receivedDate: "2026-01-01",
+          initialQuantityValue: 30,
+          quantityUnit: "tablet",
+        },
+      },
+    ]);
+
+    const openResult = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "medicationPackage", entityId: id, operation: "update", baseVersion: 1, payload: { status: "opened", openedAt } },
+    ]);
+    expect(openResult[0].result).toBe("applied");
+    const openedRecord = openResult[0].serverRecord as { status: string; openedAt: string; version: number };
+    expect(openedRecord.status).toBe("opened");
+    expect(new Date(openedRecord.openedAt).toISOString()).toBe(new Date(openedAt).toISOString());
+    expect(openedRecord.version).toBe(2);
+
+    // A second device, still holding the stale version 1, races in.
+    const staleResult = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "medicationPackage", entityId: id, operation: "update", baseVersion: 1, payload: { status: "discarded" } },
+    ]);
+    expect(staleResult[0].result).toBe("conflict");
+  });
+
+  it("medicationPackage: delete is a soft-delete (tombstone), bumping version and setting deletedAt", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationPackage",
+        entityId: id,
+        operation: "create",
+        payload: {
+          userMedicationId,
+          source: "manual",
+          gtin: null,
+          batchNumber: null,
+          serialNumber: null,
+          expiryDate: null,
+          receivedDate: "2026-01-01",
+          initialQuantityValue: 30,
+          quantityUnit: "tablet",
+        },
+      },
+    ]);
+
+    const deleteResult = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "medicationPackage", entityId: id, operation: "delete", baseVersion: 1, payload: {} },
+    ]);
+    expect(deleteResult[0].result).toBe("applied");
+    const record = deleteResult[0].serverRecord as { deletedAt: string | null; version: number };
+    expect(record.deletedAt).not.toBeNull();
+    expect(record.version).toBe(2);
+  });
+
+  it("medicationInventoryTransaction: a 'refill' transaction (no doseEventId) is applied", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    const result = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationInventoryTransaction",
+        entityId: id,
+        operation: "create",
+        payload: {
+          userMedicationId,
+          packageId: null,
+          transactionType: "refill",
+          quantityDelta: 30,
+          quantityUnit: "tablet",
+          doseEventId: null,
+          occurredAt: new Date().toISOString(),
+          source: "user",
+          note: null,
+        },
+      },
+    ]);
+
+    expect(result[0].result).toBe("applied");
+    const record = result[0].serverRecord as { transactionType: string; quantityDelta: string; doseEventId: string | null };
+    expect(record.transactionType).toBe("refill");
+    expect(Number(record.quantityDelta)).toBe(30);
+    expect(record.doseEventId).toBeNull();
+  });
+
+  it("medicationInventoryTransaction: a 'dose_taken' transaction requires doseEventId (chk_dose_txn_has_event) and is rejected without one", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+
+    const results = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationInventoryTransaction",
+        entityId: randomUUID(),
+        operation: "create",
+        payload: {
+          userMedicationId,
+          packageId: null,
+          transactionType: "dose_taken",
+          quantityDelta: -1,
+          quantityUnit: "tablet",
+          doseEventId: null,
+          occurredAt: new Date().toISOString(),
+          source: "user",
+          note: null,
+        },
+      },
+    ]);
+
+    expect(results[0].result).toBe("rejected");
+  });
+
+  it("medicationInventoryTransaction: a real 'dose_taken' transaction with a valid doseEventId is applied", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const doseEventId = randomUUID();
+
+    await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "doseEvent",
+        entityId: doseEventId,
+        operation: "create",
+        payload: { userMedicationId, scheduleId: null, scheduledAt: new Date().toISOString(), source: "manual_prn" },
+      },
+    ]);
+
+    const result = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationInventoryTransaction",
+        entityId: randomUUID(),
+        operation: "create",
+        payload: {
+          userMedicationId,
+          packageId: null,
+          transactionType: "dose_taken",
+          quantityDelta: -1,
+          quantityUnit: "tablet",
+          doseEventId,
+          occurredAt: new Date().toISOString(),
+          source: "user",
+          note: null,
+        },
+      },
+    ]);
+
+    expect(result[0].result).toBe("applied");
+    const record = result[0].serverRecord as { doseEventId: string; quantityDelta: string };
+    expect(record.doseEventId).toBe(doseEventId);
+    expect(Number(record.quantityDelta)).toBe(-1);
+  });
+
+  it("medicationInventoryTransaction: uq_inventory_txn_dose_taken_once — a second dose_taken row for the SAME doseEventId (different id) converges to the first row instead of double-consuming", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const doseEventId = randomUUID();
+
+    await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "doseEvent",
+        entityId: doseEventId,
+        operation: "create",
+        payload: { userMedicationId, scheduleId: null, scheduledAt: new Date().toISOString(), source: "manual_prn" },
+      },
+    ]);
+
+    const firstId = randomUUID();
+    const firstResult = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationInventoryTransaction",
+        entityId: firstId,
+        operation: "create",
+        payload: {
+          userMedicationId,
+          packageId: null,
+          transactionType: "dose_taken",
+          quantityDelta: -1,
+          quantityUnit: "tablet",
+          doseEventId,
+          occurredAt: new Date().toISOString(),
+          source: "user",
+          note: null,
+        },
+      },
+    ]);
+    expect(firstResult[0].result).toBe("applied");
+
+    // A retried mutation attempt for the SAME dose event, but with a
+    // freshly-generated id/clientMutationId (simulating a client that
+    // regenerated its outbox entry rather than a pure idempotent replay).
+    const secondId = randomUUID();
+    const secondResult = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationInventoryTransaction",
+        entityId: secondId,
+        operation: "create",
+        payload: {
+          userMedicationId,
+          packageId: null,
+          transactionType: "dose_taken",
+          quantityDelta: -1,
+          quantityUnit: "tablet",
+          doseEventId,
+          occurredAt: new Date().toISOString(),
+          source: "user",
+          note: null,
+        },
+      },
+    ]);
+
+    expect(secondResult[0].result).toBe("applied");
+    const record = secondResult[0].serverRecord as { id: string };
+    // Converges to the FIRST row's id -- the second attempt never actually inserted a competing row.
+    expect(record.id).toBe(firstId);
+  });
+
+  it("medicationInventoryTransaction: update/delete are rejected — the ledger is append-only", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+
+    const results = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "medicationInventoryTransaction",
+        entityId: randomUUID(),
+        operation: "update",
+        payload: { userMedicationId, quantityDelta: -5 },
+      },
+    ]);
+
+    expect(results[0].result).toBe("rejected");
+  });
 });

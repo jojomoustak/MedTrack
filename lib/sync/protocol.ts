@@ -18,6 +18,8 @@ export const syncMutationRequestSchema = z.object({
     "userMedication",
     "medicationSchedule",
     "doseEvent",
+    "medicationPackage",
+    "medicationInventoryTransaction",
   ] as const satisfies readonly SyncEntityType[]),
   entityId: z.string().min(1),
   operation: z.enum(["create", "update", "delete"]),

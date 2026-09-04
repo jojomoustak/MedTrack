@@ -18,6 +18,15 @@ export const quantityValueSchema = z
     message: "Quantity values support at most 3 decimal places (NUMERIC(12,3)).",
   });
 
+/** Signed, non-zero quantity at the same NUMERIC(12,3) precision as `quantityValueSchema` — the inventory ledger's `quantityDelta` (Phase 2 §2.9, ADR-010) is the one quantity that can legitimately be negative. */
+export const signedQuantityDeltaSchema = z
+  .number()
+  .finite()
+  .refine((v) => v !== 0, { message: "Quantity delta must not be zero." })
+  .refine((v) => Number.isFinite(v) && Math.round(v * 1000) === v * 1000, {
+    message: "Quantity values support at most 3 decimal places (NUMERIC(12,3)).",
+  });
+
 export const quantityUnitSchema = z.enum([
   "tablet",
   "capsule",
