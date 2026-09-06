@@ -16,6 +16,7 @@ import { syncNativeRemindersNow } from "@/lib/reminders/client/native-reminder-s
 import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-package-repository";
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import { consumeInventoryForDoseTaken } from "@/lib/inventory/client/consume-dose";
+import { playSound } from "@/lib/sound/client/play-sound";
 import { newId } from "@/lib/domain/ids";
 import { logger } from "@/lib/logging/logger";
 
@@ -59,7 +60,12 @@ export default function TodayPage() {
   const accountId = useAccountId();
   const { status: medsStatus, medications } = useMedicationsList(profileId);
   const names = useDisplayNames(medications);
-  const { status: dosesStatus, todayDoses, needsAttention, refresh } = useTodayDoseEvents(profileId);
+  // A dose crossed from "not yet due" to "due now" while this page stayed
+  // open (`useTodayDoseEvents`'s own doc comment) — the in-app chime,
+  // separate from the native reminder notification (Phase 11), which
+  // fires from the AlarmManager/OS layer regardless of whether this page
+  // is even open.
+  const { status: dosesStatus, todayDoses, needsAttention, refresh } = useTodayDoseEvents(profileId, () => playSound("notification"));
 
   async function handleTaken(doseId: string) {
     const repo = new DexieDoseEventRepository();

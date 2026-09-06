@@ -1,6 +1,7 @@
 "use client";
 
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
+import { playSound } from "@/lib/sound/client/play-sound";
 import type { ScheduleDraft } from "@/lib/domain/schedule-draft";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
@@ -76,7 +77,10 @@ export function ReviewStep({ name, form, strengthValue, strengthUnit, inventoryU
 
       <button
         type="button"
-        onClick={onFinish}
+        onClick={() => {
+          playSound("button");
+          onFinish();
+        }}
         disabled={submitting}
         aria-busy={submitting}
         className="min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"

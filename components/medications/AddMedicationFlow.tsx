@@ -16,6 +16,7 @@ import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-r
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import { generateDoseEventsForSchedule } from "@/lib/scheduling/client/dose-event-generator";
+import { playSound } from "@/lib/sound/client/play-sound";
 import type {
   CatalogCacheRepository,
   DoseEventRepository,
@@ -202,6 +203,7 @@ export function AddMedicationFlow({
         await generateDoseEventsForSchedule(createdSchedule, doseEventRepository ?? new DexieDoseEventRepository());
       }
 
+      playSound("success");
       onCreated?.(record);
     } catch {
       setError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");

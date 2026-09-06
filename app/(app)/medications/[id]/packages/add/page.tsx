@@ -9,6 +9,7 @@ import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-r
 import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-package-repository";
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import { newId } from "@/lib/domain/ids";
+import { playSound } from "@/lib/sound/client/play-sound";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
 export default function AddPackagePage() {
@@ -68,6 +69,7 @@ export default function AddPackagePage() {
         });
       }
 
+      playSound("success");
       router.push(`/medications/${params.id}`);
     } catch {
       setError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");

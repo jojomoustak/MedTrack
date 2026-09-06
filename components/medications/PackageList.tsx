@@ -7,6 +7,7 @@ import { computePackageRemainingStock } from "@/lib/domain/inventory-consumption
 import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-package-repository";
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import { newId } from "@/lib/domain/ids";
+import { playSound } from "@/lib/sound/client/play-sound";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
@@ -57,6 +58,7 @@ export function PackageList({
   });
 
   async function handleOpen(pkg: MedicationPackageRecord) {
+    playSound("button");
     setPendingId(pkg.id);
     try {
       const now = new Date().toISOString();
@@ -90,6 +92,7 @@ export function PackageList({
   }
 
   async function handleDiscard(pkg: MedicationPackageRecord) {
+    playSound("button");
     setPendingId(pkg.id);
     try {
       const repo = new DexieMedicationPackageRepository();

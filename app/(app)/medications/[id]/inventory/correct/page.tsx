@@ -8,6 +8,7 @@ import { InventoryCorrectionForm, type InventoryCorrectionValues } from "@/compo
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import { newId } from "@/lib/domain/ids";
+import { playSound } from "@/lib/sound/client/play-sound";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
 /**
@@ -55,6 +56,7 @@ export default function InventoryCorrectionPage() {
         source: "user",
         note: values.note,
       });
+      playSound("success");
       router.push(`/medications/${params.id}`);
     } catch {
       setError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");

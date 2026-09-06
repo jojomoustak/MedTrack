@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
+import { playSound } from "@/lib/sound/client/play-sound";
 import type { DoseEventRecord, DoseEventStatus } from "@/lib/domain/dose-event";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
@@ -89,6 +90,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
   }, []);
 
   function startUndoWindow(action: "taken" | "skipped" | "taken_late") {
+    playSound("button");
     setPendingAction(action);
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
@@ -168,7 +170,10 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
           </button>
           <button
             type="button"
-            onClick={() => onSnoozed(dose.id)}
+            onClick={() => {
+              playSound("button");
+              onSnoozed(dose.id);
+            }}
             className="min-h-14 flex-1 rounded-full border border-zinc-300 px-3 py-3 text-sm font-medium dark:border-zinc-700"
           >
             Αναβολή

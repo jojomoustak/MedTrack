@@ -8,6 +8,7 @@ import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository"
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
 import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
+import { playSound } from "@/lib/sound/client/play-sound";
 import { logger } from "@/lib/logging/logger";
 
 type Status = "idle" | "requesting" | "granted" | "denied" | "error";
@@ -37,11 +38,13 @@ export function ReminderPermissionToggle({ profileId, platform = new MedianMobil
   }
 
   async function handleRequest() {
+    playSound("button");
     setStatus("requesting");
     try {
       const result = await platform.requestReminderPermission();
       if (result.status === "granted") {
         setStatus("granted");
+        playSound("success");
         // Isolated from the outer try/catch on purpose: repository
         // construction below happens synchronously, as call arguments,
         // before `syncNativeRemindersNow`'s own async body ever runs — a

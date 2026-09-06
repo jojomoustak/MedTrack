@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface AddPackageValues {
   batchNumber: string | null;
@@ -61,6 +62,7 @@ export function AddPackageForm({
       return;
     }
     setValidationError(null);
+    playSound("button");
     onSubmit({
       batchNumber: batchNumber.trim() || null,
       expiryDate: expiryDate.trim() || null,

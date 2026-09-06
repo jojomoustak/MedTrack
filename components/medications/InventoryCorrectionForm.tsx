@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface InventoryCorrectionValues {
   /** Signed — positive adds stock, negative removes it. Never zero (enforced below). */
@@ -44,6 +45,7 @@ export function InventoryCorrectionForm({
       return;
     }
     setValidationError(null);
+    playSound("button");
     onSubmit({ quantityDelta: direction === "add" ? parsed : -parsed, note: note.trim() });
   }
 
