@@ -97,6 +97,57 @@ describe("DoseCard", () => {
     expect(onSnoozed).toHaveBeenCalledWith("dose-1");
   });
 
+  it("does not show the missed-recovery action when onTakenLate isn't provided, even for a missed dose", () => {
+    render(<DoseCard dose={makeDose({ status: "missed" })} medicationName="Ασπιρίνη" actionable={false} onTaken={vi.fn()} onSkipped={vi.fn()} onSnoozed={vi.fn()} />);
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("shows the missed-recovery action for a missed dose when onTakenLate is provided, even though actionable is false", () => {
+    render(
+      <DoseCard
+        dose={makeDose({ status: "missed" })}
+        medicationName="Ασπιρίνη"
+        actionable={false}
+        onTaken={vi.fn()}
+        onSkipped={vi.fn()}
+        onSnoozed={vi.fn()}
+        onTakenLate={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /αργοπορημένη λήψη/i })).toBeTruthy();
+    // The normal trio still never appears for a terminal dose.
+    expect(screen.queryByRole("button", { name: /^έλαβα$/i })).toBeNull();
+  });
+
+  it("does not show the missed-recovery action for a non-missed terminal dose, even with onTakenLate provided", () => {
+    render(
+      <DoseCard dose={makeDose({ status: "skipped" })} medicationName="Ασπιρίνη" actionable={false} onTaken={vi.fn()} onSkipped={vi.fn()} onSnoozed={vi.fn()} onTakenLate={vi.fn()} />,
+    );
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("the missed-recovery action goes through the same 5s undo window before calling onTakenLate", () => {
+    const onTakenLate = vi.fn();
+    render(
+      <DoseCard
+        dose={makeDose({ status: "missed" })}
+        medicationName="Ασπιρίνη"
+        actionable={false}
+        onTaken={vi.fn()}
+        onSkipped={vi.fn()}
+        onSnoozed={vi.fn()}
+        onTakenLate={onTakenLate}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /αργοπορημένη λήψη/i }));
+    expect(onTakenLate).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /αναίρεση/i })).toBeTruthy();
+
+    vi.advanceTimersByTime(5000);
+    expect(onTakenLate).toHaveBeenCalledWith("dose-1");
+  });
+
   it("a snoozed dose still shows actions (non-terminal, freely repeatable)", () => {
     render(
       <DoseCard

@@ -1,5 +1,5 @@
 import type { CreateDoseEventInput, DoseEventRecord, DoseEventTransitionPatch } from "@/lib/domain/dose-event";
-import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
+import { isDoseEventTransitionAllowed, isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
 import type { OutboxEntry } from "@/lib/domain/outbox";
 import { nextOutboxSeq } from "@/lib/domain/outbox";
 import type { DoseEventRepository, OutboxRepository } from "@/lib/domain/repositories";
@@ -99,11 +99,12 @@ export class DexieDoseEventRepository implements DoseEventRepository {
     if (!existing) {
       throw new Error(`transition: no local DoseEvent with id ${id}`);
     }
-    if (isTerminalDoseEventStatus(existing.status)) {
+    if (!isDoseEventTransitionAllowed(existing.status, patch.status)) {
       // Mirrors the server's own guard (lib/sync/server/mutations.ts) —
-      // a stale action-sheet tap on an already-terminal dose can't even
-      // produce a pointless network round trip.
-      throw new Error(`transition: DoseEvent ${id} is already terminal (${existing.status})`);
+      // a stale action-sheet tap on an already-terminal dose (other than
+      // the one narrow missed -> taken_late recovery) can't even produce
+      // a pointless network round trip.
+      throw new Error(`transition: DoseEvent ${id} cannot move from ${existing.status} to ${patch.status}`);
     }
 
     const now = new Date().toISOString();

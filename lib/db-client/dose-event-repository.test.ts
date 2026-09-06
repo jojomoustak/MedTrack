@@ -89,9 +89,25 @@ describe("DexieDoseEventRepository (idempotent-by-id)", () => {
     await repo.transition(created.id, { status: "taken", takenAt: new Date().toISOString() }, crypto.randomUUID());
 
     const pendingBefore = await outbox.listPending(new Date().toISOString());
-    await expect(repo.transition(created.id, { status: "skipped" }, crypto.randomUUID())).rejects.toThrow(/already terminal/);
+    await expect(repo.transition(created.id, { status: "skipped" }, crypto.randomUUID())).rejects.toThrow(/cannot move/);
     const pendingAfter = await outbox.listPending(new Date().toISOString());
     expect(pendingAfter).toHaveLength(pendingBefore.length);
+  });
+
+  it("transition() allows the one narrow recovery: missed -> taken_late", async () => {
+    const created = await repo.createIfMissing(scheduledInput());
+    await repo.transition(created.id, { status: "missed" }, crypto.randomUUID());
+
+    const recovered = await repo.transition(created.id, { status: "taken_late", takenAt: new Date().toISOString() }, crypto.randomUUID());
+    expect(recovered.status).toBe("taken_late");
+    expect(recovered.takenAt).not.toBeNull();
+  });
+
+  it("transition() still refuses missed -> anything other than taken_late", async () => {
+    const created = await repo.createIfMissing(scheduledInput());
+    await repo.transition(created.id, { status: "missed" }, crypto.randomUUID());
+
+    await expect(repo.transition(created.id, { status: "skipped" }, crypto.randomUUID())).rejects.toThrow(/cannot move/);
   });
 
   it("listForProfileInRange() finds dose events whose scheduledAt falls within the range", async () => {

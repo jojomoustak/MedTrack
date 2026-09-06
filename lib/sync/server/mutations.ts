@@ -787,8 +787,12 @@ async function applyDoseEventMutation(ctx: MutationContext, mutation: SyncMutati
 
   // update — a status transition (Taken/Skip/Snooze/etc, Phase 3 §2.2's
   // dose action sheet). Only applies if the row's CURRENT stored status
-  // is non-terminal; the literal status list below must stay in sync
-  // with TERMINAL_DOSE_EVENT_STATUSES (lib/domain/dose-event.ts).
+  // is non-terminal, with exactly one narrow exception (missed ->
+  // taken_late, the "I forgot to log it, but I did take it" recovery) —
+  // the literal SQL predicate below must stay in sync with
+  // isDoseEventTransitionAllowed (lib/domain/dose-event.ts), the shared
+  // source of truth this and the client repository's own guard both
+  // implement independently (SQL can't call a TS function).
   const payload = mutation.payload as {
     status?: string;
     takenAt?: string;
@@ -820,7 +824,10 @@ async function applyDoseEventMutation(ctx: MutationContext, mutation: SyncMutati
             reminder_at = COALESCE(${payload.reminderAt ?? null}::timestamptz, reminder_at),
             updated_at = now(), client_mutation_id = ${mutation.clientMutationId}::uuid
         WHERE id = ${mutation.entityId}::uuid
-          AND status NOT IN ('taken','taken_late','skipped','missed','cancelled')
+          AND (
+            status NOT IN ('taken','taken_late','skipped','missed','cancelled')
+            OR (status = 'missed' AND ${payload.status} = 'taken_late')
+          )
         RETURNING *
       ),
       current_row AS (

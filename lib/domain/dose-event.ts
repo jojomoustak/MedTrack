@@ -18,6 +18,28 @@ export function isTerminalDoseEventStatus(status: DoseEventStatus): boolean {
   return TERMINAL_DOSE_EVENT_STATUSES.includes(status);
 }
 
+/**
+ * Whether a transition from `from` to `to` is ever allowed. A plain
+ * `isTerminalDoseEventStatus(from)` check alone would make `taken_late`
+ * unreachable from any real dose-event lifecycle: it's a valid status
+ * (schema, validation, and the sync mutation handler all already accept
+ * it), fully modeled since Phase 10, but nothing ever produced it — a
+ * dose auto-swept to `missed` (`lib/scheduling/client/dose-event-
+ * generator.ts`'s `sweepMissedDoseEvents`) had no path back to
+ * `taken_late`, the one recovery this status exists for ("I forgot to
+ * log it, but I did take it"). `missed -> taken_late` is the single,
+ * narrow exception to "terminal states never transition further" — every
+ * OTHER terminal status (`taken`/`taken_late`/`skipped`/`cancelled`)
+ * still accepts nothing, and `missed` still accepts nothing else. Shared
+ * by `DexieDoseEventRepository.transition` and the server's
+ * `applyDoseEventMutation` so client and server can never disagree about
+ * which transitions are real.
+ */
+export function isDoseEventTransitionAllowed(from: DoseEventStatus, to: DoseEventStatus): boolean {
+  if (!isTerminalDoseEventStatus(from)) return true;
+  return from === "missed" && to === "taken_late";
+}
+
 export const DOSE_EVENT_SOURCES = ["schedule_generated", "manual_prn", "manual_backfill"] as const;
 export type DoseEventSource = (typeof DOSE_EVENT_SOURCES)[number];
 

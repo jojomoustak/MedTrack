@@ -76,6 +76,23 @@ export default function TodayPage() {
     refresh();
   }
 
+  /**
+   * The one recovery path out of `missed` (`isDoseEventTransitionAllowed`,
+   * `DoseCard`'s `onTakenLate`) — "I forgot to log it, but I did take
+   * it." Consumes inventory exactly like `handleTaken`, since a late dose
+   * is still a real dose.
+   */
+  async function handleTakenLate(doseId: string) {
+    const repo = new DexieDoseEventRepository();
+    const dose = await repo.transition(doseId, { status: "taken_late", takenAt: new Date().toISOString() }, newId());
+    await consumeInventoryForDoseTaken(dose, {
+      medicationPackages: new DexieMedicationPackageRepository(),
+      inventoryTransactions: new DexieInventoryTransactionRepository(),
+    });
+    pushNativeRemindersAfterTransition(profileId);
+    refresh();
+  }
+
   async function handleSkipped(doseId: string) {
     const repo = new DexieDoseEventRepository();
     await repo.transition(doseId, { status: "skipped" }, newId());
@@ -150,6 +167,7 @@ export default function TodayPage() {
                 onTaken={handleTaken}
                 onSkipped={handleSkipped}
                 onSnoozed={handleSnoozed}
+                onTakenLate={handleTakenLate}
               />
             ))}
           </div>

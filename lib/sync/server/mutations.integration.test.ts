@@ -489,6 +489,74 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     expect(record.status).toBe("skipped"); // the first terminal write wins; the racing device converges to it
   });
 
+  it("doseEvent: missed -> taken_late is the one narrow recovery, applied against a real Postgres row", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "create", payload: { userMedicationId, scheduleId: null, scheduledAt: new Date().toISOString(), source: "manual_prn" } },
+    ]);
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "missed" } },
+    ]);
+
+    const takenAt = new Date().toISOString();
+    const recoveryResult = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "taken_late", takenAt } },
+    ]);
+
+    expect(recoveryResult[0].result).toBe("applied");
+    const record = recoveryResult[0].serverRecord as { status: string; takenAt: string };
+    expect(record.status).toBe("taken_late");
+    expect(new Date(record.takenAt).toISOString()).toBe(new Date(takenAt).toISOString());
+  });
+
+  it("doseEvent: missed -> anything other than taken_late is still refused (a silent no-op that returns the current row)", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "create", payload: { userMedicationId, scheduleId: null, scheduledAt: new Date().toISOString(), source: "manual_prn" } },
+    ]);
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "missed" } },
+    ]);
+
+    const result = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "skipped" } },
+    ]);
+
+    expect(result[0].result).toBe("applied");
+    const record = result[0].serverRecord as { status: string };
+    expect(record.status).toBe("missed"); // the refused write never landed; the row stays missed
+  });
+
+  it("doseEvent: taken_late itself is a hard terminal state -- no transition out of it, not even back through the missed recovery path", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "create", payload: { userMedicationId, scheduleId: null, scheduledAt: new Date().toISOString(), source: "manual_prn" } },
+    ]);
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "missed" } },
+    ]);
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "taken_late", takenAt: new Date().toISOString() } },
+    ]);
+
+    const result = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "doseEvent", entityId: id, operation: "update", payload: { status: "skipped" } },
+    ]);
+
+    expect(result[0].result).toBe("applied");
+    const record = result[0].serverRecord as { status: string };
+    expect(record.status).toBe("taken_late"); // still the final word
+  });
+
   it("doseEvent: transition to 'taken' without takenAt is rejected (defense-in-depth on top of chk_taken_has_timestamp) -- isolated, not thrown", async () => {
     const { accountId, profileId } = await seedAccountAndProfile();
     const userMedicationId = await seedUserMedication(profileId);

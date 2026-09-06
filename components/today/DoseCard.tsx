@@ -11,12 +11,22 @@ const UNDO_WINDOW_MS = 5000;
 export interface DoseCardProps {
   dose: DoseEventRecord;
   medicationName: string;
-  /** Read-only everywhere except today's own cards (ux-accessibility-designer design, 2026-08-30): a past/future-day card, or a `missed`/other-terminal one, never renders action buttons at all. */
+  /** Read-only everywhere except today's own cards (ux-accessibility-designer design, 2026-08-30): a past/future-day card, or a `missed`/other-terminal one, never renders the Taken/Skip/Snooze trio. */
   actionable: boolean;
   onTaken: (doseId: string) => void;
   onSkipped: (doseId: string) => void;
   onSnoozed: (doseId: string) => void;
   onRetrySync?: (doseId: string) => void;
+  /**
+   * The one recovery path out of `missed` ("I forgot to log it, but I did
+   * take it" -> `taken_late`, `isDoseEventTransitionAllowed`). Deliberately
+   * independent of `actionable` — a missed dose surfaced in Today's
+   * "Χρειάζεται προσοχή" section is otherwise fully read-only, but still
+   * needs this one specific action; only rendered at all when the caller
+   * passes this prop, so Calendar's day view (which never passes it)
+   * keeps its existing fully-read-only behavior unchanged.
+   */
+  onTakenLate?: (doseId: string) => void;
 }
 
 function formatTime(iso: string | null): string {
@@ -48,11 +58,11 @@ function statusLabel(status: DoseEventStatus, dose: DoseEventRecord): string | n
   }
 }
 
-function buildAriaLabel(name: string, qtyValue: string | null, qtyUnit: string, timeLabel: string, status: string | null, actionsAvailable: boolean): string {
+function buildAriaLabel(name: string, qtyValue: string | null, qtyUnit: string, timeLabel: string, status: string | null, availableActions: string | null): string {
   const quantityPart = qtyValue ? `${qtyValue} ${qtyUnit}, ` : "";
   const statusPart = status ?? "προγραμματισμένο";
   const base = `${name}, ${quantityPart}${timeLabel}, ${statusPart}`;
-  return actionsAvailable ? `${base} — διαθέσιμες ενέργειες: Έλαβα, Παράλειψη, Αναβολή` : base;
+  return availableActions ? `${base} — διαθέσιμες ενέργειες: ${availableActions}` : base;
 }
 
 /**
@@ -68,8 +78,8 @@ function buildAriaLabel(name: string, qtyValue: string | null, qtyUnit: string, 
  * since `transition()` can't un-terminal a row once committed. Snooze is
  * non-terminal (freely repeatable) and fires immediately.
  */
-export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped, onSnoozed, onRetrySync }: DoseCardProps) {
-  const [pendingAction, setPendingAction] = useState<"taken" | "skipped" | null>(null);
+export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped, onSnoozed, onRetrySync, onTakenLate }: DoseCardProps) {
+  const [pendingAction, setPendingAction] = useState<"taken" | "skipped" | "taken_late" | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -78,13 +88,14 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
     };
   }, []);
 
-  function startUndoWindow(action: "taken" | "skipped") {
+  function startUndoWindow(action: "taken" | "skipped" | "taken_late") {
     setPendingAction(action);
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
       setPendingAction(null);
       if (action === "taken") onTaken(dose.id);
-      else onSkipped(dose.id);
+      else if (action === "skipped") onSkipped(dose.id);
+      else onTakenLate?.(dose.id);
     }, UNDO_WINDOW_MS);
   }
 
@@ -97,14 +108,20 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
   }
 
   const timeLabel = formatTime(dose.scheduledAt);
-  const displayStatus = pendingAction ? (pendingAction === "taken" ? "taken" : "skipped") : dose.status;
-  const label = pendingAction ? (pendingAction === "taken" ? `Ελήφθη ${formatTime(new Date().toISOString())}` : "Παραλείφθηκε") : statusLabel(dose.status, dose);
+  const displayStatus = pendingAction ? (pendingAction === "skipped" ? "skipped" : "taken_late" === pendingAction ? "taken_late" : "taken") : dose.status;
+  const label = pendingAction
+    ? pendingAction === "skipped"
+      ? "Παραλείφθηκε"
+      : `Ελήφθη${pendingAction === "taken_late" ? " αργότερα" : ""} ${formatTime(new Date().toISOString())}`
+    : statusLabel(dose.status, dose);
   const showActions = actionable && !pendingAction && (dose.status === "scheduled" || dose.status === "reminded" || dose.status === "snoozed");
+  const showMissedRecovery = !pendingAction && dose.status === "missed" && onTakenLate !== undefined;
+  const availableActions = showActions ? "Έλαβα, Παράλειψη, Αναβολή" : showMissedRecovery ? "Καταγραφή ως ελήφθη αργότερα" : null;
 
   return (
     <div
       role="group"
-      aria-label={buildAriaLabel(medicationName, dose.quantityValue, unitLabel(dose.quantityUnit), timeLabel, label, showActions)}
+      aria-label={buildAriaLabel(medicationName, dose.quantityValue, unitLabel(dose.quantityUnit), timeLabel, label, availableActions)}
       className="flex flex-col gap-2 rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-800"
       data-dose-status={displayStatus}
     >
@@ -157,6 +174,16 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
             Αναβολή
           </button>
         </div>
+      )}
+
+      {showMissedRecovery && (
+        <button
+          type="button"
+          onClick={() => startUndoWindow("taken_late")}
+          className="min-h-14 self-start rounded-full border border-zinc-300 px-4 py-3 text-sm font-medium dark:border-zinc-700"
+        >
+          Το πήρα, καταγραφή ως αργοπορημένη λήψη
+        </button>
       )}
     </div>
   );
