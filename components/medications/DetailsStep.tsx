@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { MedicationForm } from "@/lib/domain/user-medication";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 export const FORM_OPTIONS: MedicationForm[] = [
   "tablet",
@@ -62,6 +63,7 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    playSound("button");
     onSubmit({ form, strengthValue, strengthUnit, inventoryUnit });
   }
 
@@ -81,7 +83,10 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
               type="button"
               role="radio"
               aria-checked={form === option}
-              onClick={() => setForm(option)}
+              onClick={() => {
+                playSound("button");
+                setForm(option);
+              }}
               className={`min-h-12 rounded-full border px-4 py-2 text-sm ${
                 form === option
                   ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"

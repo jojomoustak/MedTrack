@@ -8,6 +8,7 @@ import { clearAllLocalProfileData, hasPendingLocalWork } from "@/lib/db-client/c
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { ReminderPermissionToggle } from "@/components/profile/ReminderPermissionToggle";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 /**
  * Phase 3 §2.8 Profile/settings — most of it (accessibility, Sync & Data
@@ -34,6 +35,7 @@ export default function ProfilePage() {
   const profileId = useProfileId();
 
   async function handleSignOut() {
+    playSound("button");
     // Cleared locally first, unconditionally: this is what
     // useCurrentProfile's offline fallback reads, so if the signOut()
     // network call below fails (offline right after tapping this), a

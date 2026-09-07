@@ -17,6 +17,7 @@ import { logger } from "@/lib/logging/logger";
 import { CandidateConfirmation } from "@/components/medications/CandidateConfirmation";
 import { ScanDiagnosticsPanel, type ScanDiagnostics } from "@/components/medications/ScanDiagnosticsPanel";
 import { PackageOcrCandidateFlow } from "@/components/medications/PackageOcrCandidateFlow";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface ScanStepProps {
   profileId: string;
@@ -252,7 +253,7 @@ export function ScanStep({
         <p role="status" aria-live="polite" className="text-sm text-zinc-600 dark:text-zinc-400">
           {view.phase === "scanning" ? "Άνοιγμα κάμερας…" : "Αναζήτηση φαρμάκου…"}
         </p>
-        <button type="button" onClick={onCancel} className="min-h-12 text-sm font-medium underline">
+        <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="min-h-12 text-sm font-medium underline">
           Ακύρωση
         </button>
       </div>
@@ -269,12 +270,12 @@ export function ScanStep({
         </div>
         <button
           type="button"
-          onClick={() => onFallbackToManual(null)}
+          onClick={() => { playSound("button"); onFallbackToManual(null); }}
           className="min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
         >
           Συνέχεια με χειροκίνητη καταχώριση
         </button>
-        <button type="button" onClick={onCancel} className="min-h-12 self-start text-sm font-medium underline">
+        <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="min-h-12 self-start text-sm font-medium underline">
           ← Πίσω
         </button>
       </div>
@@ -290,6 +291,7 @@ export function ScanStep({
         <button
           type="button"
           onClick={() => {
+            playSound("button");
             startedRef.current = false;
             void runScan();
           }}
@@ -299,12 +301,12 @@ export function ScanStep({
         </button>
         <button
           type="button"
-          onClick={() => onFallbackToManual(null)}
+          onClick={() => { playSound("button"); onFallbackToManual(null); }}
           className="min-h-12 text-sm font-medium underline"
         >
           Συνέχεια με χειροκίνητη καταχώριση
         </button>
-        <button type="button" onClick={onCancel} className="min-h-12 self-start text-sm font-medium underline">
+        <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="min-h-12 self-start text-sm font-medium underline">
           ← Πίσω
         </button>
       </div>
@@ -382,12 +384,12 @@ export function ScanStep({
       {view.diagnostics && <ScanDiagnosticsPanel diagnostics={view.diagnostics} />}
       <button
         type="button"
-        onClick={() => onFallbackToManual(view.parsed)}
+        onClick={() => { playSound("button"); onFallbackToManual(view.parsed); }}
         className="min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
       >
         Συνέχεια με χειροκίνητη καταχώριση
       </button>
-      <button type="button" onClick={onCancel} className="min-h-12 self-start text-sm font-medium underline">
+      <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="min-h-12 self-start text-sm font-medium underline">
         ← Πίσω
       </button>
     </div>
@@ -417,6 +419,7 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
+    playSound("button");
     try {
       await navigator.clipboard.writeText(searchTerm);
       setCopied(true);

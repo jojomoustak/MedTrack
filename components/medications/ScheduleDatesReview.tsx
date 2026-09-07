@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FORM_LABELS, FORM_OPTIONS } from "@/components/medications/DetailsStep";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 import type { ScheduleDraft } from "@/lib/domain/schedule-draft";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface ScheduleDatesReviewProps {
   /** Everything the schedule-kind-specific builder already collected — dose quantity included only when that builder (PRN) already asked for it. */
@@ -40,6 +41,7 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
       return;
     }
     setError(null);
+    playSound("button");
     onSubmit({
       ...base,
       startDate,
@@ -120,7 +122,14 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
       )}
 
       <div className="flex gap-2">
-        <button type="button" onClick={onBack} className="min-h-12 flex-1 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700">
+        <button
+          type="button"
+          onClick={() => {
+            playSound("button");
+            onBack();
+          }}
+          className="min-h-12 flex-1 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+        >
           Πίσω
         </button>
         <button type="submit" className="min-h-12 flex-1 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900">

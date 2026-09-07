@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { WEEKDAY_BIT } from "@/lib/domain/medication-schedule";
 import { ALL_WEEKDAYS_MASK } from "@/lib/domain/schedule-draft";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface WallClockScheduleValues {
   timesOfDay: string[];
@@ -37,14 +38,17 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
   }
 
   function addTimeRow() {
+    playSound("button");
     setTimes((prev) => [...prev, ""]);
   }
 
   function removeTimeRow(index: number) {
+    playSound("button");
     setTimes((prev) => prev.filter((_, i) => i !== index));
   }
 
   function toggleDay(bit: number) {
+    playSound("button");
     setSelectedDays((prev) => (prev & (1 << bit) ? prev & ~(1 << bit) : prev | (1 << bit)));
   }
 
@@ -62,6 +66,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
     // Selecting every day normalizes to "no specific days" (weekdaysMask: null).
     const weekdaysMask = specificDays && selectedDays !== ALL_WEEKDAYS_MASK ? selectedDays : null;
     setError(null);
+    playSound("button");
     onSubmit({ timesOfDay: filledTimes, weekdaysMask });
   }
 
@@ -106,7 +111,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setSpecificDays(false)}
+            onClick={() => { playSound("button"); setSpecificDays(false); }}
             aria-pressed={!specificDays}
             className={`min-h-12 flex-1 rounded-full border px-4 py-2 text-sm font-medium ${
               !specificDays ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900" : "border-zinc-300 dark:border-zinc-700"
@@ -116,7 +121,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
           </button>
           <button
             type="button"
-            onClick={() => setSpecificDays(true)}
+            onClick={() => { playSound("button"); setSpecificDays(true); }}
             aria-pressed={specificDays}
             className={`min-h-12 flex-1 rounded-full border px-4 py-2 text-sm font-medium ${
               specificDays ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900" : "border-zinc-300 dark:border-zinc-700"
@@ -156,7 +161,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
       )}
 
       <div className="flex gap-2">
-        <button type="button" onClick={onBack} className="min-h-12 flex-1 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700">
+        <button type="button" onClick={() => { playSound("button"); onBack(); }} className="min-h-12 flex-1 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700">
           Πίσω
         </button>
         <button type="submit" className="min-h-12 flex-1 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900">

@@ -2,6 +2,7 @@
 
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import { SEED_PLACEHOLDER_SOURCE } from "@/lib/domain/catalog";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface CandidateConfirmationProps {
   product: CatalogProduct;
@@ -22,7 +23,14 @@ export interface CandidateConfirmationProps {
 export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry, parsedBatch, parsedSerial }: CandidateConfirmationProps) {
   return (
     <div className="flex flex-col gap-4">
-      <button type="button" onClick={onBack} className="min-h-12 self-start text-sm font-medium underline">
+      <button
+        type="button"
+        onClick={() => {
+          playSound("button");
+          onBack();
+        }}
+        className="min-h-12 self-start text-sm font-medium underline"
+      >
         ← Πίσω στα αποτελέσματα
       </button>
 
@@ -86,7 +94,10 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
 
       <button
         type="button"
-        onClick={onConfirm}
+        onClick={() => {
+          playSound("button");
+          onConfirm();
+        }}
         className="min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
       >
         Επιβεβαίωση — είναι αυτό το φάρμακο

@@ -6,6 +6,7 @@ import { authClient } from "@/lib/auth/client/auth-client";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
 import { clearAllLocalProfileData } from "@/lib/db-client/clear-local-profile-data";
 import { createNetworkMonitor } from "@/lib/sync/client/network";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 /**
  * Phase 3 §2.9's full account-deletion flow, one client component with an
@@ -37,6 +38,7 @@ export function DeleteAccountFlow() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   async function goToSummary() {
+    playSound("button");
     setSummaryError(null);
     try {
       const res = await fetch("/api/account/deletion-summary");
@@ -50,6 +52,7 @@ export function DeleteAccountFlow() {
   }
 
   async function goToConfirm() {
+    playSound("button");
     // Phase 3 §4: Delete Account requires connectivity — checked here,
     // before the confirm screen, not discovered only after the user
     // types the confirmation phrase and taps the final button.

@@ -4,6 +4,7 @@ import { SYNC_STATE_CHIP_CONFIG } from "@/components/sync/sync-state-config";
 import { SyncStateIcon } from "@/components/sync/SyncStateIcon";
 import { useReducedMotion } from "@/lib/sync/client/use-reduced-motion";
 import type { SyncState } from "@/lib/domain/sync";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface SyncStatusChipProps {
   state: SyncState;
@@ -40,7 +41,16 @@ export function SyncStatusChip({ state, onRetry, className }: SyncStatusChipProp
 
   if (interactive) {
     return (
-      <button type="button" onClick={onRetry} className={classes} aria-label={config.srLabel} data-sync-state={state}>
+      <button
+        type="button"
+        onClick={() => {
+          playSound("button");
+          onRetry?.();
+        }}
+        className={classes}
+        aria-label={config.srLabel}
+        data-sync-state={state}
+      >
         {content}
       </button>
     );

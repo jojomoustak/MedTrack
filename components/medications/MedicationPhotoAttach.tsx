@@ -13,6 +13,7 @@ import {
   uploadMedicationPhoto as uploadPhotoRequest,
 } from "@/lib/medications/client/photo-api";
 import { ALLOWED_MEDICATION_PHOTO_CONTENT_TYPES, MAX_MEDICATION_PHOTO_BYTES } from "@/lib/validation/medication-photo";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 const POLL_INTERVAL_MS = 1500;
 /** ~60s of polling before giving up and asking the user to retry manually — a freshly-created medication is expected to sync within a few seconds when online; this is a generous ceiling, not a tight timeout. */
@@ -273,6 +274,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
             <button
               type="button"
               onClick={() => {
+                playSound("button");
                 setPollExhausted(false);
                 setPollNonce((n) => n + 1);
               }}
@@ -338,7 +340,10 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 event.target.value = "";
-                if (file) void handleFileSelected(file);
+                if (file) {
+                  playSound("button");
+                  void handleFileSelected(file);
+                }
               }}
             />
           </label>
@@ -346,7 +351,10 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
           {photoStatus === "present" && (
             <button
               type="button"
-              onClick={() => void handleRemove()}
+              onClick={() => {
+                playSound("button");
+                void handleRemove();
+              }}
               disabled={busy}
               aria-busy={busy}
               className="min-h-12 rounded-full border border-red-300 px-4 py-2 text-sm font-medium text-red-700 disabled:opacity-60 dark:border-red-900 dark:text-red-400"

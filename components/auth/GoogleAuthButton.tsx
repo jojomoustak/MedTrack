@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { authClient } from "@/lib/auth/client/auth-client";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 interface GoogleAuthButtonProps {
   /**
@@ -36,6 +37,7 @@ export function GoogleAuthButton({ mode, callbackURL, errorCallbackURL, label }:
   const [pending, setPending] = useState(false);
 
   async function handleClick() {
+    playSound("button");
     setPending(true);
     if (mode === "sign-in") {
       await authClient.signIn.social({ provider: "google", callbackURL, errorCallbackURL });

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useCatalogSearch } from "@/lib/catalog/client/use-catalog-search";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import { CandidateConfirmation } from "@/components/medications/CandidateConfirmation";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface SearchStepProps {
   onConfirmCandidate: (product: CatalogProduct) => void;
@@ -67,7 +68,7 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
             <li key={product.id}>
               <button
                 type="button"
-                onClick={() => setCandidate(product)}
+                onClick={() => { playSound("button"); setCandidate(product); }}
                 className="flex min-h-12 w-full flex-col items-start rounded-xl border border-zinc-300 px-4 py-3 text-left hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
               >
                 <span className="font-medium">{product.name}</span>
@@ -86,7 +87,7 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
           {/* Equally weighted with search results, never a dead end (Phase 3 §2.4/§8). */}
           <button
             type="button"
-            onClick={onFallbackToManual}
+            onClick={() => { playSound("button"); onFallbackToManual(); }}
             className="min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
           >
             Συνέχεια με χειροκίνητη καταχώριση
@@ -97,7 +98,7 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
       {status === "idle" && (
         <button
           type="button"
-          onClick={onFallbackToManual}
+          onClick={() => { playSound("button"); onFallbackToManual(); }}
           className="min-h-12 self-start text-sm font-medium text-zinc-700 underline dark:text-zinc-300"
         >
           Προτιμώ χειροκίνητη καταχώριση

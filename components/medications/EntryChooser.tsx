@@ -1,5 +1,7 @@
 "use client";
 
+import { playSound } from "@/lib/sound/client/play-sound";
+
 export type EntryChoice = "scan" | "search" | "manual";
 
 export interface EntryChooserProps {
@@ -24,6 +26,11 @@ export interface EntryChooserProps {
  * anymore.
  */
 export function EntryChooser({ onChoose, scanAvailable }: EntryChooserProps) {
+  function handleChoose(choice: EntryChoice) {
+    playSound("button");
+    onChoose(choice);
+  }
+
   return (
     <div className="flex flex-col gap-3" role="group" aria-label="Πώς θέλετε να προσθέσετε το φάρμακο;">
       <button
@@ -31,7 +38,7 @@ export function EntryChooser({ onChoose, scanAvailable }: EntryChooserProps) {
         disabled={!scanAvailable}
         aria-disabled={!scanAvailable}
         aria-label={scanAvailable ? "Σάρωση barcode" : "Σάρωση barcode — διαθέσιμο μόνο στην εφαρμογή για κινητά"}
-        onClick={scanAvailable ? () => onChoose("scan") : undefined}
+        onClick={scanAvailable ? () => handleChoose("scan") : undefined}
         className={
           scanAvailable
             ? "flex min-h-12 items-center rounded-xl border border-zinc-300 px-4 py-3 text-left hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
@@ -48,7 +55,7 @@ export function EntryChooser({ onChoose, scanAvailable }: EntryChooserProps) {
 
       <button
         type="button"
-        onClick={() => onChoose("search")}
+        onClick={() => handleChoose("search")}
         className="flex min-h-12 items-center rounded-xl border border-zinc-300 px-4 py-3 text-left hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
       >
         <span>
@@ -59,7 +66,7 @@ export function EntryChooser({ onChoose, scanAvailable }: EntryChooserProps) {
 
       <button
         type="button"
-        onClick={() => onChoose("manual")}
+        onClick={() => handleChoose("manual")}
         className="flex min-h-12 items-center rounded-xl border border-zinc-300 px-4 py-3 text-left hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
       >
         <span>

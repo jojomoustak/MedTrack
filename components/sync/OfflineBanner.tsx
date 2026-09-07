@@ -2,6 +2,7 @@
 
 import { useNetworkStatus } from "@/lib/sync/client/use-network-status";
 import type { NetworkState } from "@/lib/sync/client/network";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface OfflineBannerProps {
   /** Overrides the live network status — for tests/storybook-style usage; real callers should omit this and let the component read `useNetworkStatus()` itself. */
@@ -49,7 +50,10 @@ export function OfflineBanner({ state, onRetry, className }: OfflineBannerProps)
       {copy.tone === "backend" && onRetry ? (
         <button
           type="button"
-          onClick={onRetry}
+          onClick={() => {
+            playSound("button");
+            onRetry();
+          }}
           className="shrink-0 rounded-full border border-current px-3 py-1 text-xs font-medium"
         >
           Δοκιμάστε ξανά

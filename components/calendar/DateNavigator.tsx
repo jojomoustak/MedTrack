@@ -1,5 +1,7 @@
 "use client";
 
+import { playSound } from "@/lib/sound/client/play-sound";
+
 export interface DateNavigatorProps {
   date: Date;
   onPrevDay: () => void;
@@ -20,7 +22,10 @@ export function DateNavigator({ date, onPrevDay, onNextDay, onToday }: DateNavig
     <div className="flex items-center justify-between gap-2">
       <button
         type="button"
-        onClick={onPrevDay}
+        onClick={() => {
+          playSound("button");
+          onPrevDay();
+        }}
         aria-label="Προηγούμενη ημέρα"
         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 text-lg dark:border-zinc-700"
       >
@@ -29,14 +34,24 @@ export function DateNavigator({ date, onPrevDay, onNextDay, onToday }: DateNavig
       <div className="flex flex-col items-center">
         <p className="font-medium capitalize">{label}</p>
         {!isToday && (
-          <button type="button" onClick={onToday} className="min-h-12 text-sm font-medium underline">
+          <button
+            type="button"
+            onClick={() => {
+              playSound("button");
+              onToday();
+            }}
+            className="min-h-12 text-sm font-medium underline"
+          >
             Σήμερα
           </button>
         )}
       </div>
       <button
         type="button"
-        onClick={onNextDay}
+        onClick={() => {
+          playSound("button");
+          onNextDay();
+        }}
         aria-label="Επόμενη ημέρα"
         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 text-lg dark:border-zinc-700"
       >

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { MedicationPhotoAttach } from "@/components/medications/MedicationPhotoAttach";
 import { OfflineBanner } from "@/components/sync/OfflineBanner";
 import { useCurrentProfile } from "@/lib/auth/client/use-current-profile";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 /**
  * Minimal, single-purpose photo surface for one `UserMedication` — NOT a
@@ -57,7 +58,10 @@ export default function MedicationPhotoPage() {
         {isNew && (
           <button
             type="button"
-            onClick={() => router.push("/medications")}
+            onClick={() => {
+              playSound("button");
+              router.push("/medications");
+            }}
             className="min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
           >
             Ολοκλήρωση

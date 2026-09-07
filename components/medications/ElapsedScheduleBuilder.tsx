@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { zonedWallClockToUtc } from "@/lib/domain/dose-event-generation";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface ElapsedScheduleValues {
   intervalHours: number;
@@ -39,6 +40,7 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
     setError(null);
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const anchorAt = zonedWallClockToUtc(anchorDate, anchorTime, timezone).toISOString();
+    playSound("button");
     onSubmit({ intervalHours: hours, anchorAt });
   }
 
@@ -90,7 +92,14 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
       )}
 
       <div className="flex gap-2">
-        <button type="button" onClick={onBack} className="min-h-12 flex-1 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700">
+        <button
+          type="button"
+          onClick={() => {
+            playSound("button");
+            onBack();
+          }}
+          className="min-h-12 flex-1 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+        >
           Πίσω
         </button>
         <button type="submit" className="min-h-12 flex-1 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900">
