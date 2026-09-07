@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 const VISIBLE_ON = ["/today", "/medications"];
 
@@ -13,6 +14,7 @@ export function AddMedicationFab() {
   return (
     <Link
       href="/medications/add"
+      onClick={() => playSound("button")}
       aria-label="Προσθήκη φαρμάκου"
       className="fixed right-4 bottom-20 flex min-h-14 min-w-14 items-center justify-center rounded-full bg-zinc-900 px-5 py-4 font-medium text-white shadow-lg dark:bg-zinc-50 dark:text-zinc-900"
     >

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 const TABS = [
   { href: "/today", label: "Σήμερα" },
@@ -26,6 +27,7 @@ export function BottomNav() {
           <Link
             key={tab.href}
             href={tab.href}
+            onClick={() => playSound("button")}
             aria-current={active ? "page" : undefined}
             className={`flex min-h-12 flex-col items-center justify-center py-2 text-xs font-medium ${
               active ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-500 dark:text-zinc-500"

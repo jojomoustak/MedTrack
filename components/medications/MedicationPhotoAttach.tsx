@@ -328,6 +328,9 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
 
         <div className="flex gap-2">
           <label
+            onClick={() => {
+              if (!busy) playSound("button");
+            }}
             className={`min-h-12 flex-1 cursor-pointer rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium dark:border-zinc-700 ${busy ? "opacity-60" : ""}`}
           >
             {busy ? "Μεταφόρτωση…" : photoStatus === "present" ? "Αλλαγή φωτογραφίας" : "Προσθήκη φωτογραφίας (προαιρετικό)"}
@@ -341,7 +344,6 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
                 const file = event.target.files?.[0];
                 event.target.value = "";
                 if (file) {
-                  playSound("button");
                   void handleFileSelected(file);
                 }
               }}

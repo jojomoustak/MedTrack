@@ -38,7 +38,6 @@ export function ReminderPermissionToggle({ profileId, platform = new MedianMobil
   }
 
   async function handleRequest() {
-    playSound("button");
     setStatus("requesting");
     try {
       const result = await platform.requestReminderPermission();

@@ -102,6 +102,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
   }
 
   function cancelUndo() {
+    playSound("button");
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;

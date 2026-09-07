@@ -37,7 +37,11 @@ export default function MedicationsPage() {
     <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Φάρμακα</h1>
-        <Link href="/medications/add" className="min-h-12 rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700">
+        <Link
+          href="/medications/add"
+          onClick={() => playSound("button")}
+          className="min-h-12 rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+        >
           Προσθήκη
         </Link>
       </div>
@@ -81,6 +85,7 @@ export default function MedicationsPage() {
           </p>
           <Link
             href="/medications/add"
+            onClick={() => playSound("button")}
             className="flex min-h-12 items-center justify-center rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
           >
             Προσθήκη φαρμάκου
