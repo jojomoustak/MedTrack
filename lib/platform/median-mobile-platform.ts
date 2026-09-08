@@ -196,14 +196,27 @@ function normalizeReminderPermissionResult(payload: unknown): ReminderPermission
 
 function normalizeGoogleNativeSignInResult(payload: unknown): GoogleNativeSignInResult {
   const data = typeof payload === "string" ? (JSON.parse(payload) as unknown) : payload;
-  if (typeof data !== "object" || data === null) {
-    throw new Error("Google Sign-In callback payload is not an object.");
+  if (typeof data !== "object" || data === null || !("status" in data)) {
+    throw new Error("Google Sign-In callback payload is missing 'status'.");
   }
-  const { idToken, error } = data as { idToken?: unknown; error?: unknown };
-  if (typeof idToken === "string" && idToken.length > 0) {
+  const status = (data as { status: unknown }).status;
+
+  if (status === "ok") {
+    const { idToken } = data as { idToken?: unknown };
+    if (typeof idToken !== "string" || idToken.length === 0) {
+      throw new Error("Google Sign-In callback 'ok' payload is missing a string 'idToken'.");
+    }
     return { status: "ok", idToken };
   }
-  return { status: "error", message: typeof error === "string" ? error : "Unknown Google Sign-In error." };
+  if (status === "error") {
+    const { errorCode, message } = data as { errorCode?: unknown; message?: unknown };
+    return {
+      status: "error",
+      errorCode: typeof errorCode === "string" ? errorCode : "UNKNOWN_ERROR",
+      message: typeof message === "string" ? message : "Unknown Google Sign-In error.",
+    };
+  }
+  throw new Error(`Google Sign-In callback returned an unrecognized status: ${String(status)}`);
 }
 
 function normalizeNativeReminderCommandResult(payload: unknown): NativeReminderCommandResult {

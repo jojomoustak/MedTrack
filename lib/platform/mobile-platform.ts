@@ -139,7 +139,8 @@ export interface GoogleNativeSignInOk {
 }
 export interface GoogleNativeSignInError {
   status: "error";
-  /** Native's own error string (a cancellation and a real failure are not distinguished by Android's Credential Manager either) — never shown raw to the user (CLAUDE.md rule 8's spirit: no raw third-party error text), only used to decide whether to fall back to the redirect flow. */
+  /** Same `errorCode`/`message` shape as every other command's error result in this file — a cancellation and a real failure are not distinguished by Android's Credential Manager, so native is expected to report both as one generic code. Never shown raw to the user (CLAUDE.md rule 8's spirit: no raw third-party error text). */
+  errorCode: string;
   message: string;
 }
 export type GoogleNativeSignInResult = GoogleNativeSignInOk | GoogleNativeSignInError;

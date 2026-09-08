@@ -103,7 +103,7 @@ describe("GoogleAuthButton — inside Median (native Google Sign-In)", () => {
     const { GoogleAuthButton } = await import("@/components/auth/GoogleAuthButton");
     const platform = fakePlatform({
       isAvailable: () => true,
-      signInWithGoogle: vi.fn().mockResolvedValue({ status: "error", message: "User cancelled" }),
+      signInWithGoogle: vi.fn().mockResolvedValue({ status: "error", errorCode: "USER_CANCELLED", message: "User cancelled" }),
     });
     render(<GoogleAuthButton mode="sign-in" callbackURL="/today" platform={platform} />);
 
@@ -129,7 +129,7 @@ describe("GoogleAuthButton — inside Median (native Google Sign-In)", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it("shows a distinct message when Median's Social Login plugin isn't configured in this build", async () => {
+  it("shows a distinct message when the native bridge doesn't respond at all", async () => {
     const { GoogleAuthButton } = await import("@/components/auth/GoogleAuthButton");
     const platform = fakePlatform({
       isAvailable: () => true,

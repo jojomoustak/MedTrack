@@ -254,26 +254,26 @@ describe("MedianMobilePlatform.signInWithGoogle()", () => {
     const location = stubLocation();
     const promise = new MedianMobilePlatform().signInWithGoogle();
     expect(location.href).toMatch(/^median:\/\/medtracking\/signInWithGoogle\?callback=__medtrackingSignInWithGoogle_/);
-    invokeNativeCallback({ idToken: "fake-jwt" }, false, "SignInWithGoogle");
+    invokeNativeCallback({ status: "ok", idToken: "fake-jwt" }, false, "SignInWithGoogle");
     await promise;
   });
 
   it("resolves { status: 'ok', idToken } when native reports success", async () => {
     const promise = new MedianMobilePlatform().signInWithGoogle();
-    invokeNativeCallback({ idToken: "fake-jwt" }, false, "SignInWithGoogle");
+    invokeNativeCallback({ status: "ok", idToken: "fake-jwt" }, false, "SignInWithGoogle");
     await expect(promise).resolves.toEqual({ status: "ok", idToken: "fake-jwt" });
   });
 
   it("also accepts the callback payload as a JSON string, not just an object", async () => {
     const promise = new MedianMobilePlatform().signInWithGoogle();
-    invokeNativeCallback({ idToken: "fake-jwt" }, true, "SignInWithGoogle");
+    invokeNativeCallback({ status: "ok", idToken: "fake-jwt" }, true, "SignInWithGoogle");
     await expect(promise).resolves.toEqual({ status: "ok", idToken: "fake-jwt" });
   });
 
-  it("resolves { status: 'error' } — never a rejection — on a native-reported error/cancellation", async () => {
+  it("resolves the native error shape — never a rejection — on a native-reported error/cancellation", async () => {
     const promise = new MedianMobilePlatform().signInWithGoogle();
-    invokeNativeCallback({ error: "User cancelled" }, false, "SignInWithGoogle");
-    await expect(promise).resolves.toEqual({ status: "error", message: "User cancelled" });
+    invokeNativeCallback({ status: "error", errorCode: "USER_CANCELLED", message: "User cancelled" }, false, "SignInWithGoogle");
+    await expect(promise).resolves.toEqual({ status: "error", errorCode: "USER_CANCELLED", message: "User cancelled" });
   });
 
   it("rejects with MobilePlatformUnavailableError when there's no native shell at all", async () => {
