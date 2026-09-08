@@ -20,6 +20,7 @@ function makeDose(overrides: Partial<DoseEventRecord> = {}): DoseEventRecord {
     quantityUnit: "tablet",
     source: "schedule_generated",
     snoozeCount: 0,
+    notes: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     clientMutationId: "cm-1",

@@ -16,6 +16,7 @@ function scheduledInput(overrides: Partial<CreateDoseEventInput> = {}): CreateDo
     quantityValue: "1",
     quantityUnit: "tablet",
     source: "schedule_generated",
+    notes: null,
     clientMutationId: crypto.randomUUID(),
     ...overrides,
   };

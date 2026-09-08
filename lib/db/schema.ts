@@ -452,6 +452,10 @@ export const doseEvent = pgTable(
     quantityUnit: text("quantity_unit"),
     source: text("source").notNull(),
     snoozeCount: smallint("snooze_count").notNull().default(0),
+    // Free-text, user-entered only (never clinical guidance — CLAUDE.md rule
+    // 1). Additive, nullable, no backfill (ADR-014) — Phase 3's "Dose
+    // history detail" screen shows it, but no capture UI exists yet.
+    notes: text("notes"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
     clientMutationId: uuid("client_mutation_id").notNull(),

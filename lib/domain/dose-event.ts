@@ -58,6 +58,8 @@ export interface DoseEventRecord extends SyncableRecord {
   quantityUnit: string | null;
   source: DoseEventSource;
   snoozeCount: number;
+  /** Free-text, user-entered only — never clinical guidance (CLAUDE.md rule 1). `null` when never set (ADR-014: additive, no capture UI yet). Shown read-only on "Dose history detail" (Phase 3 §2.6). */
+  notes: string | null;
   createdAt: string;
   updatedAt: string;
   clientMutationId: string;

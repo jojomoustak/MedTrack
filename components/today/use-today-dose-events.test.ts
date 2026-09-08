@@ -51,6 +51,7 @@ function doseInput(overrides: Partial<CreateDoseEventInput> = {}): CreateDoseEve
     quantityValue: "1",
     quantityUnit: "tablet",
     source: "manual_prn",
+    notes: null,
     clientMutationId: crypto.randomUUID(),
     ...overrides,
   };

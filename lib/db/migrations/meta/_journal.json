@@ -85,6 +85,13 @@
       "when": 1787600000000,
       "tag": "0011_identifier_evidence_and_learning",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788881624423,
+      "tag": "0012_dose_event_notes",
+      "breakpoints": true
     }
   ]
 }

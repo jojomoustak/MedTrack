@@ -79,6 +79,7 @@ export async function generateDoseEventsForSchedule(
       quantityValue: schedule.doseQuantityValue,
       quantityUnit: schedule.doseQuantityUnit,
       source: "schedule_generated",
+      notes: null,
       clientMutationId: newId(),
     });
     created++;
