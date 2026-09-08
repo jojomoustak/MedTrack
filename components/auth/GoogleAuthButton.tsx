@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { MedianMobilePlatform } from "@/lib/platform/median-mobile-platform";
+import { MobilePlatformUnavailableError, type MobilePlatform } from "@/lib/platform/mobile-platform";
+import { mapGoogleAuthErrorFromNativeSignIn } from "@/lib/auth/client/google-auth-errors";
 
 interface GoogleAuthButtonProps {
   /**
@@ -17,28 +21,79 @@ interface GoogleAuthButtonProps {
   callbackURL: string;
   /**
    * Where Better Auth redirects on failure, with `?error=<code>` appended
-   * (only meaningful for `mode="sign-in"` — see `google-auth-errors.ts`).
+   * (only meaningful for `mode="sign-in"`, and only for the plain-browser
+   * redirect path below — see `google-auth-errors.ts`).
    * Defaults to the current page.
    */
   errorCallbackURL?: string;
   label?: string;
+  /** Test-only injection point — real callers always get `MedianMobilePlatform`. */
+  platform?: MobilePlatform;
 }
 
 /**
- * Both `signIn.social()` and `linkSocial()` are full-page-redirect flows
- * (the browser leaves this app for Google's consent screen) — there is no
- * loading/error state to manage after the call starts, since a
- * successful call never returns to this component's JS (the tab
- * navigates away). The only client-side state worth tracking is
- * "already clicked," to avoid a double-submit while the redirect is in
- * flight.
+ * Two entirely different flows depending on where this renders (found
+ * 2026-09-08: a real user's Google sign-in failed inside the Median app,
+ * worked fine in a plain browser):
+ *
+ * - **Plain browser** (`platform.isAvailable() === false`): the original
+ *   full-page-redirect flow — `signIn.social()`/`linkSocial()` navigate
+ *   the browser to Google's consent screen and back through
+ *   `/api/auth/callback/google`. No loading/error state to manage here;
+ *   a successful call never returns to this component's JS.
+ * - **Inside Median's WebView shell** (`platform.isAvailable() === true`):
+ *   the redirect flow above is blocked by Google's own policy against
+ *   OAuth in an embedded WebView (`disallowed_useragent`). Uses Median's
+ *   native Social Login plugin instead (`platform.signInWithGoogle()` —
+ *   Android's real Credential Manager / account picker, never a
+ *   WebView-hosted Google page), which returns a Google ID token, then
+ *   completes sign-in via Better Auth's `idToken`-based `signIn.social`/
+ *   `linkSocial` (a plain `fetch`, not a redirect — Better Auth verifies
+ *   the JWT server-side against the same `GOOGLE_CLIENT_ID` already
+ *   configured, per `docs/adr/ADR-003-authentication.md`'s Google
+ *   addendum). This branch genuinely returns to this component's JS on
+ *   both success and failure, so — unlike the redirect branch — it owns
+ *   real loading/error/navigation handling.
  */
-export function GoogleAuthButton({ mode, callbackURL, errorCallbackURL, label }: GoogleAuthButtonProps) {
+export function GoogleAuthButton({ mode, callbackURL, errorCallbackURL, label, platform = new MedianMobilePlatform() }: GoogleAuthButtonProps) {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [nativeError, setNativeError] = useState<string | null>(null);
 
   async function handleClick() {
     playSound("button");
+    setNativeError(null);
     setPending(true);
+
+    if (platform.isAvailable()) {
+      try {
+        const result = await platform.signInWithGoogle();
+        if (result.status !== "ok") {
+          setNativeError("Η σύνδεση με Google απέτυχε. Δοκιμάστε ξανά.");
+          return;
+        }
+        const idToken = { token: result.idToken };
+        const { error: authError } =
+          mode === "sign-in"
+            ? await authClient.signIn.social({ provider: "google", idToken, callbackURL, errorCallbackURL })
+            : await authClient.linkSocial({ provider: "google", idToken, callbackURL });
+        if (authError) {
+          setNativeError(mapGoogleAuthErrorFromNativeSignIn(authError));
+          return;
+        }
+        router.push(callbackURL);
+      } catch (err) {
+        setNativeError(
+          err instanceof MobilePlatformUnavailableError
+            ? "Η σύνδεση με Google δεν είναι ακόμα διαθέσιμη σε αυτή την έκδοση της εφαρμογής."
+            : "Η σύνδεση με Google απέτυχε. Δοκιμάστε ξανά.",
+        );
+      } finally {
+        setPending(false);
+      }
+      return;
+    }
+
     if (mode === "sign-in") {
       await authClient.signIn.social({ provider: "google", callbackURL, errorCallbackURL });
     } else {
@@ -50,16 +105,23 @@ export function GoogleAuthButton({ mode, callbackURL, errorCallbackURL, label }:
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={pending}
-      aria-busy={pending}
-      className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-zinc-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-zinc-700"
-    >
-      <GoogleGlyph />
-      {label ?? (mode === "sign-in" ? "Σύνδεση με Google" : "Σύνδεση λογαριασμού Google")}
-    </button>
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={pending}
+        aria-busy={pending}
+        className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-zinc-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-zinc-700"
+      >
+        <GoogleGlyph />
+        {label ?? (mode === "sign-in" ? "Σύνδεση με Google" : "Σύνδεση λογαριασμού Google")}
+      </button>
+      {nativeError && (
+        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+          {nativeError}
+        </p>
+      )}
+    </div>
   );
 }
 

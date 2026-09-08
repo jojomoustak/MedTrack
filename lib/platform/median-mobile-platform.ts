@@ -2,6 +2,7 @@
 
 import {
   MobilePlatformUnavailableError,
+  type GoogleNativeSignInResult,
   type MobilePlatform,
   type NativeReminderCommandResult,
   type OcrCaptureResult,
@@ -30,10 +31,22 @@ const REMINDER_PERMISSION_TIMEOUT_MS = 60_000;
 /** Reminder write commands (`upsertReminder`/`cancelRemindersForDoseEvent`) are background sync calls with no user waiting on them — a local Room write + AlarmManager call, so a much tighter backstop than the user-paced commands above is correct here. */
 const REMINDER_COMMAND_TIMEOUT_MS = 10_000;
 
+/** Same "user is paced, not us" reasoning as `SCAN_TIMEOUT_MS` — the user may sit on Android's native account picker for a while. */
+const GOOGLE_SIGN_IN_TIMEOUT_MS = 120_000;
+
 const KNOWN_FORMATS: readonly BarcodeFormat[] = ["GS1_DATA_MATRIX", "EAN_13", "EAN_8", "CODE_128", "UNKNOWN"];
 
 type WindowWithMedian = Window & { median?: unknown };
 type WindowWithCallbacks = Window & Record<string, unknown>;
+
+/** The one piece of Median's own global bridge object this app calls directly (see `MobilePlatform.signInWithGoogle`'s doc) rather than through the `median://medtracking/<command>` convention every other method here uses. */
+interface MedianSocialLoginGlobal {
+  socialLogin?: {
+    google?: {
+      login: (options: { callback: (payload: unknown) => void }) => void;
+    };
+  };
+}
 
 /**
  * Median injects a `window.median` bridge object into every page running
@@ -190,6 +203,18 @@ function normalizeReminderPermissionResult(payload: unknown): ReminderPermission
   throw new Error(`Reminder permission callback returned an unrecognized status: ${String(status)}`);
 }
 
+function normalizeGoogleNativeSignInResult(payload: unknown): GoogleNativeSignInResult {
+  const data = typeof payload === "string" ? (JSON.parse(payload) as unknown) : payload;
+  if (typeof data !== "object" || data === null) {
+    throw new Error("Google Sign-In callback payload is not an object.");
+  }
+  const { idToken, error } = data as { idToken?: unknown; error?: unknown };
+  if (typeof idToken === "string" && idToken.length > 0) {
+    return { status: "ok", idToken };
+  }
+  return { status: "error", message: typeof error === "string" ? error : "Unknown Google Sign-In error." };
+}
+
 function normalizeNativeReminderCommandResult(payload: unknown): NativeReminderCommandResult {
   const data = typeof payload === "string" ? (JSON.parse(payload) as unknown) : payload;
   if (typeof data !== "object" || data === null || !("status" in data)) {
@@ -257,6 +282,50 @@ export class MedianMobilePlatform implements MobilePlatform {
   cancelRemindersForDoseEvent(doseEventId: string): Promise<NativeReminderCommandResult> {
     return callBridgeCommand("cancelRemindersForDoseEvent", "CancelRemindersForDoseEvent", normalizeNativeReminderCommandResult, REMINDER_COMMAND_TIMEOUT_MS, {
       doseEventId,
+    });
+  }
+
+  /**
+   * Calls Median's own `window.median.socialLogin.google.login(...)`
+   * directly (see the interface doc for why this isn't the usual
+   * `median://` convention). Rejects with `MobilePlatformUnavailableError`
+   * both when there's no Median shell at all AND when Median's Social
+   * Login plugin specifically isn't configured in this build (`median`
+   * present but `socialLogin.google.login` missing) — both are "there is
+   * nothing to call," the same contract every other method here uses.
+   */
+  signInWithGoogle(): Promise<GoogleNativeSignInResult> {
+    if (!hasMedianBridge()) {
+      return Promise.reject(new MobilePlatformUnavailableError());
+    }
+    const median = (window as unknown as { median?: MedianSocialLoginGlobal }).median;
+    const login = median?.socialLogin?.google?.login;
+    if (typeof login !== "function") {
+      return Promise.reject(new MobilePlatformUnavailableError());
+    }
+
+    return new Promise<GoogleNativeSignInResult>((resolve) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        logger.warn("mobile_platform.google_sign_in.timeout", { timeoutMs: GOOGLE_SIGN_IN_TIMEOUT_MS });
+        resolve({ status: "error", message: "timeout" });
+      }, GOOGLE_SIGN_IN_TIMEOUT_MS);
+
+      login({
+        callback: (payload: unknown) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          try {
+            resolve(normalizeGoogleNativeSignInResult(payload));
+          } catch (err) {
+            logger.warn("mobile_platform.google_sign_in.malformed_response", { message: (err as Error).message });
+            resolve({ status: "error", message: "malformed response" });
+          }
+        },
+      });
     });
   }
 }

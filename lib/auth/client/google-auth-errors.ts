@@ -34,3 +34,21 @@ export function mapGoogleAuthError(code: string | null): string | null {
   if (ACCOUNT_COLLISION_CODES.has(code)) return ACCOUNT_COLLISION_MESSAGE;
   return GENERIC_GOOGLE_ERROR_MESSAGE;
 }
+
+/**
+ * Same two messages, for Median's native idToken sign-in path (`lib/
+ * platform/mobile-platform.ts`'s `signInWithGoogle`) — a direct `fetch()`
+ * response, not a redirect, so there's no `?error=<code>` query param to
+ * read. Better Auth's client error object doesn't carry the same
+ * `account_not_linked`/`unable_to_link_account` codes here: the idToken
+ * route (`sign-in.mjs`) wraps ANY `handleOAuthUserInfo` failure in one
+ * shared `code: "OAUTH_LINK_ERROR"`, preserving the original underlying
+ * string (confirmed in Better Auth 1.7.1 source: `{error: "account not
+ * linked"}` from `oauth2/link-account.mjs`) in `message` instead — so this
+ * checks `message` for that substring rather than `code`.
+ */
+export function mapGoogleAuthErrorFromNativeSignIn(error: { code?: string; message?: string } | null | undefined): string {
+  const message = error?.message?.toLowerCase() ?? "";
+  if (message.includes("not linked")) return ACCOUNT_COLLISION_MESSAGE;
+  return GENERIC_GOOGLE_ERROR_MESSAGE;
+}

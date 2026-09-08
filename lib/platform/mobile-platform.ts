@@ -108,6 +108,41 @@ export interface UpsertNativeReminderInput {
 }
 
 /**
+ * Median's own native "Social Login" plugin (docs.median.co/docs/google-
+ * sign-in-configuration, docs.median.co/docs/social-login-javascript-
+ * callbacks) — a *different* mechanism from every other command in this
+ * file: those all navigate to `median://medtracking/<command>` (this
+ * app's own custom bridge, dispatched by native code built specifically
+ * for MedTracking); this one calls Median's own pre-existing global
+ * `window.median.socialLogin.google.login(...)` directly, since it's a
+ * built-in Median capability, not something this app's native layer had
+ * to implement.
+ *
+ * Found necessary 2026-09-08: a normal `signIn.social()` browser redirect
+ * to `accounts.google.com` gets blocked by Google's own policy against
+ * embedded WebViews (`disallowed_useragent`) once inside Median's WebView
+ * shell — this native path is the documented Median fix, using Android's
+ * real Credential Manager / native account picker instead of any
+ * WebView-hosted page. Median returns only an `idToken` (a Google-issued
+ * JWT), never an authorization code — the caller must complete sign-in
+ * via Better Auth's `idToken`-based `signIn.social`/`linkSocial` (which
+ * verifies the JWT server-side against the SAME `GOOGLE_CLIENT_ID` this
+ * app already uses — see `docs/adr/ADR-003-authentication.md`'s Google
+ * addendum), not the authorization-code redirect path.
+ */
+export interface GoogleNativeSignInOk {
+  status: "ok";
+  /** Google-issued ID token JWT — pass as `{ token: idToken }` to Better Auth's `signIn.social`/`linkSocial`. */
+  idToken: string;
+}
+export interface GoogleNativeSignInError {
+  status: "error";
+  /** Median's own error string (a cancellation and a real failure are not distinguished in Median's contract) — never shown raw to the user (CLAUDE.md rule 8's spirit: no raw third-party error text), only used to decide whether to fall back to the redirect flow. */
+  message: string;
+}
+export type GoogleNativeSignInResult = GoogleNativeSignInOk | GoogleNativeSignInError;
+
+/**
  * Thrown (never resolved as a `ScanResult`) when there's no native shell
  * to actually call — running in a plain browser, or a Median build where
  * the bridge didn't respond at all. Kept distinct from `ScanResultError`
@@ -180,4 +215,17 @@ export interface MobilePlatform {
    * scheduled for this id.
    */
   cancelRemindersForDoseEvent(doseEventId: string): Promise<NativeReminderCommandResult>;
+
+  /**
+   * Invokes Median's native Google Sign-In (Android Credential Manager /
+   * native account picker — never a WebView-hosted Google page, which
+   * Google's own policy blocks inside an embedded WebView). Resolves with
+   * `{status:"ok", idToken}` or `{status:"error", message}` for any real
+   * native response, including a user cancel (Median's contract doesn't
+   * distinguish cancel from failure) — rejects with
+   * `MobilePlatformUnavailableError` only when there's no native shell to
+   * ask at all (e.g. Median's Social Login plugin isn't configured in this
+   * build), same rejection contract as every other command here.
+   */
+  signInWithGoogle(): Promise<GoogleNativeSignInResult>;
 }
