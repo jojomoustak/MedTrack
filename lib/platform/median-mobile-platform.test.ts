@@ -240,61 +240,55 @@ describe("MedianMobilePlatform.cancelRemindersForDoseEvent()", () => {
 });
 
 describe("MedianMobilePlatform.signInWithGoogle()", () => {
+  beforeEach(() => {
+    (window as unknown as { median?: unknown }).median = {};
+    stubLocation();
+  });
+
   afterEach(() => {
     delete (window as unknown as { median?: unknown }).median;
     vi.useRealTimers();
   });
 
-  it("calls window.median.socialLogin.google.login directly, not the median:// URL convention", async () => {
-    const login = vi.fn((options: { callback: (payload: unknown) => void }) => {
-      options.callback({ idToken: "fake-jwt", type: "google" });
-    });
-    (window as unknown as { median: unknown }).median = { socialLogin: { google: { login } } };
-
-    const result = await new MedianMobilePlatform().signInWithGoogle();
-
-    expect(login).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({ status: "ok", idToken: "fake-jwt" });
+  it("navigates to median://medtracking/signInWithGoogle?callback=... — this app's own command, not a Median plugin", async () => {
+    const location = stubLocation();
+    const promise = new MedianMobilePlatform().signInWithGoogle();
+    expect(location.href).toMatch(/^median:\/\/medtracking\/signInWithGoogle\?callback=__medtrackingSignInWithGoogle_/);
+    invokeNativeCallback({ idToken: "fake-jwt" }, false, "SignInWithGoogle");
+    await promise;
   });
 
-  it("resolves { status: 'error' } — never a rejection — when Median reports an error/cancellation", async () => {
-    const login = vi.fn((options: { callback: (payload: unknown) => void }) => {
-      options.callback({ error: "User cancelled", type: "google" });
-    });
-    (window as unknown as { median: unknown }).median = { socialLogin: { google: { login } } };
-
-    await expect(new MedianMobilePlatform().signInWithGoogle()).resolves.toEqual({ status: "error", message: "User cancelled" });
+  it("resolves { status: 'ok', idToken } when native reports success", async () => {
+    const promise = new MedianMobilePlatform().signInWithGoogle();
+    invokeNativeCallback({ idToken: "fake-jwt" }, false, "SignInWithGoogle");
+    await expect(promise).resolves.toEqual({ status: "ok", idToken: "fake-jwt" });
   });
 
   it("also accepts the callback payload as a JSON string, not just an object", async () => {
-    const login = vi.fn((options: { callback: (payload: unknown) => void }) => {
-      options.callback(JSON.stringify({ idToken: "fake-jwt", type: "google" }));
-    });
-    (window as unknown as { median: unknown }).median = { socialLogin: { google: { login } } };
-
-    await expect(new MedianMobilePlatform().signInWithGoogle()).resolves.toEqual({ status: "ok", idToken: "fake-jwt" });
+    const promise = new MedianMobilePlatform().signInWithGoogle();
+    invokeNativeCallback({ idToken: "fake-jwt" }, true, "SignInWithGoogle");
+    await expect(promise).resolves.toEqual({ status: "ok", idToken: "fake-jwt" });
   });
 
-  it("rejects with MobilePlatformUnavailableError when there's no Median shell at all", async () => {
+  it("resolves { status: 'error' } — never a rejection — on a native-reported error/cancellation", async () => {
+    const promise = new MedianMobilePlatform().signInWithGoogle();
+    invokeNativeCallback({ error: "User cancelled" }, false, "SignInWithGoogle");
+    await expect(promise).resolves.toEqual({ status: "error", message: "User cancelled" });
+  });
+
+  it("rejects with MobilePlatformUnavailableError when there's no native shell at all", async () => {
     delete (window as unknown as { median?: unknown }).median;
     Object.defineProperty(window.navigator, "userAgent", { value: "Mozilla/5.0 (plain browser)", configurable: true });
+    const location = stubLocation();
 
     await expect(new MedianMobilePlatform().signInWithGoogle()).rejects.toBeInstanceOf(MobilePlatformUnavailableError);
+    expect(location.href).toBe("");
   });
 
-  it("rejects with MobilePlatformUnavailableError when Median is present but the Social Login plugin isn't configured in this build", async () => {
-    (window as unknown as { median: unknown }).median = {};
-
-    await expect(new MedianMobilePlatform().signInWithGoogle()).rejects.toBeInstanceOf(MobilePlatformUnavailableError);
-  });
-
-  it("resolves { status: 'error' } if the native side never calls back at all (defense-in-depth timeout)", async () => {
+  it("rejects with MobilePlatformUnavailableError if the native side never calls back at all (defense-in-depth timeout)", async () => {
     vi.useFakeTimers();
-    const login = vi.fn(); // never invokes the callback
-    (window as unknown as { median: unknown }).median = { socialLogin: { google: { login } } };
-
     const promise = new MedianMobilePlatform().signInWithGoogle();
-    const assertion = expect(promise).resolves.toEqual({ status: "error", message: "timeout" });
+    const assertion = expect(promise).rejects.toBeInstanceOf(MobilePlatformUnavailableError);
     await vi.advanceTimersByTimeAsync(120_000);
     await assertion;
   });

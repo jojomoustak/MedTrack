@@ -39,15 +39,6 @@ const KNOWN_FORMATS: readonly BarcodeFormat[] = ["GS1_DATA_MATRIX", "EAN_13", "E
 type WindowWithMedian = Window & { median?: unknown };
 type WindowWithCallbacks = Window & Record<string, unknown>;
 
-/** The one piece of Median's own global bridge object this app calls directly (see `MobilePlatform.signInWithGoogle`'s doc) rather than through the `median://medtracking/<command>` convention every other method here uses. */
-interface MedianSocialLoginGlobal {
-  socialLogin?: {
-    google?: {
-      login: (options: { callback: (payload: unknown) => void }) => void;
-    };
-  };
-}
-
 /**
  * Median injects a `window.median` bridge object into every page running
  * inside its WebView — the primary, synchronous "are we even inside the
@@ -286,46 +277,14 @@ export class MedianMobilePlatform implements MobilePlatform {
   }
 
   /**
-   * Calls Median's own `window.median.socialLogin.google.login(...)`
-   * directly (see the interface doc for why this isn't the usual
-   * `median://` convention). Rejects with `MobilePlatformUnavailableError`
-   * both when there's no Median shell at all AND when Median's Social
-   * Login plugin specifically isn't configured in this build (`median`
-   * present but `socialLogin.google.login` missing) — both are "there is
-   * nothing to call," the same contract every other method here uses.
+   * `median://medtracking/signInWithGoogle` — this app's own native
+   * command (see the interface doc for why this is a custom bridge
+   * command rather than Median's bundled Social Login plugin), routed
+   * through the exact same `callBridgeCommand` plumbing every other
+   * command here uses. Native side: Android's Credential Manager / Google
+   * Identity Services, called directly from this app's own Kotlin.
    */
   signInWithGoogle(): Promise<GoogleNativeSignInResult> {
-    if (!hasMedianBridge()) {
-      return Promise.reject(new MobilePlatformUnavailableError());
-    }
-    const median = (window as unknown as { median?: MedianSocialLoginGlobal }).median;
-    const login = median?.socialLogin?.google?.login;
-    if (typeof login !== "function") {
-      return Promise.reject(new MobilePlatformUnavailableError());
-    }
-
-    return new Promise<GoogleNativeSignInResult>((resolve) => {
-      let settled = false;
-      const timer = setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        logger.warn("mobile_platform.google_sign_in.timeout", { timeoutMs: GOOGLE_SIGN_IN_TIMEOUT_MS });
-        resolve({ status: "error", message: "timeout" });
-      }, GOOGLE_SIGN_IN_TIMEOUT_MS);
-
-      login({
-        callback: (payload: unknown) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          try {
-            resolve(normalizeGoogleNativeSignInResult(payload));
-          } catch (err) {
-            logger.warn("mobile_platform.google_sign_in.malformed_response", { message: (err as Error).message });
-            resolve({ status: "error", message: "malformed response" });
-          }
-        },
-      });
-    });
+    return callBridgeCommand("signInWithGoogle", "SignInWithGoogle", normalizeGoogleNativeSignInResult, GOOGLE_SIGN_IN_TIMEOUT_MS);
   }
 }

@@ -108,24 +108,26 @@ export interface UpsertNativeReminderInput {
 }
 
 /**
- * Median's own native "Social Login" plugin (docs.median.co/docs/google-
- * sign-in-configuration, docs.median.co/docs/social-login-javascript-
- * callbacks) — a *different* mechanism from every other command in this
- * file: those all navigate to `median://medtracking/<command>` (this
- * app's own custom bridge, dispatched by native code built specifically
- * for MedTracking); this one calls Median's own pre-existing global
- * `window.median.socialLogin.google.login(...)` directly, since it's a
- * built-in Median capability, not something this app's native layer had
- * to implement.
+ * This app's own native Google Sign-In bridge command — same `median://
+ * medtracking/<command>` convention every other command in this file
+ * uses, dispatched by native Kotlin code built specifically for
+ * MedTracking (deliberately NOT Median's own bundled "Social Login"
+ * plugin, which requires configuration through Median's own dashboard/
+ * build pipeline — the project decided 2026-09-08 to own this natively
+ * instead, alongside the reminder-reliability foreground-service work,
+ * rather than depend on Median-side configuration for either).
  *
  * Found necessary 2026-09-08: a normal `signIn.social()` browser redirect
  * to `accounts.google.com` gets blocked by Google's own policy against
  * embedded WebViews (`disallowed_useragent`) once inside Median's WebView
- * shell — this native path is the documented Median fix, using Android's
- * real Credential Manager / native account picker instead of any
- * WebView-hosted page. Median returns only an `idToken` (a Google-issued
- * JWT), never an authorization code — the caller must complete sign-in
- * via Better Auth's `idToken`-based `signIn.social`/`linkSocial` (which
+ * shell. The native fix is unchanged in shape from the Median-plugin
+ * approach first tried — Android's real Credential Manager / native
+ * account picker (via Google Identity Services for Android, called
+ * directly from this app's own Kotlin, not through any Median API) in
+ * place of any WebView-hosted page — only *who* implements the native
+ * side changed. Native returns only an `idToken` (a Google-issued JWT),
+ * never an authorization code — the caller must complete sign-in via
+ * Better Auth's `idToken`-based `signIn.social`/`linkSocial` (which
  * verifies the JWT server-side against the SAME `GOOGLE_CLIENT_ID` this
  * app already uses — see `docs/adr/ADR-003-authentication.md`'s Google
  * addendum), not the authorization-code redirect path.
@@ -137,7 +139,7 @@ export interface GoogleNativeSignInOk {
 }
 export interface GoogleNativeSignInError {
   status: "error";
-  /** Median's own error string (a cancellation and a real failure are not distinguished in Median's contract) — never shown raw to the user (CLAUDE.md rule 8's spirit: no raw third-party error text), only used to decide whether to fall back to the redirect flow. */
+  /** Native's own error string (a cancellation and a real failure are not distinguished by Android's Credential Manager either) — never shown raw to the user (CLAUDE.md rule 8's spirit: no raw third-party error text), only used to decide whether to fall back to the redirect flow. */
   message: string;
 }
 export type GoogleNativeSignInResult = GoogleNativeSignInOk | GoogleNativeSignInError;
@@ -217,15 +219,14 @@ export interface MobilePlatform {
   cancelRemindersForDoseEvent(doseEventId: string): Promise<NativeReminderCommandResult>;
 
   /**
-   * Invokes Median's native Google Sign-In (Android Credential Manager /
-   * native account picker — never a WebView-hosted Google page, which
-   * Google's own policy blocks inside an embedded WebView). Resolves with
-   * `{status:"ok", idToken}` or `{status:"error", message}` for any real
-   * native response, including a user cancel (Median's contract doesn't
-   * distinguish cancel from failure) — rejects with
+   * Invokes this app's own native Google Sign-In command (Android
+   * Credential Manager / native account picker — never a WebView-hosted
+   * Google page, which Google's own policy blocks inside an embedded
+   * WebView). Resolves with `{status:"ok", idToken}` or
+   * `{status:"error", message}` for any real native response, including a
+   * user cancel (not distinguished from a real failure) — rejects with
    * `MobilePlatformUnavailableError` only when there's no native shell to
-   * ask at all (e.g. Median's Social Login plugin isn't configured in this
-   * build), same rejection contract as every other command here.
+   * ask at all, same rejection contract as every other command here.
    */
   signInWithGoogle(): Promise<GoogleNativeSignInResult>;
 }
