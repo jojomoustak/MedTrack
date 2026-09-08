@@ -8,10 +8,11 @@
  *
  * Seeds a full account across every table in Phase 2 §4's deletion list
  * (plus ADR-003's auth-table additions, a Google-linked credential row
- * per addendum A.7, and `sync_mutation`/`sync_change_log` per the
- * 2026-08-22 security review's item 5 — both FK to `profile.id` with
- * `ON DELETE no action` and were found missing from the deletion job by
- * that review), runs the real `deleteAccount` job, and asserts:
+ * per addendum A.7, `sync_mutation`/`sync_change_log` per the 2026-08-22
+ * security review's item 5, and `medication_identifier` per the
+ * 2026-09-08 correction — all three FK to `profile.id` with `ON DELETE
+ * no action` and were found missing from the deletion job at various
+ * points), runs the real `deleteAccount` job, and asserts:
  *   - every listed table is empty for that account/profile afterward;
  *   - `medication_schedule_wall_clock`/`_elapsed` are gone too (via
  *     cascade — asserted directly, not just trusted);
@@ -266,6 +267,25 @@ describe.skipIf(!connectionString)("deleteAccount — full hard-delete workflow 
       serverVersion: 1,
     });
 
+    // --- seed: a USER_CONFIRMED medication_identifier row -------------------
+    // Correction (2026-09-08): the exact gap item 5 above should have
+    // generalized to but didn't — `medication_identifier.profile_id`
+    // (migration 0011, added after the original review) also FKs to
+    // `profile.id` with no `ON DELETE` action, for non-AUTHORITATIVE rows.
+    // A real account's deletion 500'd on this in production. The catalog
+    // product itself is correctly NOT deleted by this workflow (server-
+    // owned reference data) — only the profile-scoped confirmation row is.
+    const catalogProductId = randomUUID();
+    await db.insert(schema.medicationCatalogProduct).values({ id: catalogProductId, name: "Test Product for OCR confirmation", regulatorySource: "EOF" });
+    await db.insert(schema.medicationIdentifier).values({
+      catalogProductId,
+      identifierType: "GTIN",
+      identifierValue: "05201234567890",
+      source: "user_ocr_confirmation",
+      evidenceType: "USER_CONFIRMED",
+      profileId,
+    });
+
     // Sanity: the session genuinely authenticates BEFORE deletion.
     const preDeleteSession = await validateSessionToken(rawSessionToken);
     expect(preDeleteSession?.accountId).toBe(accountId);
@@ -308,6 +328,8 @@ describe.skipIf(!connectionString)("deleteAccount — full hard-delete workflow 
       // no action, and were previously missing from the deletion job.
       ["sync_mutation", await db.select().from(schema.syncMutation).where(eq(schema.syncMutation.profileId, profileId))],
       ["sync_change_log", await db.select().from(schema.syncChangeLog).where(eq(schema.syncChangeLog.profileId, profileId))],
+      // Correction (2026-09-08) — same bug class as item 5, found later.
+      ["medication_identifier", await db.select().from(schema.medicationIdentifier).where(eq(schema.medicationIdentifier.profileId, profileId))],
       ["profile", await db.select().from(schema.profile).where(eq(schema.profile.id, profileId))],
       ["account_session", await db.select().from(schema.accountSession).where(eq(schema.accountSession.accountId, accountId))],
       ["account_credential", await db.select().from(schema.accountCredential).where(eq(schema.accountCredential.loginAccountId, accountId))],
@@ -316,6 +338,12 @@ describe.skipIf(!connectionString)("deleteAccount — full hard-delete workflow 
     for (const [table, rows] of emptyChecks) {
       expect(rows, `expected ${table} to be empty for this profile/account`).toHaveLength(0);
     }
+
+    // --- assert: the catalog product itself is untouched (server-owned
+    // reference data, never part of a user's own data) — only the
+    // profile-scoped confirmation row above it should be gone.
+    const [catalogRow] = await db.select().from(schema.medicationCatalogProduct).where(eq(schema.medicationCatalogProduct.id, catalogProductId));
+    expect(catalogRow).toBeTruthy();
 
     // --- assert: account row anonymized, not deleted ------------------------
     const [accountRow] = await db.select().from(schema.account).where(eq(schema.account.id, accountId));

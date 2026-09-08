@@ -151,6 +151,20 @@
  *    `medication_catalog_product` is correctly left untouched — confirmed
  *    it is server-owned reference data with no FK to any profile/account
  *    row, never part of a user's own data.
+ *    **Correction (2026-09-08): this claim was wrong.** `medication_
+ *    identifier` (added by migration 0011, after this review) also FKs
+ *    `profile_id` to `profile.id` with no `ON DELETE` action, for
+ *    USER_CONFIRMED/VERIFIED_PHYSICAL_OBSERVATION/COMMUNITY_CONFIRMED rows
+ *    (never AUTHORITATIVE ones — those are catalog-owned, always `profile_id
+ *    IS NULL`). This is the exact same bug class as item 5 above, just for
+ *    a table that didn't exist yet when item 5 was written — a real
+ *    account's deletion 500'd on it in production (any account that ever
+ *    confirmed a package-label OCR match hits this). Fixed the same way:
+ *    delete `medication_identifier` scoped to `profile_id` before the
+ *    `profile` delete. The actual lesson item 5 should have generalized to
+ *    but didn't: this deletion list needs to be re-audited against the
+ *    schema whenever a NEW table gains a `profile_id`/`account_id` FK, not
+ *    just once at this review's original pass.
  *
  * 6. UI/copy (`app/(app)/profile/delete/page.tsx` →
  *    `components/account/DeleteAccountFlow.tsx`) — matches Phase 3 §2.9's
@@ -405,6 +419,18 @@ export async function deleteAccount(request: DeleteAccountRequest, dbOverride?: 
           // the profile delete; nothing else depends on either table.
           scopedDb.delete(schema.syncChangeLog).where(eq(schema.syncChangeLog.profileId, profileId)),
           scopedDb.delete(schema.syncMutation).where(eq(schema.syncMutation.profileId, profileId)),
+          // Found 2026-09-08 (a real user's deletion 500'd on this): same
+          // exact bug class as item 5, for a table added in migration 0011
+          // (the OCR-fallback/GTIN-learning task), after this module's
+          // original security review — `medication_identifier.profile_id`
+          // also FKs to `profile.id` with no `ON DELETE` action, but only
+          // for USER_CONFIRMED/VERIFIED_PHYSICAL_OBSERVATION/
+          // COMMUNITY_CONFIRMED rows (`chk_medication_identifier_profile_
+          // scope` requires profile_id IS NOT NULL for any non-AUTHORITATIVE
+          // row) — AUTHORITATIVE rows are catalog-owned, always profile_id
+          // NULL, and correctly untouched by this WHERE clause. Any account
+          // that has ever confirmed a package-label OCR match hits this.
+          scopedDb.delete(schema.medicationIdentifier).where(eq(schema.medicationIdentifier.profileId, profileId)),
           scopedDb.delete(schema.profile).where(eq(schema.profile.id, profileId)),
           // ADR-003 "Additional findings": purge auth tables atomically
           // with the deleted_profile_registry insert below, not after.
