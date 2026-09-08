@@ -4,12 +4,13 @@ import { __resetSoundCacheForTests, playSound } from "@/lib/sound/client/play-so
 
 describe("playSound", () => {
   let playSpy: ReturnType<typeof vi.fn<() => Promise<void>>>;
+  let pauseSpy: ReturnType<typeof vi.fn<() => void>>;
   let constructedSrcs: string[];
 
   beforeEach(() => {
-    __resetSoundCacheForTests();
     constructedSrcs = [];
     playSpy = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+    pauseSpy = vi.fn<() => void>();
     class FakeAudio {
       src: string;
       preload = "";
@@ -20,12 +21,18 @@ describe("playSound", () => {
       play() {
         return playSpy();
       }
+      pause() {
+        pauseSpy();
+      }
       cloneNode() {
         const clone = new FakeAudio(this.src);
         return clone as unknown as HTMLAudioElement;
       }
     }
     vi.stubGlobal("Audio", FakeAudio);
+    // Re-armed after the Audio stub is in place, since it primes every
+    // cached effect through that same constructor.
+    __resetSoundCacheForTests();
   });
 
   afterEach(() => {
@@ -63,5 +70,29 @@ describe("playSound", () => {
       },
     );
     expect(() => playSound("button")).not.toThrow();
+  });
+
+  it("primes and immediately pauses every effect on the first real tap", async () => {
+    document.dispatchEvent(new Event("pointerdown"));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(constructedSrcs.some((s) => s.includes("button.mp3"))).toBe(true);
+    expect(constructedSrcs.some((s) => s.includes("success.mp3"))).toBe(true);
+    expect(constructedSrcs.some((s) => s.includes("notification.mp3"))).toBe(true);
+    expect(pauseSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("only unlocks once — a later tap doesn't re-prime", async () => {
+    document.dispatchEvent(new Event("pointerdown"));
+    await Promise.resolve();
+    await Promise.resolve();
+    const callsAfterFirstTap = playSpy.mock.calls.length;
+
+    document.dispatchEvent(new Event("pointerdown"));
+    document.dispatchEvent(new Event("touchstart"));
+    await Promise.resolve();
+
+    expect(playSpy.mock.calls.length).toBe(callsAfterFirstTap);
   });
 });
