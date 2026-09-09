@@ -26,11 +26,15 @@ import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-sc
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-package-repository";
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
+import { DexieFavoriteRepository } from "@/lib/db-client/favorite-repository";
+import { DexieRecentlyUsedEventRepository } from "@/lib/db-client/recently-used-event-repository";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import type { MedicationPackageRecord } from "@/lib/domain/medication-package";
 import type { InventoryTransactionRecord } from "@/lib/domain/inventory-transaction";
+import type { FavoriteRecord } from "@/lib/domain/favorite";
+import type { RecentlyUsedEventRecord } from "@/lib/domain/recently-used-event";
 import { logger } from "@/lib/logging/logger";
 
 export interface HydrateLocalDataDeps {
@@ -39,6 +43,8 @@ export interface HydrateLocalDataDeps {
   doseEvent?: DexieDoseEventRepository;
   medicationPackage?: DexieMedicationPackageRepository;
   inventoryTransaction?: DexieInventoryTransactionRepository;
+  favorite?: DexieFavoriteRepository;
+  recentlyUsedEvent?: DexieRecentlyUsedEventRepository;
   /** Injectable for tests — defaults to the real `pullChanges` (which calls the network). */
   pullChanges?: typeof pullChanges;
 }
@@ -51,6 +57,8 @@ export async function hydrateLocalDataFromServer(deps: HydrateLocalDataDeps = {}
   const doseEvent = deps.doseEvent ?? new DexieDoseEventRepository();
   const medicationPackage = deps.medicationPackage ?? new DexieMedicationPackageRepository();
   const inventoryTransaction = deps.inventoryTransaction ?? new DexieInventoryTransactionRepository();
+  const favorite = deps.favorite ?? new DexieFavoriteRepository();
+  const recentlyUsedEvent = deps.recentlyUsedEvent ?? new DexieRecentlyUsedEventRepository();
   const pull = deps.pullChanges ?? pullChanges;
 
   try {
@@ -71,6 +79,10 @@ export async function hydrateLocalDataFromServer(deps: HydrateLocalDataDeps = {}
           await medicationPackage.applyRemote(change.record as unknown as MedicationPackageRecord);
         } else if (change.entityType === "medicationInventoryTransaction") {
           await inventoryTransaction.applyRemote(change.record as unknown as InventoryTransactionRecord);
+        } else if (change.entityType === "favorite") {
+          await favorite.applyRemote(change.record as unknown as FavoriteRecord);
+        } else if (change.entityType === "recentlyUsedEvent") {
+          await recentlyUsedEvent.applyRemote(change.record as unknown as RecentlyUsedEventRecord);
         }
       }
       if (response.nextCursor === cursor || response.changes.length === 0) break;

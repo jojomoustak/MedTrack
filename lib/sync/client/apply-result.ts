@@ -9,16 +9,20 @@ import type { OutboxEntry } from "@/lib/domain/outbox";
 import type { PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
 import type {
   DoseEventRepository,
+  FavoriteRepository,
   InventoryTransactionRepository,
   MedicationPackageRepository,
   MedicationScheduleRepository,
   PurchaseListRepository,
+  RecentlyUsedEventRepository,
   UserPreferencesRepository,
 } from "@/lib/domain/repositories";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import type { MedicationPackageRecord } from "@/lib/domain/medication-package";
 import type { InventoryTransactionRecord } from "@/lib/domain/inventory-transaction";
+import type { FavoriteRecord } from "@/lib/domain/favorite";
+import type { RecentlyUsedEventRecord } from "@/lib/domain/recently-used-event";
 import type { SyncMutationResult } from "@/lib/sync/protocol";
 import { reconcileDoseEventsForSchedule } from "@/lib/scheduling/client/dose-event-generator";
 import { logger } from "@/lib/logging/logger";
@@ -30,6 +34,8 @@ export interface ApplyResultDeps {
   doseEvent?: DoseEventRepository;
   medicationPackage?: MedicationPackageRepository;
   inventoryTransaction?: InventoryTransactionRepository;
+  favorite?: FavoriteRepository;
+  recentlyUsedEvent?: RecentlyUsedEventRepository;
 }
 
 export function createApplyResult(deps: ApplyResultDeps) {
@@ -121,6 +127,33 @@ export function createApplyResult(deps: ApplyResultDeps) {
           // Append-only ledger, idempotent-by-id -- same reasoning as
           // doseEvent above: the server never returns 'conflict' here.
           await deps.inventoryTransaction.markFailed(entry.entityId);
+        }
+        return;
+      }
+      case "favorite": {
+        if (!deps.favorite) {
+          logger.warn("sync.applyResult.missing_dep", { entityType: entry.entityType });
+          return;
+        }
+        if (result.result === "applied" && result.serverRecord) {
+          await deps.favorite.applyRemote(result.serverRecord as unknown as FavoriteRecord);
+        }
+        // favorite is LWW/no-conflict-UI, same reasoning as userPreferences
+        // above — nothing else to do even on a non-applied result.
+        return;
+      }
+      case "recentlyUsedEvent": {
+        if (!deps.recentlyUsedEvent) {
+          logger.warn("sync.applyResult.missing_dep", { entityType: entry.entityType });
+          return;
+        }
+        if (result.serverRecord) {
+          await deps.recentlyUsedEvent.applyRemote(result.serverRecord as unknown as RecentlyUsedEventRecord);
+        }
+        if (result.result !== "applied") {
+          // Idempotent-by-id insert, same reasoning as doseEvent above --
+          // the server never returns 'conflict' here.
+          await deps.recentlyUsedEvent.markFailed(entry.entityId);
         }
         return;
       }

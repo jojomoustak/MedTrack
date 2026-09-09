@@ -27,24 +27,10 @@ import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule"
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import type { MedicationPackageRecord } from "@/lib/domain/medication-package";
 import type { InventoryTransactionRecord } from "@/lib/domain/inventory-transaction";
+import type { FavoriteRecord } from "@/lib/domain/favorite";
+import type { RecentlyUsedEventRecord } from "@/lib/domain/recently-used-event";
 import { notifyOutboxWrite } from "@/lib/sync/client/outbox-signal";
 import { notifyPhotoOutboxWrite } from "@/lib/medications/client/photo-outbox-signal";
-
-export interface LocalFavorite {
-  id: string;
-  profileId: string;
-  userMedicationId: string;
-  syncState: string;
-  removedAt: string | null;
-}
-
-export interface LocalRecentlyUsedEvent {
-  id: string;
-  profileId: string;
-  userMedicationId: string;
-  interactionType: string;
-  occurredAt: string;
-}
 
 export interface LocalPurchaseListItem {
   id: string;
@@ -159,8 +145,8 @@ export class MedTrackingDexie extends Dexie {
   userMedication!: EntityTable<UserMedicationRecord, "id">;
   medicationSchedule!: EntityTable<MedicationScheduleRecord, "id">;
   doseEvent!: EntityTable<DoseEventRecord, "id">;
-  favorite!: EntityTable<LocalFavorite, "id">;
-  recentlyUsedEvent!: EntityTable<LocalRecentlyUsedEvent, "id">;
+  favorite!: EntityTable<FavoriteRecord, "id">;
+  recentlyUsedEvent!: EntityTable<RecentlyUsedEventRecord, "id">;
   catalogProductCache!: EntityTable<LocalCatalogProductCache, "id">;
   unresolvedScan!: EntityTable<LocalUnresolvedScan, "id">;
   offlineIndexEntry!: EntityTable<LocalOfflineIndexEntry, "id">;

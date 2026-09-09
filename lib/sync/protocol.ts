@@ -14,6 +14,8 @@ export const syncMutationRequestSchema = z.object({
   clientMutationId: clientMutationIdSchema,
   entityType: z.enum([
     "userPreferences",
+    "favorite",
+    "recentlyUsedEvent",
     "purchaseList",
     "userMedication",
     "medicationSchedule",

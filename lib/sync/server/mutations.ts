@@ -189,6 +189,141 @@ async function applyUserPreferencesMutation(ctx: MutationContext, mutation: Sync
   return { clientMutationId: mutation.clientMutationId, result: "applied", serverRecord: record };
 }
 
+/**
+ * `Favorite` (Phase 2 §2.10) — last-write-wins on `client_updated_at`,
+ * same upsert shape as `applyUserPreferencesMutation` above, keyed on `id`
+ * (not a natural key like `account_id`) because `id` is now DETERMINISTIC
+ * (`lib/domain/favorite.ts`'s `deriveFavoriteId`, derived from
+ * `profileId`+`userMedicationId`) — two devices favoriting the same
+ * medication for the first time compute the identical `id`, so a plain
+ * `ON CONFLICT (id) DO UPDATE` is sufficient; there is no separate
+ * `(profile_id, user_medication_id)` race to reconcile the way there would
+ * be with a random id (see that function's doc for the full reasoning).
+ */
+async function applyFavoriteMutation(ctx: MutationContext, mutation: SyncMutationRequest): Promise<SyncMutationResult> {
+  const payload = mutation.payload as {
+    userMedicationId?: string;
+    removedAt?: string | null;
+    clientUpdatedAt?: string;
+  };
+  if (!payload.userMedicationId || !payload.clientUpdatedAt) {
+    throw new ValidationError("favorite mutation payload requires `userMedicationId` and `clientUpdatedAt`.");
+  }
+
+  try {
+    const [rows] = await withProfileScope(
+      ctx.profileId,
+      (db) => [
+        db.execute(sql`
+          WITH upserted AS (
+            INSERT INTO favorite (id, profile_id, user_medication_id, removed_at, created_at, updated_at, client_updated_at, client_mutation_id)
+            VALUES (
+              ${mutation.entityId}::uuid, ${ctx.profileId}::uuid, ${payload.userMedicationId}::uuid,
+              ${payload.removedAt ?? null}::timestamptz, now(), now(), ${payload.clientUpdatedAt}::timestamptz, ${mutation.clientMutationId}::uuid
+            )
+            ON CONFLICT (id) DO UPDATE SET
+              removed_at = excluded.removed_at,
+              updated_at = now(),
+              client_updated_at = excluded.client_updated_at,
+              client_mutation_id = excluded.client_mutation_id
+            WHERE favorite.client_updated_at IS NULL OR excluded.client_updated_at >= favorite.client_updated_at
+            RETURNING *
+          ),
+          current_row AS (
+            SELECT * FROM upserted
+            UNION ALL
+            SELECT * FROM favorite WHERE id = ${mutation.entityId}::uuid AND NOT EXISTS (SELECT 1 FROM upserted)
+          ),
+          recorded AS (
+            INSERT INTO sync_mutation (client_mutation_id, profile_id, entity_type, entity_id, result, response_snapshot)
+            SELECT ${mutation.clientMutationId}::uuid, ${ctx.profileId}::uuid, 'favorite', ${mutation.entityId}::uuid, 'applied', to_jsonb(current_row.*)
+            FROM current_row
+            RETURNING *
+          ),
+          logged AS (
+            INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation, occurred_at)
+            SELECT profile_id, 'favorite', id, 'update', now() FROM upserted
+            RETURNING 1
+          )
+          SELECT current_row.* FROM current_row;
+        `),
+      ],
+      { db: ctx.db },
+    );
+
+    const record = (rows as { rows?: Record<string, unknown>[] }).rows?.[0];
+    // A losing LWW write (the WHERE clause blocked the update) still
+    // returns the CURRENT authoritative row via `current_row`'s second
+    // branch — same "applied" convention as `applyUserPreferencesMutation`,
+    // never a rejected/failed result for a plain LWW loss.
+    return { clientMutationId: mutation.clientMutationId, result: "applied", serverRecord: record };
+  } catch (err) {
+    if (isForeignKeyViolation(err)) {
+      throw new ValidationError("userMedicationId does not reference a known record.");
+    }
+    throw err;
+  }
+}
+
+/**
+ * `RecentlyUsedEvent` (Phase 2 §2.11) — idempotent-by-id insert, same
+ * `ON CONFLICT (id) DO NOTHING` shape as a schedule-generated `DoseEvent`
+ * create. Pure insert-only: no update branch exists for this entity at
+ * all (Phase 2 §2.11's own "no update, no soft delete").
+ */
+async function applyRecentlyUsedEventMutation(ctx: MutationContext, mutation: SyncMutationRequest): Promise<SyncMutationResult> {
+  const payload = mutation.payload as {
+    userMedicationId?: string;
+    interactionType?: string;
+    occurredAt?: string;
+  };
+  if (!payload.userMedicationId || !payload.interactionType || !payload.occurredAt) {
+    throw new ValidationError("recentlyUsedEvent mutation payload requires `userMedicationId`, `interactionType`, and `occurredAt`.");
+  }
+
+  try {
+    const [rows] = await withProfileScope(
+      ctx.profileId,
+      (db) => [
+        db.execute(sql`
+          WITH inserted AS (
+            INSERT INTO recently_used_event (id, profile_id, user_medication_id, interaction_type, occurred_at, created_at)
+            VALUES (${mutation.entityId}::uuid, ${ctx.profileId}::uuid, ${payload.userMedicationId}::uuid, ${payload.interactionType}, ${payload.occurredAt}::timestamptz, now())
+            ON CONFLICT (id) DO NOTHING
+            RETURNING *
+          ),
+          current_row AS (
+            SELECT * FROM inserted
+            UNION ALL
+            SELECT * FROM recently_used_event WHERE id = ${mutation.entityId}::uuid AND NOT EXISTS (SELECT 1 FROM inserted)
+          ),
+          recorded AS (
+            INSERT INTO sync_mutation (client_mutation_id, profile_id, entity_type, entity_id, result, response_snapshot)
+            SELECT ${mutation.clientMutationId}::uuid, ${ctx.profileId}::uuid, 'recentlyUsedEvent', ${mutation.entityId}::uuid, 'applied', to_jsonb(current_row.*)
+            FROM current_row
+            RETURNING *
+          ),
+          logged AS (
+            INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation, occurred_at)
+            SELECT profile_id, 'recentlyUsedEvent', id, 'create', now() FROM inserted
+            RETURNING 1
+          )
+          SELECT current_row.* FROM current_row;
+        `),
+      ],
+      { db: ctx.db },
+    );
+
+    const record = (rows as { rows?: Record<string, unknown>[] }).rows?.[0];
+    return { clientMutationId: mutation.clientMutationId, result: "applied", serverRecord: record };
+  } catch (err) {
+    if (isForeignKeyViolation(err)) {
+      throw new ValidationError("userMedicationId does not reference a known record.");
+    }
+    throw err;
+  }
+}
+
 async function applyPurchaseListMutation(ctx: MutationContext, mutation: SyncMutationRequest): Promise<SyncMutationResult> {
   const payload = mutation.payload as { name?: string };
   const name = payload.name;
@@ -1156,6 +1291,10 @@ async function dispatchMutation(ctx: MutationContext, mutation: SyncMutationRequ
   switch (mutation.entityType) {
     case "userPreferences":
       return applyUserPreferencesMutation(ctx, mutation);
+    case "favorite":
+      return applyFavoriteMutation(ctx, mutation);
+    case "recentlyUsedEvent":
+      return applyRecentlyUsedEventMutation(ctx, mutation);
     case "purchaseList":
       return applyPurchaseListMutation(ctx, mutation);
     case "userMedication":

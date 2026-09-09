@@ -16,6 +16,7 @@ import { syncNativeRemindersNow } from "@/lib/reminders/client/native-reminder-s
 import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-package-repository";
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import { consumeInventoryForDoseTaken } from "@/lib/inventory/client/consume-dose";
+import { recordMedicationInteraction } from "@/lib/medications/client/record-interaction";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { newId } from "@/lib/domain/ids";
 import { logger } from "@/lib/logging/logger";
@@ -78,6 +79,7 @@ export default function TodayPage() {
       medicationPackages: new DexieMedicationPackageRepository(),
       inventoryTransactions: new DexieInventoryTransactionRepository(),
     });
+    recordMedicationInteraction(profileId, dose.userMedicationId, "marked_taken");
     pushNativeRemindersAfterTransition(profileId);
     refresh();
   }
@@ -95,6 +97,7 @@ export default function TodayPage() {
       medicationPackages: new DexieMedicationPackageRepository(),
       inventoryTransactions: new DexieInventoryTransactionRepository(),
     });
+    recordMedicationInteraction(profileId, dose.userMedicationId, "marked_taken");
     pushNativeRemindersAfterTransition(profileId);
     refresh();
   }

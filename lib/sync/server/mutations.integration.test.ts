@@ -931,4 +931,141 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
 
     expect(results[0].result).toBe("rejected");
   });
+
+  // --- Phase 13: favorite + recentlyUsedEvent ---
+
+  it("favorite (LWW): first toggle creates the row, favorited (removedAt null)", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+
+    const result = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "favorite",
+        entityId: id,
+        operation: "create",
+        payload: { userMedicationId, removedAt: null, clientUpdatedAt: new Date().toISOString() },
+      },
+    ]);
+
+    expect(result[0].result).toBe("applied");
+    const record = result[0].serverRecord as { id: string; removedAt: string | null };
+    expect(record.id).toBe(id);
+    expect(record.removedAt).toBeNull();
+  });
+
+  it("favorite (LWW): same deterministic id from two 'devices' converges to one row via ON CONFLICT, not a unique-constraint error", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID(); // same id both "devices" would derive for this (profileId, userMedicationId) pair
+    const earlier = new Date(Date.now() - 60_000).toISOString();
+    const later = new Date().toISOString();
+
+    const first = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "favorite", entityId: id, operation: "create", payload: { userMedicationId, removedAt: null, clientUpdatedAt: earlier } },
+    ]);
+    const second = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "favorite", entityId: id, operation: "create", payload: { userMedicationId, removedAt: later, clientUpdatedAt: later } },
+    ]);
+
+    expect(first[0].result).toBe("applied");
+    expect(second[0].result).toBe("applied");
+    const record = second[0].serverRecord as { id: string; removedAt: string | null };
+    expect(record.id).toBe(id); // one row throughout, never a second
+    expect(record.removedAt).not.toBeNull(); // the newer clientUpdatedAt (un-favorite) won
+  });
+
+  it("favorite (LWW): an older clientUpdatedAt than what's stored loses, but is still 'applied'", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+    const later = new Date();
+    const earlier = new Date(later.getTime() - 60_000);
+
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "favorite", entityId: id, operation: "create", payload: { userMedicationId, removedAt: null, clientUpdatedAt: later.toISOString() } },
+    ]);
+    const staleResult = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "favorite", entityId: id, operation: "update", payload: { userMedicationId, removedAt: earlier.toISOString(), clientUpdatedAt: earlier.toISOString() } },
+    ]);
+
+    expect(staleResult[0].result).toBe("applied");
+    const record = staleResult[0].serverRecord as { removedAt: string | null };
+    // The newer (already-stored) state wins — still favorited, the stale un-favorite never lands.
+    expect(record.removedAt).toBeNull();
+  });
+
+  it("favorite: a userMedicationId that doesn't exist is rejected", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+
+    const results = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "favorite",
+        entityId: randomUUID(),
+        operation: "create",
+        payload: { userMedicationId: randomUUID(), removedAt: null, clientUpdatedAt: new Date().toISOString() },
+      },
+    ]);
+
+    expect(results[0].result).toBe("rejected");
+  });
+
+  it("recentlyUsedEvent: create is idempotent-by-id — a retried create with the same id converges, doesn't error", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const id = randomUUID();
+    const occurredAt = new Date().toISOString();
+
+    const first = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "recentlyUsedEvent", entityId: id, operation: "create", payload: { userMedicationId, interactionType: "viewed", occurredAt } },
+    ]);
+    const retry = await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "recentlyUsedEvent", entityId: id, operation: "create", payload: { userMedicationId, interactionType: "viewed", occurredAt } },
+    ]);
+
+    expect(first[0].result).toBe("applied");
+    expect(retry[0].result).toBe("applied");
+    const record = retry[0].serverRecord as { id: string; interactionType: string };
+    expect(record.id).toBe(id);
+    expect(record.interactionType).toBe("viewed");
+  });
+
+  it("recentlyUsedEvent: a userMedicationId that doesn't exist is rejected", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+
+    const results = await applyMutations({ profileId, accountId, db }, [
+      {
+        clientMutationId: randomUUID(),
+        entityType: "recentlyUsedEvent",
+        entityId: randomUUID(),
+        operation: "create",
+        payload: { userMedicationId: randomUUID(), interactionType: "viewed", occurredAt: new Date().toISOString() },
+      },
+    ]);
+
+    expect(results[0].result).toBe("rejected");
+  });
+
+  it("favorite and recentlyUsedEvent both appear correctly in a pullChanges response", async () => {
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const userMedicationId = await seedUserMedication(profileId);
+    const favoriteId = randomUUID();
+    const eventId = randomUUID();
+
+    await applyMutations({ profileId, accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "favorite", entityId: favoriteId, operation: "create", payload: { userMedicationId, removedAt: null, clientUpdatedAt: new Date().toISOString() } },
+      { clientMutationId: randomUUID(), entityType: "recentlyUsedEvent", entityId: eventId, operation: "create", payload: { userMedicationId, interactionType: "scanned", occurredAt: new Date().toISOString() } },
+    ]);
+
+    const pulled = await pullChanges(profileId, accountId, 0, 100, db);
+    const favoriteChange = pulled.changes.find((c) => c.entityType === "favorite" && c.entityId === favoriteId);
+    const eventChange = pulled.changes.find((c) => c.entityType === "recentlyUsedEvent" && c.entityId === eventId);
+
+    expect(favoriteChange?.record).toBeTruthy();
+    expect((favoriteChange?.record as { userMedicationId: string } | undefined)?.userMedicationId).toBe(userMedicationId);
+    expect(eventChange?.record).toBeTruthy();
+    expect((eventChange?.record as { interactionType: string } | undefined)?.interactionType).toBe("scanned");
+  });
 });

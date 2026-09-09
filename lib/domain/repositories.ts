@@ -18,6 +18,8 @@ import type { CreateMedicationScheduleInput, MedicationSchedulePatch, Medication
 import type { CreateDoseEventInput, DoseEventRecord, DoseEventTransitionPatch } from "@/lib/domain/dose-event";
 import type { CreateMedicationPackageInput, MedicationPackagePatch, MedicationPackageRecord } from "@/lib/domain/medication-package";
 import type { CreateInventoryTransactionInput, InventoryTransactionRecord } from "@/lib/domain/inventory-transaction";
+import type { FavoriteRecord } from "@/lib/domain/favorite";
+import type { CreateRecentlyUsedEventInput, RecentlyUsedEventRecord } from "@/lib/domain/recently-used-event";
 
 export interface OutboxRepository {
   enqueue(entry: OutboxEntry): Promise<void>;
@@ -53,6 +55,36 @@ export interface PurchaseListRepository {
   /** Marks the row `conflict` (Phase 1 §5's "surfaced conflict on true divergence") rather than silently overwriting it. */
   markConflict(id: string): Promise<void>;
   /** Marks the row `failed` (never silently disappears — Phase 3 §5). */
+  markFailed(id: string): Promise<void>;
+}
+
+export interface FavoriteRepository {
+  /** Every currently-favorited (`removedAt === null`) row for this profile. */
+  listActive(profileId: string): Promise<FavoriteRecord[]>;
+  /** `null` when this medication has never been favorited at all (no local row exists yet) — distinct from "favorited, then un-favorited" (a real row with `removedAt` set). */
+  get(profileId: string, userMedicationId: string): Promise<FavoriteRecord | null>;
+  /**
+   * Flips favorited-state for one medication: creates the row on the
+   * first-ever toggle, or flips the SAME row's `removedAt`/`clientUpdatedAt`
+   * on every toggle after that (Phase 2 §2.10's "toggle-off tombstone, not
+   * a row delete" — the `UNIQUE(profileId, userMedicationId)` constraint
+   * means there is only ever one row per pair). Returns the row's new state.
+   */
+  toggle(profileId: string, userMedicationId: string, clientMutationId: string): Promise<FavoriteRecord>;
+  /** Applies a record pulled/acked from the server — never generates a new outbox entry. */
+  applyRemote(record: FavoriteRecord): Promise<void>;
+  /** Marks the row `failed` (never silently disappears — Phase 3 §5). No `markConflict`: LWW never produces a genuine conflict to surface, same reasoning as `UserPreferencesRepository`. */
+  markFailed(id: string): Promise<void>;
+}
+
+export interface RecentlyUsedEventRepository {
+  /** Most recent events first, for this profile — Phase 2 §2.11's `ix_recent_profile_time` ordering. Callers collapse to "most recent per medication" themselves (this repository returns the raw event log). */
+  listRecent(profileId: string, limit: number): Promise<RecentlyUsedEventRecord[]>;
+  /** Local create: writes the record + an outbox entry in one transaction. Pure insert-only (Phase 2 §2.11 — no update, no soft delete). */
+  record(input: CreateRecentlyUsedEventInput): Promise<RecentlyUsedEventRecord>;
+  /** Applies a record pulled/acked from the server — never generates a new outbox entry. */
+  applyRemote(record: RecentlyUsedEventRecord): Promise<void>;
+  /** Marks the row `failed` (never silently disappears — Phase 3 §5). No `markConflict`: idempotent-by-id insert never produces a genuine conflict, same reasoning as a schedule-generated `DoseEvent` create. */
   markFailed(id: string): Promise<void>;
 }
 

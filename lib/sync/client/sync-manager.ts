@@ -42,6 +42,8 @@ import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-sc
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-package-repository";
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
+import { DexieFavoriteRepository } from "@/lib/db-client/favorite-repository";
+import { DexieRecentlyUsedEventRepository } from "@/lib/db-client/recently-used-event-repository";
 import { createApplyResult } from "@/lib/sync/client/apply-result";
 import { drainOutboxFully, type DrainSummary } from "@/lib/sync/client/worker";
 import { createNetworkMonitor, type NetworkMonitor, type NetworkState } from "@/lib/sync/client/network";
@@ -88,6 +90,8 @@ export function createSyncManager(): SyncManager {
     doseEvent,
     medicationPackage,
     inventoryTransaction,
+    favorite: new DexieFavoriteRepository(),
+    recentlyUsedEvent: new DexieRecentlyUsedEventRepository(),
   });
   const network = createNetworkMonitor();
   const photoOutbox = new DexiePhotoOutboxRepository();

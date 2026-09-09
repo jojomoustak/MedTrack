@@ -10,6 +10,7 @@ import { InventorySummary } from "@/components/medications/InventorySummary";
 import { PackageList } from "@/components/medications/PackageList";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
+import { recordMedicationInteraction } from "@/lib/medications/client/record-interaction";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
@@ -56,6 +57,14 @@ export default function MedicationDetailPage() {
       cancelled = true;
     };
   }, [params.id]);
+
+  // Records once per successful load, not on every re-render — a real
+  // "viewed" interaction (Phase 2 §2.11), backing the Medications list's
+  // "Recent" segment.
+  useEffect(() => {
+    if (medication) recordMedicationInteraction(profileId, medication.id, "viewed");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once per medication actually loaded, not on every `profileId`/`medication` object-identity change.
+  }, [medication?.id]);
 
   const names = useDisplayNames(medication ? [medication] : []);
   const inventory = useMedicationInventory(params.id, medication?.lowStockThresholdValue ?? null);

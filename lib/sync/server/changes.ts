@@ -48,6 +48,26 @@ export async function pullChanges(
       : [];
   const purchaseListById = new Map(purchaseListRecords.map((r) => [r.id, r]));
 
+  const favoriteIds = logRows.filter((r) => r.entityType === "favorite").map((r) => r.entityId);
+  const favoriteRecords =
+    favoriteIds.length > 0
+      ? (await withProfileScope(profileId, (db) => [db.select().from(schema.favorite).where(inArray(schema.favorite.id, favoriteIds))], { db }))[0]
+      : [];
+  const favoriteById = new Map(favoriteRecords.map((r) => [r.id, r]));
+
+  const recentlyUsedEventIds = logRows.filter((r) => r.entityType === "recentlyUsedEvent").map((r) => r.entityId);
+  const recentlyUsedEventRecords =
+    recentlyUsedEventIds.length > 0
+      ? (
+          await withProfileScope(
+            profileId,
+            (db) => [db.select().from(schema.recentlyUsedEvent).where(inArray(schema.recentlyUsedEvent.id, recentlyUsedEventIds))],
+            { db },
+          )
+        )[0]
+      : [];
+  const recentlyUsedEventById = new Map(recentlyUsedEventRecords.map((r) => [r.id, r]));
+
   const userMedicationIds = logRows.filter((r) => r.entityType === "userMedication").map((r) => r.entityId);
   const userMedicationRecords =
     userMedicationIds.length > 0
@@ -146,6 +166,10 @@ export async function pullChanges(
     let record: Record<string, unknown> | undefined;
     if (row.entityType === "purchaseList") {
       record = purchaseListById.get(row.entityId) as Record<string, unknown> | undefined;
+    } else if (row.entityType === "favorite") {
+      record = favoriteById.get(row.entityId) as Record<string, unknown> | undefined;
+    } else if (row.entityType === "recentlyUsedEvent") {
+      record = recentlyUsedEventById.get(row.entityId) as Record<string, unknown> | undefined;
     } else if (row.entityType === "userMedication") {
       record = userMedicationById.get(row.entityId) as Record<string, unknown> | undefined;
     } else if (row.entityType === "userPreferences") {

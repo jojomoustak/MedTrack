@@ -6,8 +6,11 @@ import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useLowStockMedicationIds } from "@/lib/inventory/client/use-low-stock-medications";
+import { useFavoriteMedications } from "@/lib/medications/client/use-favorite-medications";
+import { useRecentMedications } from "@/lib/medications/client/use-recent-medications";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { playSound } from "@/lib/sound/client/play-sound";
+import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
 type Segment = "all" | "active" | "favorites" | "recent";
 
@@ -18,20 +21,38 @@ const SEGMENTS: { key: Segment; label: string }[] = [
   { key: "recent", label: "Πρόσφατα" },
 ];
 
-/** Phase 3 §2.3 Medications list — All/Active/Favorites/Recent segments (§1 refinement 1). Favorites/Recent are Phase 13 — shown as real, selectable segments with an honest "not built yet" state, not omitted or fake-populated. */
+const EMPTY_SEGMENT_MESSAGE: Record<Segment, string> = {
+  all: "Δεν έχετε προσθέσει ακόμα κανένα φάρμακο.",
+  active: "Κανένα ενεργό φάρμακο αυτή τη στιγμή.",
+  favorites: "Δεν έχετε αγαπημένα φάρμακα ακόμα. Πατήστε το ★ σε ένα φάρμακο για να το προσθέσετε.",
+  recent: "Δεν έχετε δει κανένα φάρμακο πρόσφατα.",
+};
+
+/** Phase 3 §2.3 Medications list — All/Active/Favorites/Recent segments (§1 refinement 1, Phase 13). */
 export default function MedicationsPage() {
   const profileId = useProfileId();
   const { status, medications } = useMedicationsList(profileId);
   const [segment, setSegment] = useState<Segment>("all");
   const names = useDisplayNames(medications);
   const lowStockIds = useLowStockMedicationIds(profileId, medications);
+  const { status: favoritesStatus, favoriteIds, toggleFavorite } = useFavoriteMedications(profileId);
+  const { status: recentStatus, recentMedicationIds } = useRecentMedications(profileId);
 
-  const visible =
-    segment === "active"
-      ? medications.filter((m) => m.treatmentState === "active")
-      : segment === "all"
-        ? medications
-        : []; // favorites/recent: Phase 13
+  const medicationsById = new Map(medications.map((m) => [m.id, m]));
+
+  let visible: UserMedicationRecord[];
+  let segmentLoading = false;
+  if (segment === "active") {
+    visible = medications.filter((m) => m.treatmentState === "active");
+  } else if (segment === "favorites") {
+    segmentLoading = favoritesStatus === "loading";
+    visible = medications.filter((m) => favoriteIds.has(m.id));
+  } else if (segment === "recent") {
+    segmentLoading = recentStatus === "loading";
+    visible = recentMedicationIds.map((id) => medicationsById.get(id)).filter((m): m is UserMedicationRecord => m !== undefined);
+  } else {
+    visible = medications;
+  }
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -68,61 +89,72 @@ export default function MedicationsPage() {
         ))}
       </div>
 
-      {status === "loading" && (
+      {(status === "loading" || segmentLoading) && (
         <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
           Φόρτωση…
         </p>
       )}
 
-      {status === "ready" && (segment === "favorites" || segment === "recent") && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Έρχεται σύντομα.</p>
-      )}
-
-      {status === "ready" && (segment === "all" || segment === "active") && visible.length === 0 && (
+      {status === "ready" && !segmentLoading && visible.length === 0 && (
         <div className="flex flex-col items-center gap-3 p-8 text-center">
-          <p className="text-zinc-600 dark:text-zinc-400">
-            {medications.length === 0 ? "Δεν έχετε προσθέσει ακόμα κανένα φάρμακο." : "Κανένα ενεργό φάρμακο αυτή τη στιγμή."}
-          </p>
-          <Link
-            href="/medications/add"
-            onClick={() => playSound("button")}
-            className="flex min-h-12 items-center justify-center rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
-          >
-            Προσθήκη φαρμάκου
-          </Link>
+          <p className="text-zinc-600 dark:text-zinc-400">{EMPTY_SEGMENT_MESSAGE[segment]}</p>
+          {(segment === "all" || segment === "active") && (
+            <Link
+              href="/medications/add"
+              onClick={() => playSound("button")}
+              className="flex min-h-12 items-center justify-center rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+            >
+              Προσθήκη φαρμάκου
+            </Link>
+          )}
         </div>
       )}
 
-      {status === "ready" && visible.length > 0 && (
+      {status === "ready" && !segmentLoading && visible.length > 0 && (
         <ul className="flex flex-col gap-2" aria-label="Λίστα φαρμάκων">
-          {visible.map((med) => (
-            <li key={med.id} className="flex min-h-12 items-center justify-between rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-800">
-              <div>
-                <Link href={`/medications/${med.id}`} className="font-medium underline-offset-2 hover:underline">
-                  {names.get(med.id) ?? "…"}
-                </Link>
-                {lowStockIds.has(med.id) && (
-                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                    Χαμηλό απόθεμα
-                  </span>
-                )}
-                {med.customStrengthValue && (
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    {med.customStrengthValue} {med.customStrengthUnit}
-                  </p>
-                )}
-                {/* A freshly-created medication may not exist on the server yet (local-first write) — the photo endpoints need a real server row, so this link only appears once synced (mirrors `MedicationPhotoAttach`'s own gating). */}
-                {med.syncState === "synced" ? (
-                  <Link href={`/medications/${med.id}/photo`} className="text-sm font-medium underline">
-                    Φωτογραφία
+          {visible.map((med) => {
+            const isFavorite = favoriteIds.has(med.id);
+            return (
+              <li key={med.id} className="flex min-h-12 items-center justify-between gap-2 rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound("button");
+                    toggleFavorite(med.id);
+                  }}
+                  aria-pressed={isFavorite}
+                  aria-label={isFavorite ? `Αφαίρεση ${names.get(med.id) ?? "φαρμάκου"} από τα αγαπημένα` : `Προσθήκη ${names.get(med.id) ?? "φαρμάκου"} στα αγαπημένα`}
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl ${isFavorite ? "text-amber-500" : "text-zinc-300 dark:text-zinc-600"}`}
+                >
+                  {isFavorite ? "★" : "☆"}
+                </button>
+                <div className="min-w-0 flex-1">
+                  <Link href={`/medications/${med.id}`} className="font-medium underline-offset-2 hover:underline">
+                    {names.get(med.id) ?? "…"}
                   </Link>
-                ) : (
-                  <p className="text-sm text-zinc-500 dark:text-zinc-500">Φωτογραφία μετά τον συγχρονισμό</p>
-                )}
-              </div>
-              <SyncStatusChip state={med.syncState} />
-            </li>
-          ))}
+                  {lowStockIds.has(med.id) && (
+                    <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                      Χαμηλό απόθεμα
+                    </span>
+                  )}
+                  {med.customStrengthValue && (
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      {med.customStrengthValue} {med.customStrengthUnit}
+                    </p>
+                  )}
+                  {/* A freshly-created medication may not exist on the server yet (local-first write) — the photo endpoints need a real server row, so this link only appears once synced (mirrors `MedicationPhotoAttach`'s own gating). */}
+                  {med.syncState === "synced" ? (
+                    <Link href={`/medications/${med.id}/photo`} className="text-sm font-medium underline">
+                      Φωτογραφία
+                    </Link>
+                  ) : (
+                    <p className="text-sm text-zinc-500 dark:text-zinc-500">Φωτογραφία μετά τον συγχρονισμό</p>
+                  )}
+                </div>
+                <SyncStatusChip state={med.syncState} />
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
