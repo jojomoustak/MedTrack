@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentProfile } from "@/lib/auth/client/use-current-profile";
 import { onSessionExpired } from "@/lib/auth/client/session-expired-signal";
+import { notifySessionRestored } from "@/lib/auth/client/session-restored-signal";
 import { CurrentProfileProvider } from "@/components/shell/CurrentProfileContext";
 import { AppBar } from "@/components/shell/AppBar";
 import { BottomNav } from "@/components/shell/BottomNav";
@@ -29,6 +30,16 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
   // can't catch since `session.status` itself doesn't change on its own
   // (`use-current-profile.ts` never re-fetches after its initial check).
   useEffect(() => onSessionExpired(() => router.replace("/login?reason=session_expired")), [router]);
+
+  // `SyncManagerBootstrap` lives in the root layout and never remounts on
+  // client-side navigation, so its own initial `drainNow()` can't catch a
+  // fresh sign-in that happens later in the same app session — this fires
+  // every time the authenticated shell newly resolves a valid session
+  // (including right after login), so `sync-manager.ts` gets a chance to
+  // retry any outbox entries a previously-expired session left `failed`.
+  useEffect(() => {
+    if (session.status === "ready") notifySessionRestored();
+  }, [session.status]);
 
   if (session.status === "loading") {
     return (

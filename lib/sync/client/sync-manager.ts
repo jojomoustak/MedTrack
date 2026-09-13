@@ -1,11 +1,18 @@
 /**
  * Wires the network monitor and the outbox itself to the drain worker: a
- * drain attempt fires (a) once at startup, (b) on reconnect, and (c)
- * whenever a new entry is durably written to the outbox (see
+ * drain attempt fires (a) once at startup, (b) on reconnect, (c) whenever
+ * a new entry is durably written to the outbox (see
  * `lib/sync/client/outbox-signal.ts` — added after a real browser
  * click-through found that (a)+(b) alone left every mutation written
  * *after* the initial drain, while already online, stuck in the outbox
- * forever). A single in-flight guard prevents overlapping drains if
+ * forever), and (d) whenever `app/(app)/layout.tsx` sees the session
+ * become valid again (`lib/auth/client/session-restored-signal.ts`) —
+ * added after a real live-device case where entries that had failed with
+ * 401s during a genuinely expired session stayed `failed` even after the
+ * user signed back in, since `SyncManagerBootstrap` lives in the ROOT
+ * layout and never remounts across the `/login` -> `/today` navigation, so
+ * (a) never re-fires and neither (b) nor (c) is guaranteed to happen on
+ * their own. A single in-flight guard prevents overlapping drains if
  * `drainNow()` is also called manually (e.g. a "Sync now" button, Phase 3
  * §5's Sync & Data screen) while another drain is already running.
  *
@@ -48,6 +55,7 @@ import { createApplyResult } from "@/lib/sync/client/apply-result";
 import { drainOutboxFully, type DrainSummary } from "@/lib/sync/client/worker";
 import { createNetworkMonitor, type NetworkMonitor, type NetworkState } from "@/lib/sync/client/network";
 import { onOutboxWrite } from "@/lib/sync/client/outbox-signal";
+import { onSessionRestored } from "@/lib/auth/client/session-restored-signal";
 import { syncOfflineIndex, type SyncOfflineIndexOutcome } from "@/lib/catalog/client/sync-offline-index";
 import { syncLearnedMappings, type SyncLearnedMappingsOutcome } from "@/lib/catalog/client/sync-learned-mappings";
 import { DexiePhotoOutboxRepository } from "@/lib/medications/client/photo-outbox-repository";
@@ -105,6 +113,7 @@ export function createSyncManager(): SyncManager {
   let unsubscribeNetwork: (() => void) | undefined;
   let unsubscribeOutbox: (() => void) | undefined;
   let unsubscribePhotoOutbox: (() => void) | undefined;
+  let unsubscribeSessionRestored: (() => void) | undefined;
   let schedulingTickTimer: ReturnType<typeof setInterval> | undefined;
 
   async function drainNow(): Promise<DrainSummary | null> {
@@ -206,6 +215,7 @@ export function createSyncManager(): SyncManager {
       });
       unsubscribeOutbox = onOutboxWrite(() => void drainNow());
       unsubscribePhotoOutbox = onPhotoOutboxWrite(() => void drainPhotoOutboxNow());
+      unsubscribeSessionRestored = onSessionRestored(() => void drainNow());
       network.start();
       void drainNow();
       void syncOfflineIndexNow();
@@ -219,6 +229,7 @@ export function createSyncManager(): SyncManager {
       unsubscribeNetwork?.();
       unsubscribeOutbox?.();
       unsubscribePhotoOutbox?.();
+      unsubscribeSessionRestored?.();
       if (schedulingTickTimer) clearInterval(schedulingTickTimer);
     },
     drainNow,
