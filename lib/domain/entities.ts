@@ -75,3 +75,49 @@ export interface PurchaseListConflictSnapshot {
   serverRecord: Omit<PurchaseListRecord, "syncState">;
   detectedAt: string;
 }
+
+/** `PurchaseListItem.status` (Phase 2 §2.12's `chk_item_status`). */
+export const PURCHASE_LIST_ITEM_STATUSES = ["pending", "purchased", "removed"] as const;
+export type PurchaseListItemStatus = (typeof PURCHASE_LIST_ITEM_STATUSES)[number];
+
+/**
+ * `PurchaseListItem` (Phase 2 §2.12, Phase 13). Profile-scoped (denormalized
+ * for RLS, same reasoning as every other profile-owned child row) and
+ * belongs to exactly one `PurchaseList`. Conflict strategy: optimistic
+ * concurrency via `version`, same as its parent — a genuine conflicting
+ * edit (e.g. two devices both editing the price at once) is surfaced,
+ * never silently overwritten.
+ *
+ * `userMedicationId` is optional — a shopping-list item doesn't require an
+ * existing tracked medication ("vitamin D, not tracked yet" per the data
+ * model's own example); `chk_item_has_label` requires at least one of
+ * `userMedicationId`/`label` to be set, enforced both here (validation)
+ * and by the database.
+ *
+ * `status` is the day-to-day shopping workflow (pending -> purchased, or
+ * either -> removed if the user decides not to buy it after all) — a
+ * lightweight, reversible state distinct from `deletedAt`, which is the
+ * heavier sync-layer tombstone (Phase 2 §4.A) used only when the row
+ * itself is being permanently deleted from the list, not just crossed
+ * off.
+ */
+export interface PurchaseListItemRecord extends SyncableRecord {
+  id: string;
+  purchaseListId: string;
+  profileId: string;
+  userMedicationId: string | null;
+  label: string | null;
+  quantityValue: string | null;
+  quantityUnit: string | null;
+  /** Integer cents (CLAUDE.md rule 6) — never a float. */
+  estimatedUnitPriceCents: number | null;
+  actualPaidPriceCents: number | null;
+  currency: string;
+  status: PurchaseListItemStatus;
+  purchasedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  version: number;
+  deletedAt: string | null;
+  clientMutationId: string;
+}

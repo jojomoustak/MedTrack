@@ -413,6 +413,176 @@ async function applyPurchaseListMutation(ctx: MutationContext, mutation: SyncMut
   return { clientMutationId: mutation.clientMutationId, result: outcome, serverRecord: record };
 }
 
+/**
+ * `PurchaseListItem` (Phase 2 §2.12, Phase 13) — optimistic concurrency,
+ * same multi-field CASE-per-column pattern as `applyMedicationPackageMutation`
+ * (a plain COALESCE can't tell "not sent, keep existing" apart from "sent
+ * as null, clear it"). `userMedicationId` is intentionally immutable after
+ * creation — no update path needs to move an item between "linked to a
+ * medication" and "free-text label," so there's no risk of an update
+ * violating `chk_item_has_label` by clearing both at once.
+ */
+async function applyPurchaseListItemMutation(ctx: MutationContext, mutation: SyncMutationRequest): Promise<SyncMutationResult> {
+  if (mutation.operation === "delete") {
+    if (mutation.baseVersion === undefined) {
+      throw new ValidationError("purchaseListItem delete mutations require `baseVersion`.");
+    }
+    const [rows] = await withProfileScope(
+      ctx.profileId,
+      (db) => [
+        db.execute(sql`
+        WITH updated AS (
+          UPDATE purchase_list_item
+          SET deleted_at = now(), version = version + 1, updated_at = now(), client_mutation_id = ${mutation.clientMutationId}::uuid
+          WHERE id = ${mutation.entityId}::uuid AND version = ${mutation.baseVersion} AND deleted_at IS NULL
+          RETURNING *
+        ),
+        current_row AS (
+          SELECT * FROM updated
+          UNION ALL
+          SELECT * FROM purchase_list_item WHERE id = ${mutation.entityId}::uuid AND NOT EXISTS (SELECT 1 FROM updated)
+        ),
+        recorded AS (
+          INSERT INTO sync_mutation (client_mutation_id, profile_id, entity_type, entity_id, result, response_snapshot)
+          SELECT ${mutation.clientMutationId}::uuid, ${ctx.profileId}::uuid, 'purchaseListItem', ${mutation.entityId}::uuid,
+            CASE WHEN EXISTS (SELECT 1 FROM updated) THEN 'applied' ELSE 'conflict' END,
+            to_jsonb(current_row.*)
+          FROM current_row
+          RETURNING result
+        ),
+        logged AS (
+          INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation, server_version, occurred_at)
+          SELECT profile_id, 'purchaseListItem', id, 'delete', version, now() FROM updated
+          RETURNING 1
+        )
+        SELECT current_row.*, recorded.result AS mutation_result FROM current_row, recorded;
+      `),
+      ],
+      { db: ctx.db },
+    );
+    const record = (rows as { rows?: Record<string, unknown>[] }).rows?.[0];
+    const outcome = (record?.mutation_result as string | undefined) === "applied" ? "applied" : "conflict";
+    if (record) delete record.mutation_result;
+    return { clientMutationId: mutation.clientMutationId, result: outcome, serverRecord: record };
+  }
+
+  const payload = mutation.payload as {
+    purchaseListId?: string;
+    userMedicationId?: string | null;
+    label?: string | null;
+    quantityValue?: number | null;
+    quantityUnit?: string | null;
+    estimatedUnitPriceCents?: number | null;
+    actualPaidPriceCents?: number | null;
+    currency?: string;
+    status?: string;
+    purchasedAt?: string | null;
+  };
+
+  if (mutation.operation === "create") {
+    if (!payload.purchaseListId) {
+      throw new ValidationError("purchaseListItem create mutation payload requires `purchaseListId`.");
+    }
+    if (!payload.userMedicationId && !payload.label) {
+      throw new ValidationError("purchaseListItem create mutation payload requires `userMedicationId` or `label`.");
+    }
+
+    const [rows] = await withProfileScope(
+      ctx.profileId,
+      (db) => [
+        db.execute(sql`
+        WITH inserted AS (
+          INSERT INTO purchase_list_item (
+            id, purchase_list_id, profile_id, user_medication_id, label,
+            quantity_value, quantity_unit, estimated_unit_price_cents, currency,
+            status, created_at, updated_at, version, client_mutation_id
+          )
+          VALUES (
+            ${mutation.entityId}::uuid, ${payload.purchaseListId}::uuid, ${ctx.profileId}::uuid, ${payload.userMedicationId ?? null}::uuid,
+            ${payload.label ?? null}, ${payload.quantityValue ?? null}::numeric, ${payload.quantityUnit ?? null},
+            ${payload.estimatedUnitPriceCents ?? null}, ${payload.currency ?? "EUR"}, 'pending', now(), now(), 1, ${mutation.clientMutationId}::uuid
+          )
+          ON CONFLICT (id) DO NOTHING
+          RETURNING *
+        ),
+        current_row AS (
+          SELECT * FROM inserted
+          UNION ALL
+          SELECT * FROM purchase_list_item WHERE id = ${mutation.entityId}::uuid AND NOT EXISTS (SELECT 1 FROM inserted)
+        ),
+        recorded AS (
+          INSERT INTO sync_mutation (client_mutation_id, profile_id, entity_type, entity_id, result, response_snapshot)
+          SELECT ${mutation.clientMutationId}::uuid, ${ctx.profileId}::uuid, 'purchaseListItem', ${mutation.entityId}::uuid, 'applied', to_jsonb(current_row.*)
+          FROM current_row
+          RETURNING *
+        ),
+        logged AS (
+          INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation, server_version, occurred_at)
+          SELECT profile_id, 'purchaseListItem', id, 'create', version, now() FROM inserted
+          RETURNING 1
+        )
+        SELECT current_row.* FROM current_row;
+      `),
+      ],
+      { db: ctx.db },
+    );
+    const record = (rows as { rows?: Record<string, unknown>[] }).rows?.[0];
+    return { clientMutationId: mutation.clientMutationId, result: "applied", serverRecord: record };
+  }
+
+  // update — the real optimistic-concurrency path (Phase 2 §5).
+  if (mutation.baseVersion === undefined) {
+    throw new ValidationError("purchaseListItem update mutations require `baseVersion`.");
+  }
+
+  const [rows] = await withProfileScope(
+    ctx.profileId,
+    (db) => [
+      db.execute(sql`
+      WITH updated AS (
+        UPDATE purchase_list_item
+        SET label = CASE WHEN ${payload.label !== undefined} THEN ${payload.label ?? null} ELSE label END,
+            quantity_value = CASE WHEN ${payload.quantityValue !== undefined} THEN ${payload.quantityValue ?? null}::numeric ELSE quantity_value END,
+            quantity_unit = CASE WHEN ${payload.quantityUnit !== undefined} THEN ${payload.quantityUnit ?? null} ELSE quantity_unit END,
+            estimated_unit_price_cents = CASE WHEN ${payload.estimatedUnitPriceCents !== undefined} THEN ${payload.estimatedUnitPriceCents ?? null} ELSE estimated_unit_price_cents END,
+            actual_paid_price_cents = CASE WHEN ${payload.actualPaidPriceCents !== undefined} THEN ${payload.actualPaidPriceCents ?? null} ELSE actual_paid_price_cents END,
+            currency = COALESCE(${payload.currency ?? null}, currency),
+            status = COALESCE(${payload.status ?? null}, status),
+            purchased_at = CASE WHEN ${payload.purchasedAt !== undefined} THEN ${payload.purchasedAt ?? null}::timestamptz ELSE purchased_at END,
+            version = version + 1, updated_at = now(), client_mutation_id = ${mutation.clientMutationId}::uuid
+        WHERE id = ${mutation.entityId}::uuid AND version = ${mutation.baseVersion} AND deleted_at IS NULL
+        RETURNING *
+      ),
+      current_row AS (
+        SELECT * FROM updated
+        UNION ALL
+        SELECT * FROM purchase_list_item WHERE id = ${mutation.entityId}::uuid AND NOT EXISTS (SELECT 1 FROM updated)
+      ),
+      recorded AS (
+        INSERT INTO sync_mutation (client_mutation_id, profile_id, entity_type, entity_id, result, response_snapshot)
+        SELECT ${mutation.clientMutationId}::uuid, ${ctx.profileId}::uuid, 'purchaseListItem', ${mutation.entityId}::uuid,
+          CASE WHEN EXISTS (SELECT 1 FROM updated) THEN 'applied' ELSE 'conflict' END,
+          to_jsonb(current_row.*)
+        FROM current_row
+        RETURNING result
+      ),
+      logged AS (
+        INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation, server_version, occurred_at)
+        SELECT profile_id, 'purchaseListItem', id, 'update', version, now() FROM updated
+        RETURNING 1
+      )
+      SELECT current_row.*, recorded.result AS mutation_result FROM current_row, recorded;
+    `),
+    ],
+    { db: ctx.db },
+  );
+
+  const record = (rows as { rows?: Record<string, unknown>[] }).rows?.[0];
+  const outcome = (record?.mutation_result as string | undefined) === "applied" ? "applied" : "conflict";
+  if (record) delete record.mutation_result;
+  return { clientMutationId: mutation.clientMutationId, result: outcome, serverRecord: record };
+}
+
 async function applyUserMedicationMutation(ctx: MutationContext, mutation: SyncMutationRequest): Promise<SyncMutationResult> {
   if (mutation.operation === "create") {
     const payload = mutation.payload as {
@@ -1298,6 +1468,8 @@ async function dispatchMutation(ctx: MutationContext, mutation: SyncMutationRequ
       return applyRecentlyUsedEventMutation(ctx, mutation);
     case "purchaseList":
       return applyPurchaseListMutation(ctx, mutation);
+    case "purchaseListItem":
+      return applyPurchaseListItemMutation(ctx, mutation);
     case "userMedication":
       return applyUserMedicationMutation(ctx, mutation);
     case "medicationSchedule":

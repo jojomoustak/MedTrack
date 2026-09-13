@@ -49,6 +49,17 @@ export async function pullChanges(
       : [];
   const purchaseListById = new Map(purchaseListRecords.map((r) => [r.id, r]));
 
+  const purchaseListItemIds = logRows.filter((r) => r.entityType === "purchaseListItem").map((r) => r.entityId);
+  const purchaseListItemRecords =
+    purchaseListItemIds.length > 0
+      ? (
+          await withProfileScope(profileId, (db) => [db.select().from(schema.purchaseListItem).where(inArray(schema.purchaseListItem.id, purchaseListItemIds))], {
+            db,
+          })
+        )[0]
+      : [];
+  const purchaseListItemById = new Map(purchaseListItemRecords.map((r) => [r.id, r]));
+
   const favoriteIds = logRows.filter((r) => r.entityType === "favorite").map((r) => r.entityId);
   const favoriteRecords =
     favoriteIds.length > 0
@@ -167,6 +178,8 @@ export async function pullChanges(
     let record: Record<string, unknown> | undefined;
     if (row.entityType === "purchaseList") {
       record = purchaseListById.get(row.entityId) as Record<string, unknown> | undefined;
+    } else if (row.entityType === "purchaseListItem") {
+      record = purchaseListItemById.get(row.entityId) as Record<string, unknown> | undefined;
     } else if (row.entityType === "favorite") {
       record = favoriteById.get(row.entityId) as Record<string, unknown> | undefined;
     } else if (row.entityType === "recentlyUsedEvent") {

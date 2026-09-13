@@ -17,7 +17,7 @@
  */
 import Dexie, { type EntityTable } from "dexie";
 import type { OutboxEntry } from "@/lib/domain/outbox";
-import type { PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
+import type { PurchaseListItemRecord, PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { UnresolvedScanRecord } from "@/lib/domain/repositories";
@@ -31,16 +31,6 @@ import type { FavoriteRecord } from "@/lib/domain/favorite";
 import type { RecentlyUsedEventRecord } from "@/lib/domain/recently-used-event";
 import { notifyOutboxWrite } from "@/lib/sync/client/outbox-signal";
 import { notifyPhotoOutboxWrite } from "@/lib/medications/client/photo-outbox-signal";
-
-export interface LocalPurchaseListItem {
-  id: string;
-  purchaseListId: string;
-  profileId: string;
-  label: string | null;
-  status: string;
-  syncState: string;
-  deletedAt: string | null;
-}
 
 /**
  * Read-mostly cache of catalog products this device has actually seen
@@ -141,7 +131,7 @@ export class MedTrackingDexie extends Dexie {
   outbox!: EntityTable<OutboxEntry, "clientMutationId">;
   userPreferences!: EntityTable<UserPreferencesRecord, "accountId">;
   purchaseList!: EntityTable<PurchaseListRecord, "id">;
-  purchaseListItem!: EntityTable<LocalPurchaseListItem, "id">;
+  purchaseListItem!: EntityTable<PurchaseListItemRecord, "id">;
   userMedication!: EntityTable<UserMedicationRecord, "id">;
   medicationSchedule!: EntityTable<MedicationScheduleRecord, "id">;
   doseEvent!: EntityTable<DoseEventRecord, "id">;

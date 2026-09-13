@@ -17,6 +17,7 @@ export const syncMutationRequestSchema = z.object({
     "favorite",
     "recentlyUsedEvent",
     "purchaseList",
+    "purchaseListItem",
     "userMedication",
     "medicationSchedule",
     "doseEvent",

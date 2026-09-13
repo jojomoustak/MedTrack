@@ -9,7 +9,8 @@
  * components" rule, applied to Drizzle too for symmetry).
  */
 import type { OutboxEntry } from "@/lib/domain/outbox";
-import type { PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
+import type { PurchaseListItemRecord, PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
+import type { CreatePurchaseListItemInput, UpdatePurchaseListItemInput } from "@/lib/validation/purchase-list-item";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
@@ -53,6 +54,24 @@ export interface PurchaseListRepository {
   /** Applies a record pulled/acked from the server — never generates a new outbox entry. */
   applyRemote(record: PurchaseListRecord): Promise<void>;
   /** Marks the row `conflict` (Phase 1 §5's "surfaced conflict on true divergence") rather than silently overwriting it. */
+  markConflict(id: string): Promise<void>;
+  /** Marks the row `failed` (never silently disappears — Phase 3 §5). */
+  markFailed(id: string): Promise<void>;
+}
+
+export interface PurchaseListItemRepository {
+  /** Every non-deleted item on one list, `createdAt` ascending — pending/purchased/removed all included, the UI segments by `status`. */
+  listByPurchaseList(purchaseListId: string): Promise<PurchaseListItemRecord[]>;
+  get(id: string): Promise<PurchaseListItemRecord | null>;
+  /** Local create: writes the record + an outbox entry in one transaction. */
+  create(input: CreatePurchaseListItemInput & { profileId: string }): Promise<PurchaseListItemRecord>;
+  /** Local edit (label/quantity/price/status/purchasedAt): bumps the local `version` optimistically and enqueues an outbox entry carrying `baseVersion`, same optimistic-concurrency pattern as `PurchaseListRepository.rename`. */
+  update(id: string, patch: UpdatePurchaseListItemInput, clientMutationId: string): Promise<PurchaseListItemRecord>;
+  /** Soft-deletes the row (Phase 2 §4.A tombstone) — removing it from the list entirely, distinct from `status: "removed"` (still visible, just crossed off). */
+  remove(id: string, clientMutationId: string): Promise<PurchaseListItemRecord>;
+  /** Applies a record pulled/acked from the server — never generates a new outbox entry. */
+  applyRemote(record: PurchaseListItemRecord): Promise<void>;
+  /** Marks the row `conflict` rather than silently overwriting it. */
   markConflict(id: string): Promise<void>;
   /** Marks the row `failed` (never silently disappears — Phase 3 §5). */
   markFailed(id: string): Promise<void>;

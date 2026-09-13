@@ -45,6 +45,7 @@
 import { DexieOutboxRepository } from "@/lib/db-client/outbox-repository";
 import { DexiePreferencesRepository } from "@/lib/db-client/user-preferences-repository";
 import { DexiePurchaseListRepository } from "@/lib/db-client/purchase-list-repository";
+import { DexiePurchaseListItemRepository } from "@/lib/db-client/purchase-list-item-repository";
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-package-repository";
@@ -94,6 +95,7 @@ export function createSyncManager(): SyncManager {
   const applyResult = createApplyResult({
     userPreferences: new DexiePreferencesRepository(),
     purchaseList: new DexiePurchaseListRepository(),
+    purchaseListItem: new DexiePurchaseListItemRepository(),
     medicationSchedule,
     doseEvent,
     medicationPackage,

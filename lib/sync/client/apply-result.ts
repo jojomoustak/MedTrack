@@ -6,13 +6,14 @@
  * inject a trivial fake here without needing real Dexie repositories.
  */
 import type { OutboxEntry } from "@/lib/domain/outbox";
-import type { PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
+import type { PurchaseListItemRecord, PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
 import type {
   DoseEventRepository,
   FavoriteRepository,
   InventoryTransactionRepository,
   MedicationPackageRepository,
   MedicationScheduleRepository,
+  PurchaseListItemRepository,
   PurchaseListRepository,
   RecentlyUsedEventRepository,
   UserPreferencesRepository,
@@ -30,6 +31,7 @@ import { logger } from "@/lib/logging/logger";
 export interface ApplyResultDeps {
   userPreferences: UserPreferencesRepository;
   purchaseList: PurchaseListRepository;
+  purchaseListItem?: PurchaseListItemRepository;
   medicationSchedule?: MedicationScheduleRepository;
   doseEvent?: DoseEventRepository;
   medicationPackage?: MedicationPackageRepository;
@@ -57,6 +59,20 @@ export function createApplyResult(deps: ApplyResultDeps) {
           await deps.purchaseList.markConflict(entry.entityId);
         } else {
           await deps.purchaseList.markFailed(entry.entityId);
+        }
+        return;
+      }
+      case "purchaseListItem": {
+        if (!deps.purchaseListItem) {
+          logger.warn("sync.applyResult.missing_dep", { entityType: entry.entityType });
+          return;
+        }
+        if (result.result === "applied" && result.serverRecord) {
+          await deps.purchaseListItem.applyRemote(result.serverRecord as unknown as PurchaseListItemRecord);
+        } else if (result.result === "conflict") {
+          await deps.purchaseListItem.markConflict(entry.entityId);
+        } else {
+          await deps.purchaseListItem.markFailed(entry.entityId);
         }
         return;
       }

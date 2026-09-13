@@ -19,6 +19,13 @@
  * else in the pulled batch was read and discarded. `changes.ts` already
  * hydrates a full record for medicationSchedule/doseEvent; this was the
  * one place that never consumed it.
+ *
+ * Found the identical gap again for `purchaseList` (2026-09-13, while
+ * building `purchaseListItem`) — `purchaseList` had a real repository and
+ * a working `apply-result.ts`/`sync-manager.ts` wiring since Phase 5, but
+ * was never added here, so a second device (or a reinstall) would never
+ * actually see an existing account's purchase lists. Both `purchaseList`
+ * and the new `purchaseListItem` are wired in below.
  */
 import { pullChanges } from "@/lib/sync/client/api";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
@@ -28,6 +35,8 @@ import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-pac
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import { DexieFavoriteRepository } from "@/lib/db-client/favorite-repository";
 import { DexieRecentlyUsedEventRepository } from "@/lib/db-client/recently-used-event-repository";
+import { DexiePurchaseListRepository } from "@/lib/db-client/purchase-list-repository";
+import { DexiePurchaseListItemRepository } from "@/lib/db-client/purchase-list-item-repository";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
@@ -35,6 +44,7 @@ import type { MedicationPackageRecord } from "@/lib/domain/medication-package";
 import type { InventoryTransactionRecord } from "@/lib/domain/inventory-transaction";
 import type { FavoriteRecord } from "@/lib/domain/favorite";
 import type { RecentlyUsedEventRecord } from "@/lib/domain/recently-used-event";
+import type { PurchaseListItemRecord, PurchaseListRecord } from "@/lib/domain/entities";
 import { logger } from "@/lib/logging/logger";
 
 export interface HydrateLocalDataDeps {
@@ -45,6 +55,8 @@ export interface HydrateLocalDataDeps {
   inventoryTransaction?: DexieInventoryTransactionRepository;
   favorite?: DexieFavoriteRepository;
   recentlyUsedEvent?: DexieRecentlyUsedEventRepository;
+  purchaseList?: DexiePurchaseListRepository;
+  purchaseListItem?: DexiePurchaseListItemRepository;
   /** Injectable for tests — defaults to the real `pullChanges` (which calls the network). */
   pullChanges?: typeof pullChanges;
 }
@@ -59,6 +71,8 @@ export async function hydrateLocalDataFromServer(deps: HydrateLocalDataDeps = {}
   const inventoryTransaction = deps.inventoryTransaction ?? new DexieInventoryTransactionRepository();
   const favorite = deps.favorite ?? new DexieFavoriteRepository();
   const recentlyUsedEvent = deps.recentlyUsedEvent ?? new DexieRecentlyUsedEventRepository();
+  const purchaseList = deps.purchaseList ?? new DexiePurchaseListRepository();
+  const purchaseListItem = deps.purchaseListItem ?? new DexiePurchaseListItemRepository();
   const pull = deps.pullChanges ?? pullChanges;
 
   try {
@@ -83,6 +97,10 @@ export async function hydrateLocalDataFromServer(deps: HydrateLocalDataDeps = {}
           await favorite.applyRemote(change.record as unknown as FavoriteRecord);
         } else if (change.entityType === "recentlyUsedEvent") {
           await recentlyUsedEvent.applyRemote(change.record as unknown as RecentlyUsedEventRecord);
+        } else if (change.entityType === "purchaseList") {
+          await purchaseList.applyRemote(change.record as unknown as PurchaseListRecord);
+        } else if (change.entityType === "purchaseListItem") {
+          await purchaseListItem.applyRemote(change.record as unknown as PurchaseListItemRecord);
         }
       }
       if (response.nextCursor === cursor || response.changes.length === 0) break;
