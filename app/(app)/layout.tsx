@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentProfile } from "@/lib/auth/client/use-current-profile";
+import { onSessionExpired } from "@/lib/auth/client/session-expired-signal";
 import { CurrentProfileProvider } from "@/components/shell/CurrentProfileContext";
 import { AppBar } from "@/components/shell/AppBar";
 import { BottomNav } from "@/components/shell/BottomNav";
@@ -21,6 +22,13 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
   useEffect(() => {
     if (session.status === "signed-out") router.replace("/login");
   }, [session.status, router]);
+
+  // `lib/sync/client/api.ts`'s `reportIfUnauthenticated` fires this the
+  // moment any sync call gets a real 401/403 back — a session that expired
+  // WHILE the app stayed open, which the effect above (mount-time only)
+  // can't catch since `session.status` itself doesn't change on its own
+  // (`use-current-profile.ts` never re-fetches after its initial check).
+  useEffect(() => onSessionExpired(() => router.replace("/login?reason=session_expired")), [router]);
 
   if (session.status === "loading") {
     return (

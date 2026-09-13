@@ -52,3 +52,17 @@ export function mapGoogleAuthErrorFromNativeSignIn(error: { code?: string; messa
   if (message.includes("not linked")) return ACCOUNT_COLLISION_MESSAGE;
   return GENERIC_GOOGLE_ERROR_MESSAGE;
 }
+
+const SESSION_EXPIRED_MESSAGE = "Η σύνδεσή σας έληξε. Παρακαλούμε συνδεθείτε ξανά.";
+
+/**
+ * `?reason=session_expired` on `/login` — set by
+ * `app/(app)/layout.tsx`'s `onSessionExpired` subscription
+ * (`lib/auth/client/session-expired-signal.ts`), same query-param
+ * convention as `?error=<code>` above but a distinct param name since this
+ * is a client-detected condition, not an OAuth callback redirect code.
+ */
+export function mapSessionExpiredReason(reason: string | null): string | null {
+  if (reason === "session_expired") return SESSION_EXPIRED_MESSAGE;
+  return null;
+}

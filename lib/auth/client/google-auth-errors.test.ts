@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapGoogleAuthError, mapGoogleAuthErrorFromNativeSignIn } from "@/lib/auth/client/google-auth-errors";
+import { mapGoogleAuthError, mapGoogleAuthErrorFromNativeSignIn, mapSessionExpiredReason } from "@/lib/auth/client/google-auth-errors";
 
 describe("mapGoogleAuthError", () => {
   it("returns null when no error code is present", () => {
@@ -35,5 +35,19 @@ describe("mapGoogleAuthErrorFromNativeSignIn", () => {
   it("returns the generic message when there's no error object at all", () => {
     expect(mapGoogleAuthErrorFromNativeSignIn(null)).toBe("Η σύνδεση με Google απέτυχε. Δοκιμάστε ξανά.");
     expect(mapGoogleAuthErrorFromNativeSignIn(undefined)).toBe("Η σύνδεση με Google απέτυχε. Δοκιμάστε ξανά.");
+  });
+});
+
+describe("mapSessionExpiredReason", () => {
+  it("returns null when no reason is present", () => {
+    expect(mapSessionExpiredReason(null)).toBeNull();
+  });
+
+  it("maps session_expired to a distinct message", () => {
+    expect(mapSessionExpiredReason("session_expired")).toContain("έληξε");
+  });
+
+  it("returns null for an unrecognized reason", () => {
+    expect(mapSessionExpiredReason("something_else")).toBeNull();
   });
 });
