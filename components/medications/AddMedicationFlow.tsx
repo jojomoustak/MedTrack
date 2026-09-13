@@ -15,11 +15,15 @@ import type { ScheduleDraft } from "@/lib/domain/schedule-draft";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
+import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-package-repository";
+import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import { generateDoseEventsForSchedule } from "@/lib/scheduling/client/dose-event-generator";
 import { playSound } from "@/lib/sound/client/play-sound";
 import type {
   CatalogCacheRepository,
   DoseEventRepository,
+  InventoryTransactionRepository,
+  MedicationPackageRepository,
   MedicationScheduleRepository,
   OfflineIndexRepository,
   UnresolvedScanRepository,
@@ -45,9 +49,21 @@ export interface AddMedicationFlowProps {
   scheduleRepository?: MedicationScheduleRepository;
   /** Test/DI seam — defaults to a real Dexie-backed repository. Used only for schedule-generated dose-event materialization right after a schedule is created. */
   doseEventRepository?: DoseEventRepository;
+  /** Test/DI seam — defaults to a real Dexie-backed repository. Creates the real `MedicationPackage` row (Phase 3's own "initial package step," built 2026-09-13) when the review step's quantity field is filled in. */
+  packageRepository?: MedicationPackageRepository;
+  /** Test/DI seam — defaults to a real Dexie-backed repository. Records the `package_opened` ledger entry alongside a freshly created initial package. */
+  inventoryTransactionRepository?: InventoryTransactionRepository;
 }
 
-/** No `Package`/inventory schema exists yet to hold GS1-parsed expiry/batch as structured fields (`lib/domain/ids.ts`'s reserved `MedicationPackageId` is for a future phase). Folded into the free-text `notes` field so a scan's data is preserved and visible rather than silently discarded — a deliberate stopgap, not a modeling decision, until that entity ships. */
+/**
+ * Fallback for when the review step's quantity is left blank: batch/expiry
+ * folded into the free-text `notes` field so a scan's data is still
+ * preserved and visible rather than silently discarded, same stopgap this
+ * flow has always used. Once a real quantity is given, `handleFinish`
+ * creates an actual `MedicationPackage` instead (Phase 3's own "initial
+ * package step," `AddPackageForm`'s doc — this flow never had a quantity
+ * to work with before now) and this fallback doesn't run.
+ */
 function buildScanNotes(expiry: string | null, batch: string | null): string | null {
   const parts: string[] = [];
   if (batch) parts.push(`Παρτίδα: ${batch}`);
@@ -77,12 +93,18 @@ export function AddMedicationFlow({
   unresolvedScanRepository,
   scheduleRepository,
   doseEventRepository,
+  packageRepository,
+  inventoryTransactionRepository,
 }: AddMedicationFlowProps) {
   const [step, setStep] = useState<FlowStep>("entry");
   const [catalogProduct, setCatalogProduct] = useState<CatalogProduct | null>(null);
   const [manualName, setManualName] = useState<string | null>(null);
   const [details, setDetails] = useState<DetailsStepValues | null>(null);
-  const [notes, setNotes] = useState<string | null>(null);
+  const [packageGtin, setPackageGtin] = useState<string | null>(null);
+  const [packageBatch, setPackageBatch] = useState<string | null>(null);
+  const [packageExpiry, setPackageExpiry] = useState<string | null>(null);
+  /** Empty = "not given" — the review step's quantity field is optional; see `buildScanNotes`'s doc for what happens in each case. */
+  const [initialQuantityValue, setInitialQuantityValue] = useState("");
   const [schedule, setSchedule] = useState<ScheduleDraft | null>(null);
   /** Which step "Πίσω" from the schedule step's kind chooser returns to — "review" only once Review has actually been reached at least once (editing an already-set schedule), "details" otherwise. */
   const [scheduleStepBackTarget, setScheduleStepBackTarget] = useState<"details" | "review">("details");
@@ -118,7 +140,9 @@ export function AddMedicationFlow({
   function handleCandidateConfirmed(product: CatalogProduct, parsed?: ParsedBarcode) {
     setCatalogProduct(product);
     setManualName(null);
-    setNotes(parsed ? buildScanNotes(parsed.expiry, parsed.batch) : null);
+    setPackageGtin(parsed?.gtin ?? null);
+    setPackageBatch(parsed?.batch ?? null);
+    setPackageExpiry(parsed?.expiry ?? null);
     setDetails({
       form: (product.form as MedicationForm | null) ?? null,
       strengthValue: product.strengthValue ?? "",
@@ -137,7 +161,9 @@ export function AddMedicationFlow({
   function handleManualSubmit(values: ManualEntryValues) {
     setManualName(values.name);
     setCatalogProduct(null);
-    setNotes(buildScanNotes(values.expiry, values.batch));
+    setPackageGtin(null);
+    setPackageBatch(values.batch);
+    setPackageExpiry(values.expiry);
     setStep("details");
   }
 
@@ -166,6 +192,15 @@ export function AddMedicationFlow({
     setSubmitting(true);
     setError(null);
     try {
+      // A real initial package needs a quantity — this flow only ever had
+      // a barcode's/manual entry's parsed batch/expiry to go on before now
+      // (`AddPackageForm`'s own doc). When the review step's quantity is
+      // left blank, fall back to the old notes-folding stopgap instead of
+      // losing the scanned/entered batch/expiry entirely.
+      const parsedQuantity = Number(initialQuantityValue.replace(",", "."));
+      const hasPackageData = Boolean(packageBatch || packageExpiry);
+      const shouldCreatePackage = hasPackageData && Number.isFinite(parsedQuantity) && parsedQuantity > 0;
+
       const repo = repository ?? new DexieUserMedicationRepository();
       const record = await repo.create({
         id: newId(),
@@ -179,8 +214,46 @@ export function AddMedicationFlow({
         inventoryUnit: details.inventoryUnit,
         lowStockThresholdValue: null,
         expiryWarningDays: 30,
-        notes,
+        notes: shouldCreatePackage ? null : buildScanNotes(packageExpiry, packageBatch),
       });
+
+      if (shouldCreatePackage) {
+        // Matches `/medications/[id]/packages/add`'s own create-then-open
+        // sequence exactly — a package someone already has when adding the
+        // medication is almost always one they're about to start using.
+        const packageRepo = packageRepository ?? new DexieMedicationPackageRepository();
+        const pkg = await packageRepo.create({
+          id: newId(),
+          clientMutationId: newId(),
+          profileId,
+          userMedicationId: record.id,
+          source: packageGtin ? "scan" : "manual",
+          gtin: packageGtin,
+          batchNumber: packageBatch,
+          serialNumber: null,
+          expiryDate: packageExpiry,
+          receivedDate: new Date().toISOString().slice(0, 10),
+          initialQuantityValue: String(parsedQuantity),
+          quantityUnit: details.inventoryUnit,
+        });
+        const openedAt = new Date().toISOString();
+        await packageRepo.update(pkg.id, { status: "opened", openedAt }, newId());
+        const inventoryRepo = inventoryTransactionRepository ?? new DexieInventoryTransactionRepository();
+        await inventoryRepo.createIfMissing({
+          id: newId(),
+          clientMutationId: newId(),
+          profileId,
+          userMedicationId: record.id,
+          packageId: pkg.id,
+          transactionType: "package_opened",
+          quantityDelta: pkg.initialQuantityValue,
+          quantityUnit: pkg.quantityUnit,
+          doseEventId: null,
+          occurredAt: openedAt,
+          source: "user",
+          note: null,
+        });
+      }
 
       if (schedule) {
         const scheduleRepo = scheduleRepository ?? new DexieMedicationScheduleRepository();
@@ -251,6 +324,10 @@ export function AddMedicationFlow({
           onFinish={handleFinish}
           submitting={submitting}
           error={error}
+          packageBatch={packageBatch}
+          packageExpiry={packageExpiry}
+          initialQuantityValue={initialQuantityValue}
+          onInitialQuantityValueChange={setInitialQuantityValue}
         />
       )}
     </div>

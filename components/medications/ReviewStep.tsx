@@ -16,6 +16,11 @@ export interface ReviewStepProps {
   onFinish: () => void;
   submitting: boolean;
   error: string | null;
+  /** Batch/expiry captured via scan or manual entry — when either is present, this step also asks for a quantity so a real `MedicationPackage` can be created instead of folding the data into free-text notes (`AddMedicationFlow`'s `buildScanNotes` fallback). */
+  packageBatch: string | null;
+  packageExpiry: string | null;
+  initialQuantityValue: string;
+  onInitialQuantityValueChange: (value: string) => void;
 }
 
 function describeSchedule(schedule: ScheduleDraft): string {
@@ -32,7 +37,24 @@ function describeSchedule(schedule: ScheduleDraft): string {
 }
 
 /** Phase 3 §2.4 "Add Medication — review & finish": summary before creating the `UserMedication` (+ optional `MedicationSchedule`) rows. */
-export function ReviewStep({ name, form, strengthValue, strengthUnit, inventoryUnit, schedule, onEditSchedule, onFinish, submitting, error }: ReviewStepProps) {
+export function ReviewStep({
+  name,
+  form,
+  strengthValue,
+  strengthUnit,
+  inventoryUnit,
+  schedule,
+  onEditSchedule,
+  onFinish,
+  submitting,
+  error,
+  packageBatch,
+  packageExpiry,
+  initialQuantityValue,
+  onInitialQuantityValueChange,
+}: ReviewStepProps) {
+  const hasPackageData = Boolean(packageBatch || packageExpiry);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-zinc-300 p-4 dark:border-zinc-700">
@@ -68,6 +90,41 @@ export function ReviewStep({ name, form, strengthValue, strengthUnit, inventoryU
           {schedule ? describeSchedule(schedule) : "Χωρίς πρόγραμμα ακόμα — μπορείτε να προσθέσετε αργότερα."}
         </p>
       </div>
+
+      {hasPackageData && (
+        <div className="rounded-xl border border-zinc-300 p-4 dark:border-zinc-700">
+          <h3 className="font-medium">Αρχικό απόθεμα</h3>
+          <dl className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+            {packageBatch && (
+              <>
+                <dt className="text-zinc-500">Παρτίδα</dt>
+                <dd>{packageBatch}</dd>
+              </>
+            )}
+            {packageExpiry && (
+              <>
+                <dt className="text-zinc-500">Λήξη</dt>
+                <dd>{packageExpiry}</dd>
+              </>
+            )}
+          </dl>
+          <label className="mt-3 flex flex-col gap-1">
+            <span className="text-sm font-medium">Πόσα έχετε; (προαιρετικό)</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={initialQuantityValue}
+              onChange={(e) => onInitialQuantityValueChange(e.target.value)}
+              placeholder={`π.χ. 30 ${inventoryUnit}`}
+              aria-label="Αρχική ποσότητα"
+              className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-transparent"
+            />
+          </label>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
+            Αν το συμπληρώσετε, θα δημιουργηθεί μια πραγματική συσκευασία στο απόθεμά σας.
+          </p>
+        </div>
+      )}
 
       {error && (
         <p role="alert" className="text-sm text-red-700 dark:text-red-400">

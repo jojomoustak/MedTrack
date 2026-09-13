@@ -299,6 +299,95 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     expect(input.notes).toContain("2026-12-31");
   });
 
+  it("scan -> candidate found -> confirm -> review, quantity filled in -> creates a real MedicationPackage (opened) instead of folding batch/expiry into notes", async () => {
+    const { repository, create } = makeFakeRepository();
+    const product = makeProduct();
+    const raw = `01${product.gtin}17${"261231"}10${"LOT9"}`;
+    const platform: MobilePlatform = makeFakePlatform({
+      isAvailable: () => true,
+      scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: raw, format: "GS1_DATA_MATRIX" }),
+    });
+    const cacheRepository: CatalogCacheRepository = {
+      get: vi.fn().mockResolvedValue(null),
+      getByGtin: vi.fn().mockResolvedValue(product),
+      getByEofCode: vi.fn().mockResolvedValue(null),
+      cacheAll: vi.fn().mockResolvedValue(undefined),
+    };
+    const offlineIndex: OfflineIndexRepository = {
+      getManifest: vi.fn().mockResolvedValue(null),
+      getById: vi.fn().mockResolvedValue(null),
+      getAll: vi.fn().mockResolvedValue([]),
+      getByEofCode: vi.fn().mockResolvedValue(null),
+      getByGtin: vi.fn().mockResolvedValue(null),
+      search: vi.fn().mockResolvedValue([]),
+      replaceAll: vi.fn().mockResolvedValue(undefined),
+    };
+    const createPackage = vi.fn().mockImplementation(async (input) => ({
+      ...input,
+      status: "unopened",
+      openedAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      version: 1,
+      deletedAt: null,
+      syncState: "pending",
+    }));
+    const updatePackage = vi.fn().mockImplementation(async (id, patch) => ({ id, ...patch }));
+    const packageRepository = {
+      listByUserMedication: vi.fn().mockResolvedValue([]),
+      get: vi.fn().mockResolvedValue(null),
+      create: createPackage,
+      update: updatePackage,
+      softDelete: vi.fn(),
+      applyRemote: vi.fn(),
+      markConflict: vi.fn(),
+      markFailed: vi.fn(),
+    };
+    const createInventoryTransaction = vi.fn().mockResolvedValue(undefined);
+    const inventoryTransactionRepository = {
+      listByUserMedication: vi.fn().mockResolvedValue([]),
+      listForProfile: vi.fn().mockResolvedValue([]),
+      createIfMissing: createInventoryTransaction,
+      applyRemote: vi.fn(),
+      markFailed: vi.fn(),
+    };
+
+    render(
+      <AddMedicationFlow
+        profileId="profile-1"
+        repository={repository}
+        platform={platform}
+        cacheRepository={cacheRepository}
+        offlineIndex={offlineIndex}
+        packageRepository={packageRepository}
+        inventoryTransactionRepository={inventoryTransactionRepository}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /σάρωση/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /επιβεβαίωση/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /παράλειψη/i }));
+
+    fireEvent.change(await screen.findByLabelText(/αρχική ποσότητα/i), { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("button", { name: /ολοκλήρωση/i }));
+
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+    const medicationInput = create.mock.calls[0][0] as CreateUserMedicationInput;
+    expect(medicationInput.notes).toBeNull();
+
+    await waitFor(() => expect(createPackage).toHaveBeenCalledTimes(1));
+    const packageInput = createPackage.mock.calls[0][0];
+    expect(packageInput.source).toBe("scan");
+    expect(packageInput.gtin).toBe(product.gtin);
+    expect(packageInput.batchNumber).toBe("LOT9");
+    expect(packageInput.expiryDate).toBe("2026-12-31");
+    expect(packageInput.initialQuantityValue).toBe("20");
+    expect(packageInput.quantityUnit).toBe(product.form);
+
+    expect(updatePackage).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ status: "opened" }), expect.any(String));
+    expect(createInventoryTransaction).toHaveBeenCalledWith(expect.objectContaining({ transactionType: "package_opened", quantityDelta: "20" }));
+  });
+
   it("scan -> candidate found -> confirm: Details step is never rendered at all for a catalog match", async () => {
     const { repository } = makeFakeRepository();
     const product = makeProduct();

@@ -17,14 +17,15 @@ export interface AddPackageValues {
  * "Προσθήκη συσκευασίας". Batch/expiry are optional (a package with
  * neither is still a real, trackable unit of stock).
  *
- * Not yet wired: `AddMedicationFlow`'s own scan/manual-entry batch/expiry
- * capture still folds into the medication's free-text `notes` field
- * (`buildScanNotes`) rather than creating a real `MedicationPackage` row
- * here — that flow only ever had a barcode's parsed batch/expiry to go
- * on, never a quantity (Phase 3's own screen inventory calls out a
- * distinct "initial package step" for that, never built). A real fix
- * routes that data through this same form instead of leaving it as text;
- * flagged as a follow-up, not done in this pass.
+ * `AddMedicationFlow`'s own scan/manual-entry batch/expiry capture (Phase
+ * 3's own screen inventory called out a distinct "initial package step,"
+ * built 2026-09-13) now creates a real `MedicationPackage` row directly in
+ * `ReviewStep` when a quantity is given, rather than going through this
+ * form — that flow only ever had a barcode's/manual entry's parsed batch/
+ * expiry to go on, never a quantity, until `ReviewStep` added one inline.
+ * Left as free-text `notes` (`buildScanNotes`) only when that quantity is
+ * left blank, so scanned/entered data is never silently discarded either
+ * way.
  *
  * "Άνοιγμα τώρα" defaults on: a package someone bothers to add by hand is
  * almost always one they're about to start using, and skipping a second
