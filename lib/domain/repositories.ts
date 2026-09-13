@@ -11,7 +11,7 @@
 import type { OutboxEntry } from "@/lib/domain/outbox";
 import type { PurchaseListItemRecord, PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
 import type { CreatePurchaseListItemInput, UpdatePurchaseListItemInput } from "@/lib/validation/purchase-list-item";
-import type { UserMedicationRecord } from "@/lib/domain/user-medication";
+import type { UserMedicationPatch, UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
 import type { LearnedGtinMapping } from "@/lib/domain/learned-mapping";
@@ -132,6 +132,8 @@ export interface UserMedicationRepository {
   get(id: string): Promise<UserMedicationRecord | null>;
   /** Local create: writes the record + an outbox entry in one transaction. */
   create(input: CreateUserMedicationInput): Promise<UserMedicationRecord>;
+  /** Local edit (`/medications/[id]/edit`): bumps the local `version` optimistically and enqueues an outbox entry carrying `baseVersion`, same optimistic-concurrency pattern as `MedicationPackageRepository.update`. */
+  update(id: string, patch: UserMedicationPatch, clientMutationId: string): Promise<UserMedicationRecord>;
   /** Applies a record pulled/acked from the server — never generates a new outbox entry. */
   applyRemote(record: UserMedicationRecord): Promise<void>;
   markConflict(id: string): Promise<void>;

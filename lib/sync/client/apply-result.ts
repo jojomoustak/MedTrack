@@ -4,6 +4,20 @@
  * markConflict/markFailed live on repository Y". Kept separate from
  * `worker.ts` so the worker itself stays entity-agnostic and tests can
  * inject a trivial fake here without needing real Dexie repositories.
+ *
+ * Real gap found (2026-09-13, while building `/medications/[id]/edit`):
+ * `userMedication` had never had a case here at all — every create
+ * mutation's ack silently fell into `default`'s warn log, so a
+ * medication's local `syncState` never actually became `"synced"` via
+ * its own outbox entry; it only self-healed once the NEXT unrelated
+ * pull happened to include it (`hydrate-local-data.ts` DOES handle
+ * `userMedication`, which is why this was never visibly broken end to
+ * end). Worse for an update once `UserMedicationRepository.update`
+ * existed: a genuine version conflict would never have been marked
+ * `syncState: "conflict"` (Phase 1 §5's "surfaced conflict on true
+ * divergence" rule) — the losing edit would just silently vanish on the
+ * next pull with no signal to the user at all. Added below, same
+ * optimistic-concurrency shape as `medicationPackage`.
  */
 import type { OutboxEntry } from "@/lib/domain/outbox";
 import type { PurchaseListItemRecord, PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
@@ -16,6 +30,7 @@ import type {
   PurchaseListItemRepository,
   PurchaseListRepository,
   RecentlyUsedEventRepository,
+  UserMedicationRepository,
   UserPreferencesRepository,
 } from "@/lib/domain/repositories";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
@@ -24,6 +39,7 @@ import type { MedicationPackageRecord } from "@/lib/domain/medication-package";
 import type { InventoryTransactionRecord } from "@/lib/domain/inventory-transaction";
 import type { FavoriteRecord } from "@/lib/domain/favorite";
 import type { RecentlyUsedEventRecord } from "@/lib/domain/recently-used-event";
+import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { SyncMutationResult } from "@/lib/sync/protocol";
 import { reconcileDoseEventsForSchedule } from "@/lib/scheduling/client/dose-event-generator";
 import { logger } from "@/lib/logging/logger";
@@ -32,6 +48,7 @@ export interface ApplyResultDeps {
   userPreferences: UserPreferencesRepository;
   purchaseList: PurchaseListRepository;
   purchaseListItem?: PurchaseListItemRepository;
+  userMedication?: UserMedicationRepository;
   medicationSchedule?: MedicationScheduleRepository;
   doseEvent?: DoseEventRepository;
   medicationPackage?: MedicationPackageRepository;
@@ -73,6 +90,20 @@ export function createApplyResult(deps: ApplyResultDeps) {
           await deps.purchaseListItem.markConflict(entry.entityId);
         } else {
           await deps.purchaseListItem.markFailed(entry.entityId);
+        }
+        return;
+      }
+      case "userMedication": {
+        if (!deps.userMedication) {
+          logger.warn("sync.applyResult.missing_dep", { entityType: entry.entityType });
+          return;
+        }
+        if (result.result === "applied" && result.serverRecord) {
+          await deps.userMedication.applyRemote(result.serverRecord as unknown as UserMedicationRecord);
+        } else if (result.result === "conflict") {
+          await deps.userMedication.markConflict(entry.entityId);
+        } else {
+          await deps.userMedication.markFailed(entry.entityId);
         }
         return;
       }

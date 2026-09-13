@@ -134,4 +134,75 @@ describe("DexieUserMedicationRepository (optimistic concurrency, optional catalo
     expect(final?.syncState).toBe("synced");
     expect(final?.version).toBe(3);
   });
+
+  it("update() bumps version, enqueues an update outbox entry carrying baseVersion, and sends only the changed fields as payload", async () => {
+    const id = crypto.randomUUID();
+    await repo.create({
+      id,
+      profileId,
+      clientMutationId: crypto.randomUUID(),
+      catalogProductId: null,
+      customName: "Παρακεταμόλη",
+      customForm: "tablet",
+      customStrengthValue: "500",
+      customStrengthUnit: "mg",
+      inventoryUnit: "tablet",
+      lowStockThresholdValue: null,
+      expiryWarningDays: 30,
+      notes: "Original note",
+    });
+
+    const updated = await repo.update(id, { customName: "Depon" }, crypto.randomUUID());
+
+    expect(updated.version).toBe(2);
+    expect(updated.customName).toBe("Depon");
+    expect(updated.notes).toBe("Original note"); // untouched field survives locally
+
+    const pending = await outbox.listPending(new Date().toISOString());
+    const updateEntry = pending.find((e) => e.operation === "update");
+    expect(updateEntry?.baseVersion).toBe(1);
+    expect(updateEntry?.payload).toEqual({ customName: "Depon" });
+  });
+
+  it("update() can clear notes/lowStockThresholdValue back to null when explicitly asked", async () => {
+    const id = crypto.randomUUID();
+    await repo.create({
+      id,
+      profileId,
+      clientMutationId: crypto.randomUUID(),
+      catalogProductId: null,
+      customName: "Παρακεταμόλη",
+      customForm: "tablet",
+      customStrengthValue: null,
+      customStrengthUnit: null,
+      inventoryUnit: "tablet",
+      lowStockThresholdValue: "10",
+      expiryWarningDays: 30,
+      notes: "Original note",
+    });
+
+    const updated = await repo.update(id, { notes: null, lowStockThresholdValue: null }, crypto.randomUUID());
+    expect(updated.notes).toBeNull();
+    expect(updated.lowStockThresholdValue).toBeNull();
+  });
+
+  it("update() rejects an empty customName (still must satisfy chk_catalog_or_manual in spirit)", async () => {
+    const id = crypto.randomUUID();
+    await repo.create({
+      id,
+      profileId,
+      clientMutationId: crypto.randomUUID(),
+      catalogProductId: null,
+      customName: "Παρακεταμόλη",
+      customForm: "tablet",
+      customStrengthValue: null,
+      customStrengthUnit: null,
+      inventoryUnit: "tablet",
+      lowStockThresholdValue: null,
+      expiryWarningDays: 30,
+      notes: null,
+    });
+
+    await expect(repo.update(id, { customName: "" }, crypto.randomUUID())).rejects.toThrow();
+  });
 });

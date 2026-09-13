@@ -662,13 +662,29 @@ async function applyUserMedicationMutation(ctx: MutationContext, mutation: SyncM
     }
   }
 
-  // update — optimistic concurrency, limited to the fields users can
-  // actually edit post-creation at this phase (treatment state, notes,
-  // low-stock threshold) — full editing is a later-phase concern.
+  // update — optimistic concurrency (`/medications/[id]/edit`, built
+  // 2026-09-13, real full editing at last). Every column uses the same
+  // "explicit CASE WHEN the key was actually present in the JSON payload"
+  // pattern `applyMedicationPackageMutation`/`applyPurchaseListItemMutation`
+  // use — a real, previously-shipped bug here: the original version of
+  // this branch used a plain `COALESCE(payload.field ?? null, column)` for
+  // treatmentState (works by accident, since it never legitimately needs
+  // clearing to null) but a BARE `payload.field ?? null` — no COALESCE,
+  // no CASE — for notes/lowStockThresholdValue, which unconditionally
+  // NULLed both columns on every update regardless of whether the caller
+  // even sent them. Went unnoticed because no client code had ever called
+  // this path before now (`UserMedicationRepository.update` was added in
+  // the same change that fixed this).
   const payload = mutation.payload as {
+    customName?: string | null;
+    customForm?: string | null;
+    customStrengthValue?: string | null;
+    customStrengthUnit?: string | null;
     treatmentState?: string;
-    notes?: string | null;
+    inventoryUnit?: string;
     lowStockThresholdValue?: string | null;
+    expiryWarningDays?: number;
+    notes?: string | null;
   };
   if (mutation.baseVersion === undefined) {
     throw new ValidationError("userMedication update mutations require `baseVersion`.");
@@ -680,9 +696,15 @@ async function applyUserMedicationMutation(ctx: MutationContext, mutation: SyncM
       db.execute(sql`
       WITH updated AS (
         UPDATE user_medication
-        SET treatment_state = COALESCE(${payload.treatmentState ?? null}, treatment_state),
-            notes = ${payload.notes ?? null},
-            low_stock_threshold_value = ${payload.lowStockThresholdValue ?? null}::numeric,
+        SET custom_name = CASE WHEN ${payload.customName !== undefined} THEN ${payload.customName ?? null} ELSE custom_name END,
+            custom_form = CASE WHEN ${payload.customForm !== undefined} THEN ${payload.customForm ?? null} ELSE custom_form END,
+            custom_strength_value = CASE WHEN ${payload.customStrengthValue !== undefined} THEN ${payload.customStrengthValue ?? null}::numeric ELSE custom_strength_value END,
+            custom_strength_unit = CASE WHEN ${payload.customStrengthUnit !== undefined} THEN ${payload.customStrengthUnit ?? null} ELSE custom_strength_unit END,
+            treatment_state = COALESCE(${payload.treatmentState ?? null}, treatment_state),
+            inventory_unit = COALESCE(${payload.inventoryUnit ?? null}, inventory_unit),
+            low_stock_threshold_value = CASE WHEN ${payload.lowStockThresholdValue !== undefined} THEN ${payload.lowStockThresholdValue ?? null}::numeric ELSE low_stock_threshold_value END,
+            expiry_warning_days = COALESCE(${payload.expiryWarningDays ?? null}, expiry_warning_days),
+            notes = CASE WHEN ${payload.notes !== undefined} THEN ${payload.notes ?? null} ELSE notes END,
             version = version + 1,
             updated_at = now(),
             client_mutation_id = ${mutation.clientMutationId}::uuid

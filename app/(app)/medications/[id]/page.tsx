@@ -92,9 +92,12 @@ export default function MedicationDetailPage() {
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 p-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <Link href="/medications" aria-label="Πίσω στα φάρμακα" className="min-h-12 text-sm font-medium underline">
           ← Πίσω
+        </Link>
+        <Link href={`/medications/${medication.id}/edit`} className="min-h-12 rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700">
+          Επεξεργασία
         </Link>
       </div>
 

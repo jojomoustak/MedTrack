@@ -53,3 +53,28 @@ export interface UserMedicationRecord extends SyncableRecord {
   deletedAt: string | null;
   clientMutationId: string;
 }
+
+/**
+ * Fields a medication EDIT can change (`/medications/[id]/edit`, built
+ * 2026-09-13). `catalogProductId` is never among them — ADR-004's "a
+ * catalog match is a relationship, never merged into a copy" rule means
+ * a catalog-linked medication's name/form/strength are never edited here
+ * at all (they're the catalog product's own fields); the edit UI hides
+ * `customName`/`customForm`/`customStrengthValue`/`customStrengthUnit`
+ * entirely for that case, matching `DetailsStep`'s own precedent of
+ * skipping those fields for a confirmed catalog match.
+ */
+export type UserMedicationPatch = Partial<
+  Pick<
+    UserMedicationRecord,
+    | "customName"
+    | "customForm"
+    | "customStrengthValue"
+    | "customStrengthUnit"
+    | "treatmentState"
+    | "inventoryUnit"
+    | "lowStockThresholdValue"
+    | "expiryWarningDays"
+    | "notes"
+  >
+>;

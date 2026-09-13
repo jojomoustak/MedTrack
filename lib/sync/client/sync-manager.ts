@@ -96,6 +96,7 @@ export function createSyncManager(): SyncManager {
     userPreferences: new DexiePreferencesRepository(),
     purchaseList: new DexiePurchaseListRepository(),
     purchaseListItem: new DexiePurchaseListItemRepository(),
+    userMedication: new DexieUserMedicationRepository(),
     medicationSchedule,
     doseEvent,
     medicationPackage,

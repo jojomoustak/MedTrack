@@ -1,4 +1,5 @@
-import type { UserMedicationRecord } from "@/lib/domain/user-medication";
+import type { UserMedicationPatch, UserMedicationRecord } from "@/lib/domain/user-medication";
+import { updateUserMedicationSchema } from "@/lib/validation/user-medication";
 import type { OutboxEntry } from "@/lib/domain/outbox";
 import { nextOutboxSeq } from "@/lib/domain/outbox";
 import type { CreateUserMedicationInput, OutboxRepository, UserMedicationRepository } from "@/lib/domain/repositories";
@@ -74,6 +75,42 @@ export class DexieUserMedicationRepository implements UserMedicationRepository {
     });
 
     return record;
+  }
+
+  async update(id: string, patch: UserMedicationPatch, clientMutationId: string): Promise<UserMedicationRecord> {
+    const parsed = updateUserMedicationSchema.parse(patch);
+    const existing = await this.db.userMedication.get(id);
+    if (!existing) {
+      throw new Error(`update: no local UserMedication with id ${id}`);
+    }
+
+    const now = new Date().toISOString();
+    const cleanedPatch: UserMedicationPatch = { ...parsed };
+    for (const key of Object.keys(cleanedPatch) as (keyof typeof cleanedPatch)[]) {
+      if (cleanedPatch[key] === undefined) delete cleanedPatch[key];
+    }
+    const updated: UserMedicationRecord = { ...existing, ...cleanedPatch, updatedAt: now, version: existing.version + 1, syncState: "pending" };
+
+    const outboxEntry: OutboxEntry<UserMedicationPatch> = {
+      clientMutationId,
+      entityType: "userMedication",
+      entityId: id,
+      operation: "update",
+      payload: cleanedPatch,
+      baseVersion: existing.version,
+      createdAt: now,
+      seq: nextOutboxSeq(),
+      status: "pending",
+      attempts: 0,
+      nextAttemptAt: now,
+    };
+
+    await this.db.transaction("rw", this.db.userMedication, this.db.outbox, async () => {
+      await this.db.userMedication.put(updated);
+      await this.db.outbox.put(outboxEntry as unknown as OutboxEntry);
+    });
+
+    return updated;
   }
 
   async applyRemote(record: UserMedicationRecord): Promise<void> {
