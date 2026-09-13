@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
+import { compareTimestampsAscending, isTimestampAtOrBefore } from "@/lib/domain/timestamp";
 
 export interface TodayDoseEventsState {
   status: "loading" | "ready";
@@ -70,11 +71,13 @@ export function useTodayDoseEvents(profileId: string | null, onNewlyDue?: (dose:
       ]);
       if (cancelled) return;
 
-      todayDoses.sort((a, b) => (a.scheduledAt ?? "").localeCompare(b.scheduledAt ?? ""));
-      const needsAttention = recentDoses.filter((d) => d.status === "missed").sort((a, b) => (a.scheduledAt ?? "").localeCompare(b.scheduledAt ?? ""));
+      todayDoses.sort((a, b) => compareTimestampsAscending(a.scheduledAt ?? "", b.scheduledAt ?? ""));
+      const needsAttention = recentDoses.filter((d) => d.status === "missed").sort((a, b) => compareTimestampsAscending(a.scheduledAt ?? "", b.scheduledAt ?? ""));
 
       const nowIso = now.toISOString();
-      const currentlyDue = todayDoses.filter((d) => (d.status === "scheduled" || d.status === "reminded") && d.scheduledAt !== null && d.scheduledAt <= nowIso);
+      const currentlyDue = todayDoses.filter(
+        (d) => (d.status === "scheduled" || d.status === "reminded") && d.scheduledAt !== null && isTimestampAtOrBefore(d.scheduledAt, nowIso),
+      );
       const currentlyDueIds = new Set(currentlyDue.map((d) => d.id));
       // `previouslyDueIdsRef.current === null` means this is the first
       // load this mount -- every "due" dose found here was already due

@@ -3,6 +3,7 @@ import { isDoseEventTransitionAllowed, isTerminalDoseEventStatus } from "@/lib/d
 import type { OutboxEntry } from "@/lib/domain/outbox";
 import { nextOutboxSeq } from "@/lib/domain/outbox";
 import type { DoseEventRepository, OutboxRepository } from "@/lib/domain/repositories";
+import { isTimestampAtOrAfter, isTimestampAtOrBefore, isTimestampBefore } from "@/lib/domain/timestamp";
 import { getClientDb, type MedTrackingDexie } from "@/lib/db-client/dexie";
 import { DexieOutboxRepository } from "@/lib/db-client/outbox-repository";
 
@@ -23,7 +24,7 @@ export class DexieDoseEventRepository implements DoseEventRepository {
     return this.db.doseEvent
       .where("profileId")
       .equals(profileId)
-      .filter((r) => r.scheduledAt !== null && r.scheduledAt >= fromIso && r.scheduledAt <= toIso)
+      .filter((r) => r.scheduledAt !== null && isTimestampAtOrAfter(r.scheduledAt, fromIso) && isTimestampAtOrBefore(r.scheduledAt, toIso))
       .toArray();
   }
 
@@ -39,7 +40,7 @@ export class DexieDoseEventRepository implements DoseEventRepository {
     return this.db.doseEvent
       .where("profileId")
       .equals(profileId)
-      .filter((r) => !isTerminalDoseEventStatus(r.status) && r.scheduledAt !== null && r.scheduledAt < cutoffIso)
+      .filter((r) => !isTerminalDoseEventStatus(r.status) && r.scheduledAt !== null && isTimestampBefore(r.scheduledAt, cutoffIso))
       .toArray();
   }
 

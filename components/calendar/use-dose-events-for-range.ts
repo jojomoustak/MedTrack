@@ -6,6 +6,7 @@ import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-sc
 import { GENERATION_HORIZON_MS } from "@/lib/scheduling/client/dose-event-generator";
 import { projectDoseInstantsForRange, type ProjectedDoseInstant } from "@/lib/domain/dose-instant-projection";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
+import { compareTimestampsAscending } from "@/lib/domain/timestamp";
 
 export interface DoseEventsForRangeState {
   status: "loading" | "ready";
@@ -51,7 +52,7 @@ export function useDoseEventsForRange(profileId: string | null, from: Date, to: 
       const horizonEnd = new Date(now.getTime() + GENERATION_HORIZON_MS);
 
       const doses = await doseEventRepo.listForProfileInRange(profileId!, startOfLocalDayIso(from), endOfLocalDayIso(to));
-      doses.sort((a, b) => (a.scheduledAt ?? "").localeCompare(b.scheduledAt ?? ""));
+      doses.sort((a, b) => compareTimestampsAscending(a.scheduledAt ?? "", b.scheduledAt ?? ""));
 
       let projected: ProjectedDoseInstant[] = [];
       if (endOfLocalDayIso(to) > horizonEnd.toISOString()) {

@@ -9,6 +9,7 @@ import * as schema from "@/lib/db/schema";
 import type { Db, TestableDb } from "@/lib/db/client";
 import type { SyncChangeEntry, SyncChangesResponseBody } from "@/lib/sync/protocol";
 import { toCamelCaseRecord } from "@/lib/sync/server/snake-case";
+import { normalizeTimestampsInRecord } from "@/lib/sync/server/normalize-timestamps";
 
 export async function pullChanges(
   profileId: string,
@@ -190,7 +191,7 @@ export async function pullChanges(
       operation: row.operation as SyncChangeEntry["operation"],
       serverVersion: row.serverVersion,
       occurredAt: row.occurredAt,
-      record,
+      record: normalizeTimestampsInRecord(record),
     };
   });
 

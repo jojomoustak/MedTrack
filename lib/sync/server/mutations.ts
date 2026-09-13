@@ -31,6 +31,7 @@ import type { SyncMutationRequest, SyncMutationResult } from "@/lib/sync/protoco
 import { ConflictError, ValidationError, toAppError } from "@/lib/errors/app-error";
 import { deriveTimeAnchor, type ScheduleKind } from "@/lib/domain/medication-schedule";
 import { toCamelCaseRecord } from "@/lib/sync/server/snake-case";
+import { normalizeTimestampsInRecord } from "@/lib/sync/server/normalize-timestamps";
 import { logger } from "@/lib/logging/logger";
 
 const POSTGRES_UNIQUE_VIOLATION = "23505";
@@ -1324,13 +1325,13 @@ export async function applyOneMutation(ctx: MutationContext, mutation: SyncMutat
     return {
       clientMutationId: mutation.clientMutationId,
       result: existing.result as SyncMutationResult["result"],
-      serverRecord: toCamelCaseRecord(existing.responseSnapshot as Record<string, unknown> | null),
+      serverRecord: normalizeTimestampsInRecord(toCamelCaseRecord(existing.responseSnapshot as Record<string, unknown> | null)),
     };
   }
 
   try {
     const result = await dispatchMutation(ctx, mutation);
-    return { ...result, serverRecord: toCamelCaseRecord(result.serverRecord) };
+    return { ...result, serverRecord: normalizeTimestampsInRecord(toCamelCaseRecord(result.serverRecord)) };
   } catch (err) {
     if (isUniqueViolation(err)) {
       // Lost a race against a concurrent identical retry — the other
@@ -1340,7 +1341,7 @@ export async function applyOneMutation(ctx: MutationContext, mutation: SyncMutat
         return {
           clientMutationId: mutation.clientMutationId,
           result: nowExisting.result as SyncMutationResult["result"],
-          serverRecord: toCamelCaseRecord(nowExisting.responseSnapshot as Record<string, unknown> | null),
+          serverRecord: normalizeTimestampsInRecord(toCamelCaseRecord(nowExisting.responseSnapshot as Record<string, unknown> | null)),
         };
       }
     }

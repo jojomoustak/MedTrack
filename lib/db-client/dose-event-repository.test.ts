@@ -141,6 +141,30 @@ describe("DexieDoseEventRepository (idempotent-by-id)", () => {
     expect(overdue.map((r) => r.id)).not.toContain(takenPast.id);
   });
 
+  it("listNonTerminalBefore() does not treat a Postgres-format scheduledAt later TODAY as before the cutoff (real live-device bug, 2026-09-13)", async () => {
+    // A dose event round-tripped through the server carries `scheduledAt`
+    // in Postgres's own timestamptz text output ("YYYY-MM-DD HH:mm:ss+00",
+    // a space instead of "T") rather than ISO 8601 -- see
+    // lib/domain/timestamp.ts. A plain string comparison against an ISO
+    // cutoff on the SAME calendar date got this backwards: the space
+    // sorts before "T", so the dose looked "before" the cutoff no matter
+    // what time later today it was actually scheduled for.
+    const laterToday = await repo.createIfMissing(scheduledInput({ id: crypto.randomUUID(), scheduledAt: "2026-09-13 21:24:00+00" }));
+
+    const cutoff = "2026-09-13T11:52:14.478Z"; // an hour-ago-style cutoff, same calendar date, well before 21:24
+    const overdue = await repo.listNonTerminalBefore("profile-1", cutoff);
+
+    expect(overdue.map((r) => r.id)).not.toContain(laterToday.id);
+  });
+
+  it("listForProfileInRange() correctly includes a Postgres-format scheduledAt within a same-day range", async () => {
+    const laterToday = await repo.createIfMissing(scheduledInput({ id: crypto.randomUUID(), scheduledAt: "2026-09-13 21:24:00+00" }));
+
+    const inRange = await repo.listForProfileInRange("profile-1", "2026-09-13T00:00:00.000Z", "2026-09-13T23:59:59.999Z");
+
+    expect(inRange.map((r) => r.id)).toContain(laterToday.id);
+  });
+
   it("applyRemote() converges a non-terminal local row to the server's record", async () => {
     const created = await repo.createIfMissing(scheduledInput());
     await repo.applyRemote({ ...created, status: "taken", takenAt: new Date().toISOString(), syncState: "pending" });

@@ -26,6 +26,7 @@
  */
 import { computeScheduleInstants, deriveScheduledDoseEventId, RECURRING_SCHEDULE_KINDS } from "@/lib/domain/dose-event-generation";
 import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
+import { isTimestampBefore } from "@/lib/domain/timestamp";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { DoseEventRepository, MedicationScheduleRepository } from "@/lib/domain/repositories";
 import { newId } from "@/lib/domain/ids";
@@ -114,7 +115,7 @@ export async function reconcileDoseEventsForSchedule(
   const existingForSchedule = await doseEvents.listByScheduleId(schedule.id);
   for (const event of existingForSchedule) {
     if (isTerminalDoseEventStatus(event.status)) continue;
-    if (event.scheduledAt === null || event.scheduledAt < nowIso) continue;
+    if (event.scheduledAt === null || isTimestampBefore(event.scheduledAt, nowIso)) continue;
     if (!validInstants.has(event.scheduledAt)) {
       await doseEvents.transition(event.id, { status: "cancelled" }, newId());
     }
