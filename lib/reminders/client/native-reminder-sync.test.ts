@@ -104,6 +104,27 @@ describe("syncNativeRemindersNow", () => {
     );
   });
 
+  it("does NOT re-upsert a non-terminal dose whose reminderAt has already passed (real live bug, 2026-09-13)", async () => {
+    // A dose that already fired natively stays non-terminal on the web
+    // side for up to an hour (sweepMissedDoseEvents' grace window) while
+    // the user hasn't yet tapped Taken/Skip. Re-upserting it here with its
+    // now-past reminderAt used to re-arm AlarmManager with a past trigger
+    // time, which fires almost immediately -- causing the same reminder
+    // to silently re-fire every time this reconcile pass ran.
+    const deps = makeDeps([makeDose({ reminderAt: "2025-12-31T23:00:00.000Z" })]); // 1h before `now`
+    await syncNativeRemindersNow("profile-1", deps);
+
+    expect(deps.platform.upsertReminder).not.toHaveBeenCalled();
+    expect(deps.platform.cancelRemindersForDoseEvent).not.toHaveBeenCalled();
+  });
+
+  it("still upserts a dose whose reminderAt is exactly now", async () => {
+    const deps = makeDeps([makeDose({ reminderAt: "2026-01-01T00:00:00.000Z" })]);
+    await syncNativeRemindersNow("profile-1", deps);
+
+    expect(deps.platform.upsertReminder).toHaveBeenCalledWith(expect.objectContaining({ doseEventId: "dose-1" }));
+  });
+
   it("skips a PRN-style dose event with no scheduleId or reminderAt", async () => {
     const deps = makeDeps([makeDose({ scheduleId: null, reminderAt: null })]);
     await syncNativeRemindersNow("profile-1", deps);

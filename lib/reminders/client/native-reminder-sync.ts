@@ -20,6 +20,7 @@
 import type { DoseEventRepository, UserMedicationRepository, CatalogCacheRepository, OfflineIndexRepository } from "@/lib/domain/repositories";
 import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
+import { isTimestampBefore } from "@/lib/domain/timestamp";
 import type { MobilePlatform } from "@/lib/platform/mobile-platform";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { resolveMedicationDisplayName } from "@/lib/medications/client/use-display-names";
@@ -64,6 +65,24 @@ export async function syncNativeRemindersNow(profileId: string, deps: NativeRemi
         continue;
       }
       if (dose.reminderAt === null || dose.scheduleId === null) continue;
+      // Real bug found live (2026-09-13): a dose that already fired
+      // natively stays non-terminal on the WEB side for up to an hour
+      // (`DEFAULT_MISSED_GRACE_MINUTES`, `sweepMissedDoseEvents`) while the
+      // user hasn't yet tapped Taken/Skip — every reconcile pass in that
+      // window used to unconditionally re-`upsertReminder` it with its
+      // now-PAST `reminderAt`. Native's `AlarmManager.setExactAndAllow-
+      // WhileIdle` fires almost immediately for a past trigger time, so
+      // the SAME reminder re-fired (and re-posted into the same
+      // notification id) every time the app reconciled — reopening the
+      // app, a scheduling tick, anything. Skipping an already-past
+      // `reminderAt` here leaves an already-fired alarm alone entirely
+      // (nothing to re-arm) and simply never arms one for an overdue dose
+      // that native hasn't fired yet either, which is correct: the
+      // `RECONCILE_LOOKBACK_MS` window above exists for the CANCEL branch
+      // (a just-turned-terminal dose still needs its stale alarm torn
+      // down), not for arming new ones with a trigger time that's already
+      // gone.
+      if (isTimestampBefore(dose.reminderAt, now.toISOString())) continue;
 
       let medicationLabel = medicationNameCache.get(dose.userMedicationId);
       if (medicationLabel === undefined) {
