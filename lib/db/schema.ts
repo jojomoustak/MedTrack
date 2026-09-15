@@ -19,6 +19,7 @@
  */
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   bigserial,
   boolean,
   char,
@@ -925,4 +926,40 @@ export const accountVerification = pgTable(
     // doesn't serve that query at all; this index does.
     index("ix_account_verification_identifier").on(t.purpose, t.createdAt.desc()),
   ],
+);
+
+// ---------------------------------------------------------------------------
+// Better Auth's own rate-limit persistence (`rateLimit: { storage:
+// "database", ... }`, `lib/auth/config.ts`) — Resend email integration /
+// login-abuse hardening task, 2026-09-15. Named `auth_rate_limit` (not
+// `rate_limit`) to avoid any confusion with a future project-specific rate
+// limiting concept. Field names (`key`/`count`/`lastRequest`) are already
+// identical to Better Auth's own canonical `rateLimit` model fields
+// (confirmed against `@better-auth/core`'s `rateLimitSchema`) — the
+// `rateLimit.fields` mapping in `lib/auth/config.ts` is still written out
+// explicitly, matching this project's "always name it, never rely on
+// Better Auth's defaults implicitly" convention for every other model.
+//
+// `lastRequest` is epoch milliseconds and MUST be `bigint`, not `integer`:
+// `int32` overflows in January 2038, and this column is written on every
+// rate-limited request, not just at signup — see `BaseRateLimit`'s own
+// `lastRequest: z.ZodNumber` type. Uses `{ mode: "number" }` (not
+// `"bigint"`) so the adapter always receives/returns a plain JS `number`,
+// matching that zod type exactly and avoiding Better Auth's own
+// `readRow()` defensive `typeof data?.lastRequest === "bigint"` coercion
+// path entirely (confirmed by reading
+// `node_modules/better-auth/dist/api/rate-limiter/index.mjs`).
+// ---------------------------------------------------------------------------
+export const authRateLimit = pgTable(
+  "auth_rate_limit",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Better Auth's own opaque, IP/path-derived rate-limit bucket key —
+    // never a profile_id/account_id, so there's no owner-scoping concept
+    // for RLS purposes (see migration 0014's SCOPE NOTE).
+    key: text("key").notNull(),
+    count: integer("count").notNull(),
+    lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+  },
+  (t) => [uniqueIndex("uq_auth_rate_limit_key").on(t.key)],
 );

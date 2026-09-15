@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
+import { playSound } from "@/lib/sound/client/play-sound";
 
 /**
  * Phase 3 §2.1 "Login" / §8: wrong-credentials and no-connection are two
@@ -64,6 +66,14 @@ export function LoginForm() {
           className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
         />
       </label>
+
+      <Link
+        href="/forgot-password"
+        onClick={() => playSound("button")}
+        className="self-end text-sm font-medium underline"
+      >
+        Ξεχάσατε τον κωδικό;
+      </Link>
 
       {error && (
         <p role="alert" className="text-sm text-red-700 dark:text-red-400">

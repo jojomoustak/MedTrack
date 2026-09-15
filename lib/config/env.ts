@@ -110,6 +110,22 @@ const envSchema = z.object({
   // platform-injected, never something this app's own config should
   // require or validate the shape of).
   BLOB_STORE_ID: z.string().trim().min(1).optional(),
+
+  // Resend (transactional email — password reset, email verification, and
+  // the related auth notices, `lib/email/server/resend-client.ts`).
+  // Deliberately OPTIONAL, same pattern as BLOB_READ_WRITE_TOKEN above:
+  // this app must still build/run/typecheck/test for everyone who hasn't
+  // set up a Resend account yet — the email-sending feature itself fails
+  // closed with a clear `ConfigError` (never a silent no-op) the moment
+  // it's actually exercised without these set, rather than making the
+  // ENTIRE app (including unrelated routes that happen to call `getEnv()`)
+  // refuse to start.
+  RESEND_API_KEY: z.string().trim().min(1).optional(),
+  // "Sender" address Resend sends from, e.g. `MedTracking <noreply@yourdomain.com>`.
+  // Must be on a domain verified in the Resend dashboard — Resend rejects
+  // sends from an unverified domain, which `sendEmail()` surfaces as a
+  // thrown error (never silently dropped).
+  EMAIL_FROM: z.string().trim().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

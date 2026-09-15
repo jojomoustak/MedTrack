@@ -7,6 +7,7 @@ import { authClient } from "@/lib/auth/client/auth-client";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
 import { clearAllLocalProfileData, hasPendingLocalWork } from "@/lib/db-client/clear-local-profile-data";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { EmailVerificationBanner } from "@/components/profile/EmailVerificationBanner";
 import { ReminderPermissionToggle } from "@/components/profile/ReminderPermissionToggle";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { playSound } from "@/lib/sound/client/play-sound";
@@ -99,6 +100,8 @@ export default function ProfilePage() {
     <div className="flex flex-col gap-6 p-6">
       <h1 className="text-xl font-semibold">Προφίλ</h1>
       {data?.user?.email && <p className="text-zinc-600 dark:text-zinc-400">{data.user.email}</p>}
+
+      <EmailVerificationBanner email={data?.user?.email ?? null} />
 
       <p className="text-sm text-zinc-500 dark:text-zinc-500">Ρυθμίσεις, προσβασιμότητα και κατάσταση συγχρονισμού έρχονται σύντομα.</p>
 

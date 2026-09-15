@@ -25,7 +25,7 @@ import { and, eq } from "drizzle-orm";
 import * as schema from "@/lib/db/schema";
 import type { TestableDb } from "@/lib/db/client";
 import { hashPassword } from "@/lib/auth/argon2";
-import { LOCKOUT_THRESHOLD, verifyPasswordWithLockout } from "@/lib/auth/lockout";
+import { clearLockout, LOCKOUT_THRESHOLD, verifyPasswordWithLockout } from "@/lib/auth/lockout";
 
 const connectionString = process.env.SYNC_IT_DATABASE_URL;
 
@@ -155,5 +155,37 @@ describe.skipIf(!connectionString)("password-credential lockout is scoped to cre
     row = await readCredential(passwordCredentialId);
     expect(row.failedLoginCount).toBe(0);
     expect(row.lockedUntil).toBeNull();
+  });
+
+  it("clearLockout (the password-reset escape hatch, ADR-003 §'Security review resolution' item 1) clears a real locked password row without touching a linked google row", async () => {
+    const { accountId, passwordHash, passwordCredentialId, googleCredentialId } = await seedDualCredentialAccount();
+
+    for (let attempt = 0; attempt < LOCKOUT_THRESHOLD; attempt++) {
+      await verifyPasswordWithLockout(db, { hash: passwordHash, password: "definitely-wrong" });
+    }
+    const lockedRow = await readCredential(passwordCredentialId);
+    expect(lockedRow.lockedUntil).not.toBeNull();
+
+    // Simulate a hypothetical bug that also set lockout-shaped fields on
+    // the google row — clearLockout must never touch it, same invariant
+    // as verifyPasswordWithLockout's own "vice versa" test above.
+    await db
+      .update(schema.accountCredential)
+      .set({ failedLoginCount: 42, lockedUntil: new Date(Date.now() + 3_600_000).toISOString() })
+      .where(and(eq(schema.accountCredential.id, googleCredentialId), eq(schema.accountCredential.credentialType, "google")));
+
+    await clearLockout(db, accountId);
+
+    const clearedRow = await readCredential(passwordCredentialId);
+    expect(clearedRow.failedLoginCount).toBe(0);
+    expect(clearedRow.lockedUntil).toBeNull();
+
+    const untouchedGoogleRow = await readCredential(googleCredentialId);
+    expect(untouchedGoogleRow.failedLoginCount).toBe(42);
+    expect(untouchedGoogleRow.lockedUntil).not.toBeNull();
+
+    // The escape hatch actually un-blocks sign-in, not just the counter.
+    const ok = await verifyPasswordWithLockout(db, { hash: passwordHash, password: "correct-horse-battery-staple" });
+    expect(ok).toBe(true);
   });
 });

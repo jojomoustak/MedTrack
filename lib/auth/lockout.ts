@@ -18,10 +18,13 @@
  * assert against, so the minimal, already-fully-specified-by-ADR-003
  * mechanics (thresholds, not messaging) are implemented here. What is
  * NOT built here, unchanged from before: distinct lockout-vs-wrong-password
- * UI messaging (still needs `ux-accessibility-designer`), the
- * password-reset escape hatch (no reset flow exists yet), and the
- * separate per-IP rate limit ADR-003 also calls for (an API-layer
- * concern, orthogonal to this per-credential-row scoping fix).
+ * UI messaging (still needs `ux-accessibility-designer`).
+ *
+ * Password-reset flow, lockout's escape hatch (`clearLockout`, below), and
+ * the separate per-IP rate limit ADR-003 also calls for (an API-layer
+ * concern, orthogonal to this per-credential-row scoping fix) were both
+ * added in a later task (Resend email integration, 2026-09-15) — see
+ * `lib/auth/config.ts`'s `emailAndPassword.onPasswordReset`/`rateLimit`.
  *
  * Integration point: wraps `emailAndPassword.password.verify` in
  * `lib/auth/config.ts` rather than a generic Better Auth `hooks.before`/
@@ -105,4 +108,29 @@ export async function verifyPasswordWithLockout(
     })
     .where(and(eq(accountCredential.id, row.id), eq(accountCredential.credentialType, "password")));
   return false;
+}
+
+/**
+ * ADR-003 §"Security review resolution" item 1's escape hatch: "password-
+ * reset (email link) works regardless of lockout state and immediately
+ * clears both `failed_login_count` and `locked_until` on successful
+ * reset." Wired into `emailAndPassword.onPasswordReset`
+ * (`lib/auth/config.ts`) — Better Auth's `user.id` there is this table's
+ * `loginAccountId` (`account.id`, the login identity Better Auth's core
+ * `user` model is mapped to — see `lib/auth/config.ts`'s `authSchema`
+ * comment), not `accountCredential.id` itself.
+ *
+ * Scoped to `credential_type = 'password'` explicitly, same hard
+ * requirement as every other read/write of these two columns in this file
+ * (addendum A.6) — a password reset must never touch a linked Google
+ * credential row on the same account, which has no lockout concept at all.
+ * A no-op (never throws) if the account has no password credential row
+ * (e.g. a Google-only account somehow reached this path) — there is
+ * nothing to clear, not an error condition.
+ */
+export async function clearLockout(db: LockoutDb, accountId: string): Promise<void> {
+  await db
+    .update(accountCredential)
+    .set({ failedLoginCount: 0, lockedUntil: null })
+    .where(and(eq(accountCredential.loginAccountId, accountId), eq(accountCredential.credentialType, "password")));
 }

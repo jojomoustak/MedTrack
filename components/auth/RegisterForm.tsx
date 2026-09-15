@@ -90,12 +90,28 @@ export function RegisterForm() {
   );
 }
 
-/** Never shows a raw Better Auth/server error string (CLAUDE.md rule 8) — a small, honest translation layer. */
+/**
+ * Never shows a raw Better Auth/server error string (CLAUDE.md rule 8) — a
+ * small, honest translation layer.
+ *
+ * Account-enumeration partial mitigation (security audit follow-up,
+ * 2026-09-15): the previous version of this function had an explicit
+ * "already exists" branch that told an unauthenticated visitor, in plain
+ * UI text, whether a given email is already registered — a textbook
+ * enumeration oracle. Removed; an existing-email sign-up now falls into
+ * the same generic branch as every other failure, so the rendered UI text
+ * no longer confirms existence either way. This does NOT close the
+ * underlying HTTP-level distinguishability (different status code / no
+ * session cookie for the existing-email case) — closing that would require
+ * Better Auth's own generic-duplicate-response mechanism, which is
+ * structurally incompatible with ADR-003 §5's grace-period policy
+ * (`autoSignIn: true`/`requireEmailVerification: false`) at this app's
+ * current config; see `lib/auth/config.ts`'s doc comment for the full
+ * reachability finding. That remaining gap is tracked, not silently
+ * accepted as fixed.
+ */
 function translateAuthError(message: string): string {
   const lower = message.toLowerCase();
-  if (lower.includes("already exists") || lower.includes("already registered")) {
-    return "Υπάρχει ήδη λογαριασμός με αυτό το email.";
-  }
   if (lower.includes("password")) {
     return "Ο κωδικός πρόσβασης πρέπει να έχει τουλάχιστον 8 χαρακτήρες.";
   }

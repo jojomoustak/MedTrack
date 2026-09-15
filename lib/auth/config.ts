@@ -30,14 +30,54 @@
  * added alongside the 2026-08-21 "Sign in with Google" addendum because
  * that addendum's A.6 made per-`credential_type`-scoping a hard,
  * tested requirement. Still NOT built: distinct lockout-vs-wrong-password
- * UI messaging (needs `ux-accessibility-designer`) and the
- * password-reset escape hatch (no reset flow exists yet) — both remain
- * follow-ups, unchanged from the original Phase 4 deferral.
+ * UI messaging (needs `ux-accessibility-designer`).
  *
  * Google Sign-In (ADR-003 addendum, 2026-08-21) is configured below via
  * `socialProviders.google` + `account.accountLinking` — see the addendum
  * (`docs/adr/ADR-003-authentication.md`, "Addendum (2026-08-21)") for the
  * full design and its security review resolution.
+ *
+ * Password reset / email verification / rate limiting (security audit
+ * follow-up, 2026-09-15 — Resend email integration), all via Resend
+ * (`lib/email/server/resend-client.ts` + `lib/email/server/templates.ts`):
+ *   - `emailVerification.sendVerificationEmail` + `sendOnSignUp: true`
+ *     sends a verification email on every sign-up. This does NOT reopen
+ *     ADR-003 §5's grace-period decision — `autoSignIn: true` and
+ *     `requireEmailVerification: false` below are UNCHANGED; the grace
+ *     period is account creation logging the user in immediately
+ *     regardless of verification state, which this doesn't touch.
+ *   - `emailAndPassword.sendResetPassword` sends the real reset link only
+ *     for an already-verified account (`data.user.emailVerified`); for an
+ *     unverified account it sends
+ *     `passwordResetBlockedPendingVerificationEmail` instead (ADR-003 §5
+ *     bullet 4: "unverified email means password-reset won't work yet"),
+ *     pointing at the in-app "resend verification" action rather than
+ *     minting a second token here.
+ *   - `emailAndPassword.onPasswordReset` clears the password credential's
+ *     lockout state (`lib/auth/lockout.ts`'s `clearLockout`) — ADR-003
+ *     §"Security review resolution" item 1's escape hatch, finally wired
+ *     up now that a reset flow exists.
+ *   - `rateLimit` (`storage: "database"`, `lib/db/schema.ts`'s
+ *     `authRateLimit` table) adds `customRules` for `/sign-in/email`
+ *     (ADR-003 §1's literal "≤20 login POSTs/IP/5 min" requirement),
+ *     `/sign-up/email`, and `/request-password-reset` — path strings
+ *     confirmed against `createAuthEndpoint(...)` calls in
+ *     `node_modules/better-auth/.../api/routes/*.mjs` for this pinned
+ *     version, not assumed (the endpoint is `/request-password-reset`,
+ *     NOT `/forget-password` — Better Auth 1.7.1 has no `/forget-password`
+ *     route in core; that name only exists in the separate `email-otp`
+ *     plugin, not used here).
+ *   - **`onExistingUserSignUp` is deliberately NOT wired below.** Reading
+ *     `sign-up.mjs`'s actual source confirms this callback only fires
+ *     inside the `shouldReturnGenericDuplicateResponse` branch, which is
+ *     `requireEmailVerification || autoSignIn === false` — both false
+ *     here, so it is structurally unreachable under this app's config.
+ *     Configuring it anyway would be dead code with a misleading doc
+ *     comment; `RegisterForm.tsx`'s error-message change is the actual
+ *     (partial) enumeration mitigation for the sign-up path instead. See
+ *     `docs/adr/ADR-003-authentication.md`'s addendum-1 item 4 for the
+ *     accepted reasoning on why the remaining HTTP-level distinguishability
+ *     is a known, non-blocking gap.
  */
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -46,10 +86,16 @@ import { withProfileScope } from "@/lib/db/rls";
 import * as schema from "@/lib/db/schema";
 import { getEnv } from "@/lib/config/env";
 import { hashPassword } from "@/lib/auth/argon2";
-import { verifyPasswordWithLockout } from "@/lib/auth/lockout";
+import { clearLockout, verifyPasswordWithLockout } from "@/lib/auth/lockout";
 import { stripOAuthTokens } from "@/lib/auth/oauth-token-strip";
 import { withHashedSessionTokenAdapter } from "@/lib/auth/adr003-adapter";
 import { emailVerifiedTimestampPlugin } from "@/lib/auth/email-verified-plugin";
+import { sendEmail } from "@/lib/email/server/resend-client";
+import {
+  passwordResetBlockedPendingVerificationEmail,
+  passwordResetEmail,
+  verificationEmail,
+} from "@/lib/email/server/templates";
 import { logger } from "@/lib/logging/logger";
 import { pseudonymize } from "@/lib/logging/redact";
 
@@ -118,6 +164,12 @@ const authSchema = {
   accountSession: schema.accountSession,
   accountCredential: schema.accountCredential,
   accountVerification: schema.accountVerification,
+  // Better Auth's own canonical model name for this one really is
+  // "rateLimit" (no collision with any pre-existing MedTracking table, so
+  // — unlike "account"/"user" above — no alias is needed). Backed by
+  // `lib/db/schema.ts`'s `authRateLimit` (Postgres table `auth_rate_limit`,
+  // migration 0014).
+  rateLimit: schema.authRateLimit,
 };
 
 function buildAuth() {
@@ -146,6 +198,41 @@ function buildAuth() {
         // (Phase 2 §0) — Better Auth's default id generator produces a
         // non-UUID string, which would fail on insert.
         generateId: "uuid",
+      },
+    },
+
+    // Security audit follow-up (2026-09-15): per-IP rate limiting, backed
+    // by `lib/db/schema.ts`'s `authRateLimit` table (`storage: "database"`
+    // — persists across serverless-function cold starts, unlike the
+    // in-memory default, which is required for this to actually hold up
+    // on Vercel). `customRules` path strings confirmed against
+    // `createAuthEndpoint(...)` calls in the pinned Better Auth version's
+    // own route source, not guessed:
+    //   - "/sign-in/email": ADR-003 §"Security review resolution" item 1's
+    //     literal requirement, "≤20 login POSTs/IP/5 min across all
+    //     accounts" — additive to (never a replacement for) the
+    //     per-account lockout in `lib/auth/lockout.ts`, which is the
+    //     primary control there; this is the separate, coarser per-IP
+    //     backstop that same section calls for.
+    //   - "/sign-up/email" / "/request-password-reset": not spelled out
+    //     numerically by any doc in this repo — chosen to be generous
+    //     enough not to block a real family-assisted retry (Phase 0 §2
+    //     Elena persona) while still bounding scripted
+    //     enumeration/email-bombing abuse; tune later if a more precise
+    //     spec appears.
+    rateLimit: {
+      enabled: true,
+      storage: "database",
+      modelName: "rateLimit",
+      fields: {
+        key: "key",
+        count: "count",
+        lastRequest: "lastRequest",
+      },
+      customRules: {
+        "/sign-in/email": { window: 300, max: 20 },
+        "/sign-up/email": { window: 3600, max: 10 },
+        "/request-password-reset": { window: 300, max: 5 },
       },
     },
 
@@ -285,6 +372,47 @@ function buildAuth() {
       // not a login gate — account creation logs the user in immediately.
       autoSignIn: true,
       requireEmailVerification: false,
+      // Security audit follow-up (2026-09-15): `data.user` here is Better
+      // Auth's core `User` shape, which includes a real `emailVerified`
+      // boolean (confirmed against `@better-auth/core`'s
+      // `sendResetPassword` type) — NOT the same value as
+      // `session.user.emailVerified` on the client, which
+      // `lib/auth/email-verified-plugin.ts`'s own doc comment documents as
+      // unreliable for that specific response path; this server-side
+      // callback isn't affected by that quirk.
+      sendResetPassword: async (data: { user: { email: string; emailVerified: boolean }; url: string }) => {
+        const content = data.user.emailVerified
+          ? passwordResetEmail({ url: data.url })
+          : passwordResetBlockedPendingVerificationEmail();
+        await sendEmail({ to: data.user.email, subject: content.subject, html: content.html, text: content.text });
+      },
+      // ADR-003 §"Security review resolution" item 1's escape hatch:
+      // "password-reset... immediately clears both failed_login_count and
+      // locked_until on successful reset." `user.id` here is
+      // `account.id` (Better Auth's core `user` model is mapped to
+      // `loginAccount`/`account` above) — `clearLockout` itself scopes the
+      // write to `credential_type = 'password'` (addendum A.6), so a
+      // linked Google credential row is never touched by this.
+      onPasswordReset: async (data: { user: { id: string } }) => {
+        await clearLockout(db, data.user.id);
+      },
+    },
+
+    // Security audit follow-up (2026-09-15): sends a real verification
+    // email on every sign-up. Independent of, and does not reopen, ADR-003
+    // §5's grace period — `autoSignIn`/`requireEmailVerification` above are
+    // unchanged; this only adds the email send itself.
+    // `autoSignInAfterVerification: true` is a no-op refresh for someone
+    // already logged in via the grace period (the common case here) —
+    // harmless, matches Better Auth's own documented behavior for that
+    // option.
+    emailVerification: {
+      sendVerificationEmail: async ({ user, url }: { user: { email: string }; url: string }) => {
+        const content = verificationEmail({ url });
+        await sendEmail({ to: user.email, subject: content.subject, html: content.html, text: content.text });
+      },
+      sendOnSignUp: true,
+      autoSignInAfterVerification: true,
     },
 
     databaseHooks: {
