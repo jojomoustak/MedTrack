@@ -26,6 +26,10 @@ export default function WelcomePage() {
           Σύνδεση
         </Link>
       </div>
+
+      <Link href="/privacy" className="flex min-h-12 items-center text-sm text-zinc-500 underline dark:text-zinc-500">
+        Πολιτική Απορρήτου
+      </Link>
     </main>
   );
 }
