@@ -55,7 +55,7 @@ export function InventorySummary({
             Εκτίμηση εξάντλησης: {formatProjectedDate(projection.projectedOutOfStockDate)} ({projection.daysRemaining}{" "}
             {projection.daysRemaining === 1 ? "ημέρα" : "ημέρες"})
           </p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-500">
+          <p className="text-sm text-zinc-500 dark:text-zinc-500">
             {projection.basis === "observed" ? "Βάσει της πρόσφατης χρήσης σας" : "Βάσει του προγράμματός σας"} — εκτίμηση αποθέματος, δεν αποτελεί
             ιατρική σύσταση.
           </p>

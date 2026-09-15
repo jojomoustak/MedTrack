@@ -120,7 +120,7 @@ export function ReviewStep({
               className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-transparent"
             />
           </label>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-500">
             Αν το συμπληρώσετε, θα δημιουργηθεί μια πραγματική συσκευασία στο απόθεμά σας.
           </p>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 /**
@@ -20,6 +20,17 @@ export function DeleteMedicationSection({
   error: string | null;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Moves focus into the newly-revealed confirm block so a screen-reader
+  // or keyboard user is actually taken to it — without this, expanding
+  // the block leaves focus (and the assistive-tech cursor) wherever it
+  // was, with no indication anything changed (accessibility audit,
+  // Phase 15 Hardening). "Άκυρο" rather than the destructive confirm
+  // button, matching this app's "safer default" convention elsewhere.
+  useEffect(() => {
+    if (confirming) cancelButtonRef.current?.focus();
+  }, [confirming]);
 
   return (
     <section className="flex flex-col gap-2 rounded-xl border border-red-300 p-4 dark:border-red-900">
@@ -32,6 +43,7 @@ export function DeleteMedicationSection({
             playSound("button");
             setConfirming(true);
           }}
+          aria-expanded={confirming}
           className="min-h-12 rounded-full border border-red-300 px-4 py-2 text-sm font-medium text-red-700 dark:border-red-900 dark:text-red-400"
         >
           Διαγραφή φαρμάκου
@@ -48,6 +60,7 @@ export function DeleteMedicationSection({
           )}
           <div className="flex gap-2">
             <button
+              ref={cancelButtonRef}
               type="button"
               onClick={() => {
                 playSound("button");

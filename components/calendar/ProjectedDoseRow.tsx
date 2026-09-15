@@ -25,7 +25,7 @@ export function ProjectedDoseRow({ medicationName, scheduledAt }: ProjectedDoseR
       <p className="text-sm">
         {timeLabel} — {medicationName}
       </p>
-      <span className="ml-auto text-xs">{DOSE_MARKER_LABEL.projected}</span>
+      <span className="ml-auto text-sm">{DOSE_MARKER_LABEL.projected}</span>
     </div>
   );
 }

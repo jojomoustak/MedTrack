@@ -138,7 +138,16 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
               {dose.quantityValue} {unitLabel(dose.quantityUnit)}
             </p>
           )}
-          {label && <p className="text-sm text-zinc-600 dark:text-zinc-400">{label}</p>}
+          {/* `aria-live` scoped to just this line, not the whole card, so a
+              status change (e.g. tapping Έλαβα) is announced to a screen
+              reader without re-announcing the medication name/quantity
+              alongside it every time (accessibility audit, Phase 15
+              Hardening). */}
+          {label && (
+            <p aria-live="polite" className="text-sm text-zinc-600 dark:text-zinc-400">
+              {label}
+            </p>
+          )}
         </div>
         {dose.syncState !== "synced" && <SyncStatusChip state={dose.syncState} onRetry={onRetrySync ? () => onRetrySync(dose.id) : undefined} />}
       </div>
@@ -147,9 +156,10 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
         <button
           type="button"
           onClick={cancelUndo}
+          aria-live="polite"
           className="min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium underline dark:border-zinc-700"
         >
-          Αναίρεση
+          Αναίρεση — {label}
         </button>
       )}
 

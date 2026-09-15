@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
@@ -36,6 +36,17 @@ export function DeleteAccountFlow() {
   const [confirmText, setConfirmText] = useState("");
   const [offline, setOffline] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const stepContainerRef = useRef<HTMLDivElement>(null);
+
+  // Same reasoning as AddMedicationFlow's identical fix (accessibility
+  // audit, Phase 15 Hardening) — this step machine renders a completely
+  // different root element per step, so without this, focus is left
+  // wherever it was on the PREVIOUS step's now-unmounted content. Matters
+  // most here of all this app's flows: this is the account-wide,
+  // irreversible GDPR-erasure path (CLAUDE.md rule 9).
+  useEffect(() => {
+    stepContainerRef.current?.focus();
+  }, [step]);
 
   async function goToSummary() {
     playSound("button");
@@ -107,7 +118,7 @@ export function DeleteAccountFlow() {
 
   if (step === "explain") {
     return (
-      <div className="flex flex-col gap-6 p-6">
+      <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 p-6">
         <h1 className="text-xl font-semibold text-red-800 dark:text-red-400">Διαγραφή λογαριασμού</h1>
         <div className="flex flex-col gap-3 text-sm text-zinc-700 dark:text-zinc-300">
           <p>
@@ -135,7 +146,7 @@ export function DeleteAccountFlow() {
 
   if (step === "summary" && summary) {
     return (
-      <div className="flex flex-col gap-6 p-6">
+      <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 p-6">
         <h1 className="text-xl font-semibold text-red-800 dark:text-red-400">Αυτά θα χάσετε</h1>
         <ul className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
           <li>{summary.medications} φάρμακα</li>
@@ -155,7 +166,7 @@ export function DeleteAccountFlow() {
 
   if (step === "confirm") {
     return (
-      <div className="flex flex-col gap-6 p-6">
+      <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 p-6">
         <h1 className="text-xl font-semibold text-red-800 dark:text-red-400">Επιβεβαίωση διαγραφής</h1>
 
         {offline && (
@@ -195,7 +206,7 @@ export function DeleteAccountFlow() {
 
   if (step === "in-progress") {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 p-6 text-center" role="status" aria-live="polite">
+      <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col items-center justify-center gap-4 p-6 text-center" role="status" aria-live="polite">
         <p className="text-lg font-medium">Διαγραφή σε εξέλιξη…</p>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">Μην κλείσετε ή ανανεώσετε αυτή τη σελίδα.</p>
       </div>
@@ -204,7 +215,7 @@ export function DeleteAccountFlow() {
 
   // step === "done"
   return (
-    <div className="flex flex-col items-center justify-center gap-4 p-6 text-center" role="status" aria-live="polite">
+    <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col items-center justify-center gap-4 p-6 text-center" role="status" aria-live="polite">
       <p className="text-lg font-medium">Ο λογαριασμός σας διαγράφηκε.</p>
     </div>
   );

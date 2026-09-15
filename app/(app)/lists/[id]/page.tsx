@@ -8,6 +8,7 @@ import { usePurchaseListItems } from "@/lib/lists/client/use-purchase-list-items
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { DexiePurchaseListRepository } from "@/lib/db-client/purchase-list-repository";
+import { UndoableDeleteButton } from "@/components/lists/UndoableDeleteButton";
 import type { PurchaseListRecord, PurchaseListItemRecord } from "@/lib/domain/entities";
 import { formatCents, fromDecimalEuros, toCents } from "@/lib/domain/money";
 import { playSound } from "@/lib/sound/client/play-sound";
@@ -84,7 +85,7 @@ export default function PurchaseListDetailPage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center gap-2">
-        <Link href="/lists" onClick={() => playSound("button")} className="text-sm font-medium underline">
+        <Link href="/lists" onClick={() => playSound("button")} className="flex min-h-12 items-center text-sm font-medium underline">
           Λίστες
         </Link>
         <span className="text-zinc-400">/</span>
@@ -169,8 +170,12 @@ export default function PurchaseListDetailPage() {
                     void markPurchased(item.id);
                   }}
                   aria-label={`Σήμανση "${itemDisplayName(item)}" ως αγορασμένο`}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-zinc-400 dark:border-zinc-600"
-                />
+                  className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-full border-2 border-zinc-400 dark:border-zinc-600"
+                >
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                    <path d="M4 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{itemDisplayName(item)}</p>
                   {itemPriceLabel(item) && <p className="text-sm text-zinc-600 dark:text-zinc-400">{itemPriceLabel(item)}</p>}
@@ -186,17 +191,7 @@ export default function PurchaseListDetailPage() {
                 >
                   Όχι πια
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    playSound("button");
-                    void deleteItem(item.id);
-                  }}
-                  aria-label={`Διαγραφή "${itemDisplayName(item)}"`}
-                  className="min-h-12 min-w-12 text-sm font-medium text-red-700 dark:text-red-400"
-                >
-                  Διαγραφή
-                </button>
+                <UndoableDeleteButton label={`Διαγραφή "${itemDisplayName(item)}"`} onConfirm={() => void deleteItem(item.id)} />
               </li>
             ))}
           </ul>
@@ -217,7 +212,7 @@ export default function PurchaseListDetailPage() {
                       void markPending(item.id);
                     }}
                     aria-label={`Αναίρεση αγοράς "${itemDisplayName(item)}"`}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900"
+                    className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900"
                   >
                     ✓
                   </button>
@@ -225,17 +220,7 @@ export default function PurchaseListDetailPage() {
                     <p className="font-medium line-through">{itemDisplayName(item)}</p>
                     {itemPriceLabel(item) && <p className="text-sm text-zinc-600 dark:text-zinc-400">{itemPriceLabel(item)}</p>}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound("button");
-                      void deleteItem(item.id);
-                    }}
-                    aria-label={`Διαγραφή "${itemDisplayName(item)}"`}
-                    className="min-h-12 min-w-12 text-sm font-medium text-red-700 dark:text-red-400"
-                  >
-                    Διαγραφή
-                  </button>
+                  <UndoableDeleteButton label={`Διαγραφή "${itemDisplayName(item)}"`} onConfirm={() => void deleteItem(item.id)} />
                 </div>
                 {item.userMedicationId && (
                   <Link
@@ -272,17 +257,7 @@ export default function PurchaseListDetailPage() {
                 >
                   Επαναφορά
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    playSound("button");
-                    void deleteItem(item.id);
-                  }}
-                  aria-label={`Διαγραφή "${itemDisplayName(item)}"`}
-                  className="min-h-12 min-w-12 text-sm font-medium text-red-700 dark:text-red-400"
-                >
-                  Διαγραφή
-                </button>
+                <UndoableDeleteButton label={`Διαγραφή "${itemDisplayName(item)}"`} onConfirm={() => void deleteItem(item.id)} />
               </li>
             ))}
           </ul>

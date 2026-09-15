@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EntryChooser, type EntryChoice } from "@/components/medications/EntryChooser";
 import { SearchStep } from "@/components/medications/SearchStep";
 import { ScanStep } from "@/components/medications/ScanStep";
@@ -112,6 +112,18 @@ export function AddMedicationFlow({
   const [error, setError] = useState<string | null>(null);
   const [scanAvailable] = useState(() => (platform ?? getDefaultMobilePlatform()).isAvailable());
   const [manualPrefill, setManualPrefill] = useState<{ expiry: string | null; batch: string | null }>({ expiry: null, batch: null });
+  const stepContainerRef = useRef<HTMLDivElement>(null);
+
+  // Moves focus to the newly-rendered step on every transition — without
+  // this, a screen-reader/keyboard user tapping "Συνέχεια" (or any other
+  // step-advancing action) has focus left on a now-unmounted or
+  // repositioned element, with no indication the screen changed
+  // (accessibility audit, Phase 15 Hardening). The container itself
+  // (rather than a specific heading inside each step) is the focus
+  // target, since not every step component exposes a heading ref.
+  useEffect(() => {
+    stepContainerRef.current?.focus();
+  }, [step]);
 
   /** Manual entry NOT reached via a scan fallback (entry chooser directly, or search's "no results") — always a clean form, no stale pre-fill from an earlier scan attempt in the same flow instance. */
   function handleManualEntryDirect() {
@@ -288,7 +300,7 @@ export function AddMedicationFlow({
   const displayName = catalogProduct?.name ?? manualName ?? "";
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-6 p-4">
+    <div ref={stepContainerRef} tabIndex={-1} className="mx-auto flex max-w-md flex-col gap-6 p-4">
       {step === "entry" && <EntryChooser onChoose={handleEntryChoice} scanAvailable={scanAvailable} />}
       {step === "scan" && (
         <ScanStep

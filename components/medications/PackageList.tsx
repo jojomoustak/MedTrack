@@ -115,7 +115,7 @@ export function PackageList({
             <p className="font-medium">
               {computePackageRemainingStock(transactions, pkg.id)} / {pkg.initialQuantityValue} {unitLabel(pkg.quantityUnit)}
             </p>
-            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">{STATUS_LABELS[pkg.status]}</span>
+            <span className="text-sm font-medium text-zinc-500 dark:text-zinc-500">{STATUS_LABELS[pkg.status]}</span>
           </div>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {pkg.batchNumber ? `Παρτίδα ${pkg.batchNumber}` : "Χωρίς αριθμό παρτίδας"}
