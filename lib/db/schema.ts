@@ -963,3 +963,38 @@ export const authRateLimit = pgTable(
   },
   (t) => [uniqueIndex("uq_auth_rate_limit_key").on(t.key)],
 );
+
+// ---------------------------------------------------------------------------
+// Self-hosted internal error log (Phase 15 Hardening observability
+// follow-up, 2026-09-15) — a release-engineer audit flagged "no production
+// error tracking" as a gap. Rather than a third-party vendor (Sentry etc,
+// which needs its own account/API-key decision, same class of blocker
+// Resend was until the user approved it), this follows ADR-003's own
+// precedent ("self-hosted, backed directly by the Neon Postgres already
+// used for domain data, no second vendor/data store") for the same reason:
+// a queryable table this app already has a connection to, no new vendor
+// relationship needed. `lib/errors/http.ts`'s `toSafeErrorResponse` writes
+// one row here for every NON-operational (unexpected, 500-class) error —
+// operational errors (validation failures, 404s, etc.) are expected/
+// routine and not worth persisting.
+//
+// `context` stores the SAME redacted object `logger.error` already logs
+// (never raw — see `lib/logging/redact.ts`) — CLAUDE.md rule 8 applies
+// here exactly as it does to every other log line, a persisted row is not
+// exempt just because it's in Postgres instead of stdout.
+//
+// No RLS: not profile/account-owned, an internal ops table with no owner
+// column, same category as `account_deletion_audit` (migration 0001's
+// SCOPE NOTE). No admin UI is built for this (out of scope for what was
+// asked) — query directly, e.g.
+//   SELECT occurred_at, code, http_status, message, context
+//   FROM error_log ORDER BY occurred_at DESC LIMIT 50;
+// ---------------------------------------------------------------------------
+export const errorLog = pgTable("error_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  occurredAt: timestamptz("occurred_at").notNull().defaultNow(),
+  code: text("code").notNull(),
+  httpStatus: integer("http_status").notNull(),
+  message: text("message").notNull(),
+  context: jsonb("context"),
+});
