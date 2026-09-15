@@ -11,6 +11,7 @@ import { PackageList } from "@/components/medications/PackageList";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
 import { recordMedicationInteraction } from "@/lib/medications/client/record-interaction";
+import { playSound } from "@/lib/sound/client/play-sound";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
@@ -81,7 +82,7 @@ export default function MedicationDetailPage() {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
         <p className="text-zinc-600 dark:text-zinc-400">Το φάρμακο δεν βρέθηκε.</p>
-        <Link href="/medications" className="min-h-12 text-sm font-medium underline">
+        <Link href="/medications" onClick={() => playSound("button")} className="min-h-12 text-sm font-medium underline">
           Πίσω στα φάρμακα
         </Link>
       </div>
@@ -93,10 +94,14 @@ export default function MedicationDetailPage() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 p-4">
       <div className="flex items-center justify-between gap-3">
-        <Link href="/medications" aria-label="Πίσω στα φάρμακα" className="min-h-12 text-sm font-medium underline">
+        <Link href="/medications" onClick={() => playSound("button")} aria-label="Πίσω στα φάρμακα" className="min-h-12 text-sm font-medium underline">
           ← Πίσω
         </Link>
-        <Link href={`/medications/${medication.id}/edit`} className="min-h-12 rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700">
+        <Link
+          href={`/medications/${medication.id}/edit`}
+          onClick={() => playSound("button")}
+          className="min-h-12 rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+        >
           Επεξεργασία
         </Link>
       </div>
@@ -134,12 +139,14 @@ export default function MedicationDetailPage() {
           <div className="flex gap-2">
             <Link
               href={`/medications/${medication.id}/packages/add`}
+              onClick={() => playSound("button")}
               className="min-h-12 flex-1 rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium dark:border-zinc-700"
             >
               Προσθήκη συσκευασίας
             </Link>
             <Link
               href={`/medications/${medication.id}/inventory/correct`}
+              onClick={() => playSound("button")}
               className="min-h-12 flex-1 rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium dark:border-zinc-700"
             >
               Διόρθωση αποθέματος
@@ -154,7 +161,7 @@ export default function MedicationDetailPage() {
       )}
 
       {medication.syncState === "synced" ? (
-        <Link href={`/medications/${medication.id}/photo`} className="min-h-12 text-sm font-medium underline">
+        <Link href={`/medications/${medication.id}/photo`} onClick={() => playSound("button")} className="min-h-12 text-sm font-medium underline">
           Φωτογραφία
         </Link>
       ) : (

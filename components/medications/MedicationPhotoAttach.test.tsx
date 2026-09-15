@@ -46,6 +46,7 @@ function makeRepository(record: UserMedicationRecord | null): UserMedicationRepo
     get: vi.fn().mockResolvedValue(record),
     create: vi.fn(),
     update: vi.fn(),
+    softDelete: vi.fn(),
     applyRemote: vi.fn(),
     markConflict: vi.fn(),
     markFailed: vi.fn(),

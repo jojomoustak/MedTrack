@@ -113,6 +113,31 @@ export class DexieUserMedicationRepository implements UserMedicationRepository {
     return updated;
   }
 
+  async softDelete(id: string, clientMutationId: string): Promise<void> {
+    const existing = await this.db.userMedication.get(id);
+    if (!existing) return;
+
+    const now = new Date().toISOString();
+    const outboxEntry: OutboxEntry<Record<string, never>> = {
+      clientMutationId,
+      entityType: "userMedication",
+      entityId: id,
+      operation: "delete",
+      payload: {},
+      baseVersion: existing.version,
+      createdAt: now,
+      seq: nextOutboxSeq(),
+      status: "pending",
+      attempts: 0,
+      nextAttemptAt: now,
+    };
+
+    await this.db.transaction("rw", this.db.userMedication, this.db.outbox, async () => {
+      await this.db.userMedication.update(id, { deletedAt: now, version: existing.version + 1, syncState: "pending" });
+      await this.db.outbox.put(outboxEntry as unknown as OutboxEntry);
+    });
+  }
+
   async applyRemote(record: UserMedicationRecord): Promise<void> {
     await this.db.userMedication.put({ ...record, syncState: "synced" });
   }

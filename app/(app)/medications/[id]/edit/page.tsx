@@ -6,8 +6,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { EditMedicationForm, type EditMedicationValues } from "@/components/medications/EditMedicationForm";
+import { DeleteMedicationSection } from "@/components/medications/DeleteMedicationSection";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { recordMedicationInteraction } from "@/lib/medications/client/record-interaction";
+import { deleteMedicationWithCascade } from "@/lib/medications/client/delete-medication";
 import { newId } from "@/lib/domain/ids";
 import { playSound } from "@/lib/sound/client/play-sound";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
@@ -20,6 +22,8 @@ export default function EditMedicationPage() {
   const [medication, setMedication] = useState<UserMedicationRecord | null | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +52,19 @@ export default function EditMedicationPage() {
     }
   }
 
+  async function handleDelete() {
+    playSound("button");
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteMedicationWithCascade(profileId, params.id);
+      router.push("/medications");
+    } catch {
+      setDeleteError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+      setDeleting(false);
+    }
+  }
+
   if (medication === undefined) {
     return (
       <p role="status" className="p-6 text-sm text-zinc-600 dark:text-zinc-400">
@@ -60,7 +77,7 @@ export default function EditMedicationPage() {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
         <p className="text-zinc-600 dark:text-zinc-400">Το φάρμακο δεν βρέθηκε.</p>
-        <Link href="/medications" className="min-h-12 text-sm font-medium underline">
+        <Link href="/medications" onClick={() => playSound("button")} className="min-h-12 text-sm font-medium underline">
           Πίσω στα φάρμακα
         </Link>
       </div>
@@ -70,7 +87,7 @@ export default function EditMedicationPage() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 p-4">
       <div className="flex items-center gap-3">
-        <Link href={`/medications/${params.id}`} aria-label="Πίσω" className="min-h-12 text-sm font-medium underline">
+        <Link href={`/medications/${params.id}`} onClick={() => playSound("button")} aria-label="Πίσω" className="min-h-12 text-sm font-medium underline">
           ← Πίσω
         </Link>
         <h1 className="text-xl font-semibold">Επεξεργασία φαρμάκου</h1>
@@ -83,6 +100,8 @@ export default function EditMedicationPage() {
         submitting={submitting}
         error={error}
       />
+
+      <DeleteMedicationSection onConfirmDelete={() => void handleDelete()} deleting={deleting} error={deleteError} />
     </div>
   );
 }

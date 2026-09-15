@@ -205,4 +205,55 @@ describe("DexieUserMedicationRepository (optimistic concurrency, optional catalo
 
     await expect(repo.update(id, { customName: "" }, crypto.randomUUID())).rejects.toThrow();
   });
+
+  it("softDelete() sets deletedAt, bumps version, and enqueues a delete outbox entry with an empty payload", async () => {
+    const id = crypto.randomUUID();
+    await repo.create({
+      id,
+      profileId,
+      clientMutationId: crypto.randomUUID(),
+      catalogProductId: null,
+      customName: "Παρακεταμόλη",
+      customForm: "tablet",
+      customStrengthValue: null,
+      customStrengthUnit: null,
+      inventoryUnit: "tablet",
+      lowStockThresholdValue: null,
+      expiryWarningDays: 30,
+      notes: null,
+    });
+
+    await repo.softDelete(id, crypto.randomUUID());
+
+    const deleted = await repo.get(id);
+    expect(deleted?.deletedAt).not.toBeNull();
+    expect(deleted?.version).toBe(2);
+
+    const pending = await outbox.listPending(new Date().toISOString());
+    const deleteEntry = pending.find((e) => e.operation === "delete");
+    expect(deleteEntry?.baseVersion).toBe(1);
+    expect(deleteEntry?.payload).toEqual({});
+  });
+
+  it("softDelete()'d medications are excluded from list()", async () => {
+    const id = crypto.randomUUID();
+    await repo.create({
+      id,
+      profileId,
+      clientMutationId: crypto.randomUUID(),
+      catalogProductId: null,
+      customName: "Παρακεταμόλη",
+      customForm: "tablet",
+      customStrengthValue: null,
+      customStrengthUnit: null,
+      inventoryUnit: "tablet",
+      lowStockThresholdValue: null,
+      expiryWarningDays: 30,
+      notes: null,
+    });
+
+    await repo.softDelete(id, crypto.randomUUID());
+
+    expect(await repo.list(profileId)).toHaveLength(0);
+  });
 });

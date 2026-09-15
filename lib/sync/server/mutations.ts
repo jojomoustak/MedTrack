@@ -662,6 +662,56 @@ async function applyUserMedicationMutation(ctx: MutationContext, mutation: SyncM
     }
   }
 
+  if (mutation.operation === "delete") {
+    // Real bug caught before this operation ever shipped a client caller
+    // (`UserMedicationRepository.softDelete`, built alongside this
+    // branch): without an explicit delete branch, a "delete" operation
+    // fell through to the update branch below, which only sets columns
+    // present in the JSON payload — an empty `{}` payload (exactly what
+    // `softDelete` sends) would have bumped `version`/`updated_at` and
+    // left `deleted_at` untouched, silently no-opping the delete.
+    if (mutation.baseVersion === undefined) {
+      throw new ValidationError("userMedication delete mutations require `baseVersion`.");
+    }
+    const [rows] = await withProfileScope(
+      ctx.profileId,
+      (db) => [
+        db.execute(sql`
+        WITH updated AS (
+          UPDATE user_medication
+          SET deleted_at = now(), version = version + 1, updated_at = now(), client_mutation_id = ${mutation.clientMutationId}::uuid
+          WHERE id = ${mutation.entityId}::uuid AND version = ${mutation.baseVersion} AND deleted_at IS NULL
+          RETURNING *
+        ),
+        current_row AS (
+          SELECT * FROM updated
+          UNION ALL
+          SELECT * FROM user_medication WHERE id = ${mutation.entityId}::uuid AND NOT EXISTS (SELECT 1 FROM updated)
+        ),
+        recorded AS (
+          INSERT INTO sync_mutation (client_mutation_id, profile_id, entity_type, entity_id, result, response_snapshot)
+          SELECT ${mutation.clientMutationId}::uuid, ${ctx.profileId}::uuid, 'userMedication', ${mutation.entityId}::uuid,
+            CASE WHEN EXISTS (SELECT 1 FROM updated) THEN 'applied' ELSE 'conflict' END,
+            to_jsonb(current_row.*)
+          FROM current_row
+          RETURNING result
+        ),
+        logged AS (
+          INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation, server_version, occurred_at)
+          SELECT profile_id, 'userMedication', id, 'delete', version, now() FROM updated
+          RETURNING 1
+        )
+        SELECT current_row.*, recorded.result AS mutation_result FROM current_row, recorded;
+      `),
+      ],
+      { db: ctx.db },
+    );
+    const record = (rows as { rows?: Record<string, unknown>[] }).rows?.[0];
+    const outcome = (record?.mutation_result as string | undefined) === "applied" ? "applied" : "conflict";
+    if (record) delete record.mutation_result;
+    return { clientMutationId: mutation.clientMutationId, result: outcome, serverRecord: record };
+  }
+
   // update — optimistic concurrency (`/medications/[id]/edit`, built
   // 2026-09-13, real full editing at last). Every column uses the same
   // "explicit CASE WHEN the key was actually present in the JSON payload"

@@ -134,6 +134,8 @@ export interface UserMedicationRepository {
   create(input: CreateUserMedicationInput): Promise<UserMedicationRecord>;
   /** Local edit (`/medications/[id]/edit`): bumps the local `version` optimistically and enqueues an outbox entry carrying `baseVersion`, same optimistic-concurrency pattern as `MedicationPackageRepository.update`. */
   update(id: string, patch: UserMedicationPatch, clientMutationId: string): Promise<UserMedicationRecord>;
+  /** Soft-deletes the medication itself (Phase 2 §4.A tombstone) — callers are responsible for the cascade (`lib/medications/client/delete-medication.ts`: soft-deleting active schedules, cancelling their dose events, and syncing the cancellation to native reminders), same as `MedicationPackageRepository.softDelete`'s bare tombstone leaving cross-entity cleanup to its caller. */
+  softDelete(id: string, clientMutationId: string): Promise<void>;
   /** Applies a record pulled/acked from the server — never generates a new outbox entry. */
   applyRemote(record: UserMedicationRecord): Promise<void>;
   markConflict(id: string): Promise<void>;
