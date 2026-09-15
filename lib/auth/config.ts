@@ -51,6 +51,7 @@ import { stripOAuthTokens } from "@/lib/auth/oauth-token-strip";
 import { withHashedSessionTokenAdapter } from "@/lib/auth/adr003-adapter";
 import { emailVerifiedTimestampPlugin } from "@/lib/auth/email-verified-plugin";
 import { logger } from "@/lib/logging/logger";
+import { pseudonymize } from "@/lib/logging/redact";
 
 const POSTGRES_UNIQUE_VIOLATION = "23505";
 
@@ -75,12 +76,12 @@ async function createProfileForNewAccount(accountId: string): Promise<void> {
   const profileId = crypto.randomUUID();
   try {
     await withProfileScope(profileId, (db) => [db.insert(schema.profile).values({ id: profileId, ownerAccountId: accountId })]);
-    logger.info("auth.profile.create", { accountId });
+    logger.info("auth.profile.create", { accountRef: pseudonymize(accountId) });
   } catch (err) {
     if (isUniqueViolation(err)) {
       // A profile already exists for this account (e.g. a retried
       // create.after hook) — the 1:1 invariant already holds, nothing to do.
-      logger.debug("auth.profile.create.already_exists", { accountId });
+      logger.debug("auth.profile.create.already_exists", { accountRef: pseudonymize(accountId) });
       return;
     }
     throw err;
@@ -297,7 +298,7 @@ function buildAuth() {
       session: {
         create: {
           before: async (session) => {
-            logger.info("auth.session.create", { accountId: session.userId });
+            logger.info("auth.session.create", { accountRef: pseudonymize(session.userId) });
             return { data: session };
           },
         },

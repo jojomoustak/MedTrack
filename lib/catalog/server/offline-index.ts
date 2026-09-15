@@ -52,6 +52,12 @@ export async function generateOfflineIndex(db: Db | TestableDb = getDb()): Promi
   // when synced, are only ever re-resolved through the authenticated,
   // profile-scoped `resolve-identifier` API — never through this shared
   // index.
+  //
+  // Unscoped read, safe under migration 0013's RLS: this WHERE clause
+  // only ever matches `evidence_type = 'AUTHORITATIVE'` rows, which have
+  // `profile_id IS NULL` (`chk_medication_identifier_profile_scope`) —
+  // the policy's `profile_id IS NULL` branch admits those unconditionally,
+  // not gated on `app.current_profile_id`.
   const identifierRows = await db
     .select({ catalogProductId: schema.medicationIdentifier.catalogProductId, identifierValue: schema.medicationIdentifier.identifierValue })
     .from(schema.medicationIdentifier)

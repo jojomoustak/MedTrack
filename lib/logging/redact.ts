@@ -34,6 +34,15 @@ const DENYLIST_FRAGMENTS = [
   "batch",
   "condition",
   "allerg",
+  // product identifiers — a GTIN/barcode/NHRN is a globally-unique key for
+  // one specific pharmaceutical product, so knowing it is functionally
+  // equivalent to knowing which medication a person has (security review,
+  // Phase 15 Hardening, 2026-09-15)
+  "gtin",
+  "ean",
+  "nhrn",
+  "barcode",
+  "identifiervalue",
   // identity / PII
   "email",
   "displayname",

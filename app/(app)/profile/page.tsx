@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
@@ -33,6 +34,32 @@ export default function ProfilePage() {
   const { data } = authClient.useSession();
   const router = useRouter();
   const profileId = useProfileId();
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  // GDPR Art. 15/20 (security review, Phase 15 Hardening, 2026-09-15) — a
+  // plain download rather than a new route/screen: this is a one-shot
+  // fetch-and-save action, not a flow with steps.
+  async function handleExport() {
+    playSound("button");
+    setExportError(null);
+    setExporting(true);
+    try {
+      const res = await fetch("/api/account/export");
+      if (!res.ok) throw new Error("export request failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `medtrack-export-${profileId}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportError("Η λήψη απέτυχε. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function handleSignOut() {
     playSound("button");
@@ -89,6 +116,27 @@ export default function ProfilePage() {
       >
         Αποσύνδεση
       </button>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Τα δεδομένα μου</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Λήψη όλων των δεδομένων του λογαριασμού σας (φάρμακα, προγράμματα, δόσεις, απόθεμα, λίστες) σε μορφή JSON.
+        </p>
+        {exportError && (
+          <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+            {exportError}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exporting}
+          aria-busy={exporting}
+          className="min-h-12 self-start rounded-full border border-zinc-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-zinc-700"
+        >
+          {exporting ? "Λήψη…" : "Λήψη των δεδομένων μου"}
+        </button>
+      </section>
 
       <section className="mt-6 flex flex-col gap-2 rounded-lg border-2 border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
         <div className="flex items-center gap-2 text-red-800 dark:text-red-300">

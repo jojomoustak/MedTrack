@@ -4,14 +4,31 @@
  * columns/index already in place from Phase 4
  * (`medication_catalog_product.name_normalized`,
  * `ix_catalog_name_trgm`). `medication_catalog_product` has no owner/no
- * RLS (Phase 2 §2.4) — this queries `getDb()` directly, no
- * `withProfileScope` needed, matching the "no owner, no client conflict
- * strategy" design decision.
+ * RLS (Phase 2 §2.4) — every method that only touches THAT table
+ * (`search`, `lookupByGtin`, `lookupByEofCode`, `loadExact`) queries
+ * `this.db` directly, no `withProfileScope` needed, matching the "no
+ * owner, no client conflict strategy" design decision.
+ *
+ * `medication_identifier` is different: migration 0013 gives it RLS
+ * (`profile_id IS NULL OR profile_id = app.current_profile_id`), because
+ * unlike the catalog table it DOES have profile-owned rows
+ * (USER_CONFIRMED, from `confirmIdentifier` below). Its AUTHORITATIVE rows
+ * (`profile_id IS NULL`) are still genuinely global reference data and are
+ * still read over the plain unscoped `this.db` connection in
+ * `lookupByIdentifier`'s first query — that's safe because the policy's
+ * `profile_id IS NULL` branch is unconditionally true, not gated on any
+ * session variable. Every query that can touch a non-null-`profile_id`
+ * row (a specific profile's own USER_CONFIRMED mapping) MUST go through
+ * `withProfileScope`, or the RLS policy's second branch — which checks
+ * `app.current_profile_id`, never set on the unscoped connection — makes
+ * those rows silently invisible/unwritable instead of erroring.
  */
 import { sql } from "drizzle-orm";
 import { getDb, type Db, type TestableDb } from "@/lib/db/client";
+import { withProfileScope } from "@/lib/db/rls";
 import * as schema from "@/lib/db/schema";
 import { logger } from "@/lib/logging/logger";
+import { pseudonymize } from "@/lib/logging/redact";
 import type {
   CatalogIdentifierType,
   CatalogProduct,
@@ -87,6 +104,10 @@ export class PostgresCatalogProvider implements MedicationCatalogProvider {
   async lookupByIdentifier(type: CatalogIdentifierType, value: string, confirmingProfileId?: string): Promise<IdentifierResolution> {
     const { medicationIdentifier: mi } = schema;
 
+    // Unscoped, over the plain `this.db` connection: matches only
+    // AUTHORITATIVE rows (`profile_id IS NULL`), which migration 0013's
+    // RLS policy always allows regardless of `app.current_profile_id` —
+    // see this file's header doc.
     const authoritativeMatches = await this.db
       .selectDistinct({ catalogProductId: mi.catalogProductId })
       .from(mi)
@@ -100,14 +121,24 @@ export class PostgresCatalogProvider implements MedicationCatalogProvider {
 
     if (authoritativeMatches.length === 1) {
       if (confirmingProfileId) {
-        const userMatches = await this.db
-          .selectDistinct({ catalogProductId: mi.catalogProductId })
-          .from(mi)
-          .where(
-            sql`${mi.identifierType} = ${type} AND ${mi.identifierValue} = ${value} AND ${mi.evidenceType} = 'USER_CONFIRMED' AND ${mi.profileId} = ${confirmingProfileId}`,
-          );
+        // Scoped: this row's `profile_id` is NOT NULL, so migration
+        // 0013's RLS policy only allows it through when
+        // `app.current_profile_id` matches — `withProfileScope` is what
+        // actually sets that for the duration of this query.
+        const [userMatches] = await withProfileScope(
+          confirmingProfileId,
+          (scopedDb) => [
+            scopedDb
+              .selectDistinct({ catalogProductId: mi.catalogProductId })
+              .from(mi)
+              .where(
+                sql`${mi.identifierType} = ${type} AND ${mi.identifierValue} = ${value} AND ${mi.evidenceType} = 'USER_CONFIRMED' AND ${mi.profileId} = ${confirmingProfileId}`,
+              ),
+          ] as const,
+          { db: this.db },
+        );
         if (userMatches.some((m) => m.catalogProductId !== authoritativeMatches[0].catalogProductId)) {
-          logger.warn("catalog.identifier.authoritative_shadows_user_confirmed", { type, confirmingProfileId });
+          logger.warn("catalog.identifier.authoritative_shadows_user_confirmed", { type, profileRef: pseudonymize(confirmingProfileId) });
         }
       }
       return this.loadExact(authoritativeMatches[0].catalogProductId, "AUTHORITATIVE");
@@ -115,12 +146,18 @@ export class PostgresCatalogProvider implements MedicationCatalogProvider {
 
     if (!confirmingProfileId) return { state: "VALID_IDENTIFIER_UNRESOLVED" };
 
-    const userMatches = await this.db
-      .selectDistinct({ catalogProductId: mi.catalogProductId })
-      .from(mi)
-      .where(
-        sql`${mi.identifierType} = ${type} AND ${mi.identifierValue} = ${value} AND ${mi.evidenceType} = 'USER_CONFIRMED' AND ${mi.profileId} = ${confirmingProfileId}`,
-      );
+    const [userMatches] = await withProfileScope(
+      confirmingProfileId,
+      (scopedDb) => [
+        scopedDb
+          .selectDistinct({ catalogProductId: mi.catalogProductId })
+          .from(mi)
+          .where(
+            sql`${mi.identifierType} = ${type} AND ${mi.identifierValue} = ${value} AND ${mi.evidenceType} = 'USER_CONFIRMED' AND ${mi.profileId} = ${confirmingProfileId}`,
+          ),
+      ] as const,
+      { db: this.db },
+    );
 
     if (userMatches.length === 0) return { state: "VALID_IDENTIFIER_UNRESOLVED" };
     if (userMatches.length > 1) {
@@ -154,37 +191,63 @@ export class PostgresCatalogProvider implements MedicationCatalogProvider {
   async confirmIdentifier(type: CatalogIdentifierType, value: string, catalogProductId: string, profileId: string): Promise<ConfirmIdentifierOutcome> {
     const { medicationIdentifier: mi } = schema;
 
-    const existingForThisProduct = await this.db
-      .select({ id: mi.id })
-      .from(mi)
-      .where(
-        sql`${mi.identifierType} = ${type} AND ${mi.identifierValue} = ${value} AND ${mi.evidenceType} = 'USER_CONFIRMED' AND ${mi.profileId} = ${profileId} AND ${mi.catalogProductId} = ${catalogProductId}`,
-      )
-      .limit(1);
+    // Every query below writes or reads a `profile_id IS NOT NULL` row
+    // (a USER_CONFIRMED mapping), so each one must run through
+    // `withProfileScope` — migration 0013's RLS policy only allows those
+    // rows through when `app.current_profile_id` matches. Kept as three
+    // separate calls (mirroring the three sequential round trips this
+    // method already made before this table had RLS) rather than merged
+    // into fewer batches, to keep this change to exactly what RLS
+    // requires.
+    const [existingForThisProduct] = await withProfileScope(
+      profileId,
+      (scopedDb) => [
+        scopedDb
+          .select({ id: mi.id })
+          .from(mi)
+          .where(
+            sql`${mi.identifierType} = ${type} AND ${mi.identifierValue} = ${value} AND ${mi.evidenceType} = 'USER_CONFIRMED' AND ${mi.profileId} = ${profileId} AND ${mi.catalogProductId} = ${catalogProductId}`,
+          )
+          .limit(1),
+      ] as const,
+      { db: this.db },
+    );
     if (existingForThisProduct.length > 0) return { status: "already_confirmed" };
 
-    const conflictingForOtherProduct = await this.db
-      .select({ id: mi.id })
-      .from(mi)
-      .where(
-        sql`${mi.identifierType} = ${type} AND ${mi.identifierValue} = ${value} AND ${mi.evidenceType} = 'USER_CONFIRMED' AND ${mi.profileId} = ${profileId} AND ${mi.catalogProductId} <> ${catalogProductId}`,
-      )
-      .limit(1);
+    const [conflictingForOtherProduct] = await withProfileScope(
+      profileId,
+      (scopedDb) => [
+        scopedDb
+          .select({ id: mi.id })
+          .from(mi)
+          .where(
+            sql`${mi.identifierType} = ${type} AND ${mi.identifierValue} = ${value} AND ${mi.evidenceType} = 'USER_CONFIRMED' AND ${mi.profileId} = ${profileId} AND ${mi.catalogProductId} <> ${catalogProductId}`,
+          )
+          .limit(1),
+      ] as const,
+      { db: this.db },
+    );
 
-    await this.db
-      .insert(mi)
-      .values({ catalogProductId, identifierType: type, identifierValue: value, source: "user_confirmed", evidenceType: "USER_CONFIRMED", profileId })
-      // `where` (not `target` alone) is required here, exactly like
-      // `upsert-catalog-records.ts`'s `onConflictDoUpdate({ targetWhere })`
-      // fix earlier in this project: the arbiter is the PARTIAL index
-      // `uq_medication_identifier_user_confirmed_no_dupe`
-      // (`WHERE evidence_type = 'USER_CONFIRMED'`), and Postgres only
-      // matches an `ON CONFLICT` clause to a partial index when the
-      // clause's own predicate is provided and syntactically implies it.
-      .onConflictDoNothing({
-        target: [mi.catalogProductId, mi.identifierType, mi.identifierValue, mi.profileId],
-        where: sql`${mi.evidenceType} = 'USER_CONFIRMED'`,
-      });
+    await withProfileScope(
+      profileId,
+      (scopedDb) => [
+        scopedDb
+          .insert(mi)
+          .values({ catalogProductId, identifierType: type, identifierValue: value, source: "user_confirmed", evidenceType: "USER_CONFIRMED", profileId })
+          // `where` (not `target` alone) is required here, exactly like
+          // `upsert-catalog-records.ts`'s `onConflictDoUpdate({ targetWhere })`
+          // fix earlier in this project: the arbiter is the PARTIAL index
+          // `uq_medication_identifier_user_confirmed_no_dupe`
+          // (`WHERE evidence_type = 'USER_CONFIRMED'`), and Postgres only
+          // matches an `ON CONFLICT` clause to a partial index when the
+          // clause's own predicate is provided and syntactically implies it.
+          .onConflictDoNothing({
+            target: [mi.catalogProductId, mi.identifierType, mi.identifierValue, mi.profileId],
+            where: sql`${mi.evidenceType} = 'USER_CONFIRMED'`,
+          }),
+      ] as const,
+      { db: this.db },
+    );
 
     return conflictingForOtherProduct.length > 0 ? { status: "conflict_with_own_prior_mapping" } : { status: "created" };
   }
