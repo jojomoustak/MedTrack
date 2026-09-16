@@ -1,0 +1,24 @@
+-- Real production bug fix (2026-09-17): the first live exercise of the
+-- password-reset flow 500'd on a second "forgot password" request for the
+-- same account. Root cause: `uq_account_verification_token_hash` (a UNIQUE
+-- index on `account_verification.token_hash`) assumed that column always
+-- holds a per-request-unique hashed token. Better Auth's actual
+-- password-reset handler writes `value: user.id` (the account's own id,
+-- constant across every reset request for that account) into this column
+-- — the real random per-request token lives in `purpose`
+-- (`reset-password:<token>`) instead. A second reset request for the same
+-- account therefore always collided with the first request's still-present
+-- row and failed with a unique-violation 500, until that row was consumed
+-- or manually deleted — every user's second-or-later reset attempt was
+-- broken, not an edge case.
+--
+-- Confirmed not load-bearing before dropping: Better Auth's own
+-- `findVerificationValue` queries by `identifier` (our `purpose`) alone,
+-- served by `ix_account_verification_identifier` (added alongside this
+-- table, migration 0000) — this index never served that lookup and nothing
+-- else in the codebase queries `account_verification` by `token_hash`.
+--
+-- Forward/rollback: dropping an index is reversible (CREATE UNIQUE INDEX
+-- again) but should not be reversed — re-adding it reintroduces this exact
+-- bug.
+DROP INDEX "uq_account_verification_token_hash";

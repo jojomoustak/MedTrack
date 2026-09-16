@@ -918,12 +918,20 @@ export const accountVerification = pgTable(
     updatedAt: timestamptz("updated_at"),
   },
   (t) => [
-    uniqueIndex("uq_account_verification_token_hash").on(t.tokenHash),
-    // Better Auth's `findVerificationValue` (`db/internal-adapter.mjs`)
-    // queries by `identifier` (our `purpose`) alone, sorted by
-    // `createdAt` desc, `limit 1` — confirmed by reading the pinned
-    // version's source. `uq_account_verification_token_hash` above
-    // doesn't serve that query at all; this index does.
+    // `uq_account_verification_token_hash` (a UNIQUE index on `tokenHash`)
+    // REMOVED here (migration 0016) — a REAL production 500 (2026-09-17,
+    // first live exercise of the password-reset flow) found it actively
+    // wrong, not just unnecessary as the comment below already suspected.
+    // Better Auth's password-reset handler (`api/routes/password.mjs`)
+    // writes `value: user.id` into this column — the ACCOUNT's id, constant
+    // per account, never a per-request hash — while the actual per-request
+    // random token lives in `purpose` (`reset-password:<token>`) instead.
+    // A second "forgot password" request for the same account therefore
+    // always collided with the first request's still-present row and
+    // 500'd, permanently, until that row was consumed or manually deleted
+    // — i.e. every user's second-or-later reset attempt was broken. Never
+    // load-bearing for anything Better Auth actually needs (confirmed
+    // below: lookups key on `purpose` alone), so dropping it is a pure fix.
     index("ix_account_verification_identifier").on(t.purpose, t.createdAt.desc()),
   ],
 );
