@@ -7,11 +7,11 @@
  * "unverified email" banner / resend-verification affordance
  * (`components/profile/EmailVerificationBanner.tsx`).
  *
- * Reads `account.email_verified_at` directly rather than trusting Better
- * Auth's session-shaped `user.emailVerified` — `lib/auth/email-verified-
- * plugin.ts`'s own doc comment documents that field as unreliable on some
- * client response paths (can surface as a raw `Date` rather than a clean
- * boolean); this column is the authoritative source per that same comment.
+ * Reads `account.email_verified` (the native boolean Better Auth itself
+ * reads/writes directly, 2026-09-17 fix — see `lib/db/schema.ts`'s doc
+ * comment) rather than deriving from `email_verified_at`. Both are kept
+ * in sync (`lib/auth/config.ts`'s `databaseHooks.user.update.after`), but
+ * the boolean is the primary source as of this fix, not a derived one.
  */
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
@@ -27,11 +27,11 @@ export async function GET(request: Request) {
     const session = await requireSessionFromRequest(request);
     const db = getDb();
     const [row] = await db
-      .select({ emailVerifiedAt: schema.account.emailVerifiedAt })
+      .select({ emailVerified: schema.account.emailVerified })
       .from(schema.account)
       .where(eq(schema.account.id, session.accountId))
       .limit(1);
-    return NextResponse.json({ emailVerified: Boolean(row?.emailVerifiedAt) });
+    return NextResponse.json({ emailVerified: row?.emailVerified ?? false });
   } catch (err) {
     return toSafeErrorResponse(err, { route: "account.email-verification" });
   }

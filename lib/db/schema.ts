@@ -57,6 +57,30 @@ export const account = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     email: citext("email").notNull(),
     emailVerifiedAt: timestamptz("email_verified_at"),
+    // Real production bug fix (2026-09-17): a genuine boolean, mapped
+    // directly onto Better Auth's core `user.emailVerified` field with NO
+    // custom type/transform (the field NAME matches Better Auth's own
+    // default exactly, so no `user.fields` entry is needed either —
+    // Better Auth reads/writes a plain boolean everywhere, including
+    // internal, non-API-response code paths like `send-verification-
+    // email`'s own already-verified check). The PRIOR approach (a
+    // schema-overriding plugin mapping `emailVerified` onto
+    // `emailVerifiedAt` via a `type: "date"` field + input/output
+    // transforms, `lib/auth/email-verified-plugin.ts`, now deleted) was
+    // reasoned to only ever need a write-side transform — wrong in
+    // practice: a live account with `email_verified_at IS NULL` (never
+    // verified) got treated as "already verified" by Better Auth's
+    // OWN internal `getSessionFromCtx()`-derived check, permanently
+    // blocking that account's "resend verification email" action with a
+    // 400 EMAIL_ALREADY_VERIFIED — confirmed by reproducing the exact
+    // request against production and reading the raw response body,
+    // not assumed. `emailVerifiedAt` is KEPT (not removed) as the
+    // project's audit-timestamp convention ("every 'when did X happen'
+    // fact is a timestamp, not a flag" — this file's own established
+    // pattern) — synced from this boolean via `databaseHooks.user.update.
+    // after` (`lib/auth/config.ts`) whenever it flips true, but no longer
+    // read by Better Auth itself for anything.
+    emailVerified: boolean("email_verified").notNull().default(false),
     displayName: text("display_name"),
     // Found via a REAL Google OAuth click-through (2026-08-21): a
     // brand-new Google sign-up 500'd with `[Better Auth]:

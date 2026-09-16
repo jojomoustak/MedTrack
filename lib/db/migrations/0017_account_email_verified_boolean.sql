@@ -1,0 +1,26 @@
+-- Real production bug fix (2026-09-17) — see lib/db/schema.ts's
+-- `account.emailVerified` doc comment for the full root-cause writeup.
+-- Better Auth's core `user.emailVerified` field was mapped onto
+-- `account.email_verified_at` (a nullable timestamp) via a custom
+-- schema-overriding plugin with input/output transforms
+-- (lib/auth/email-verified-plugin.ts, now deleted). That plugin's
+-- transform only reliably applied on Better Auth's own API-response
+-- serialization path — NOT on internal, non-serialized reads like the
+-- one `POST /send-verification-email` uses to decide whether an account
+-- is "already verified". A NULL `email_verified_at` (genuinely
+-- unverified) was read there as truthy, permanently blocking every
+-- account's "resend verification email" action.
+--
+-- Fix: a real, native boolean column, matching Better Auth's own default
+-- field type exactly (no plugin, no transform, no custom type needed
+-- anywhere). `email_verified_at` is kept as a derived audit timestamp
+-- (project convention), synced by `lib/auth/config.ts`'s new
+-- `databaseHooks.user.update.after` hook whenever this boolean flips
+-- true, but no longer read by Better Auth itself for anything.
+--
+-- Backfill: any account whose `email_verified_at` was already set (e.g.
+-- a Google-linked account, which is Google-attested verified at sign-in)
+-- is backfilled to `email_verified = true` so this migration cannot
+-- un-verify an account that was correctly verified under the old scheme.
+ALTER TABLE "account" ADD COLUMN "email_verified" boolean NOT NULL DEFAULT false;--> statement-breakpoint
+UPDATE "account" SET "email_verified" = true WHERE "email_verified_at" IS NOT NULL;

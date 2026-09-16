@@ -79,6 +79,7 @@
  *     accepted reasoning on why the remaining HTTP-level distinguishability
  *     is a known, non-blocking gap.
  */
+import { eq, sql } from "drizzle-orm";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { getDb } from "@/lib/db/client";
@@ -89,7 +90,6 @@ import { hashPassword } from "@/lib/auth/argon2";
 import { clearLockout, verifyPasswordWithLockout } from "@/lib/auth/lockout";
 import { stripOAuthTokens } from "@/lib/auth/oauth-token-strip";
 import { withHashedSessionTokenAdapter } from "@/lib/auth/adr003-adapter";
-import { emailVerifiedTimestampPlugin } from "@/lib/auth/email-verified-plugin";
 import { sendEmail } from "@/lib/email/server/resend-client";
 import {
   passwordResetBlockedPendingVerificationEmail,
@@ -249,11 +249,12 @@ function buildAuth() {
         // than left unmapped, since an unmapped core field still gets
         // written by the adapter and errors if no column exists for it.
         image: "avatarUrl",
-        // `emailVerified` (boolean) <-> `email_verified_at` (timestamptz)
-        // conversion is handled by `emailVerifiedTimestampPlugin` below,
-        // which fully overrides this field's schema (type + fieldName +
-        // transform) — do not also rename it here, the plugin's
-        // `fieldName` takes care of that.
+        // `emailVerified` deliberately has NO entry here (2026-09-17 fix)
+        // — the drizzle column is named `emailVerified` (mapped to
+        // `email_verified`), identical to Better Auth's own default field
+        // name, so it maps automatically with no custom type/transform
+        // needed. See `lib/db/schema.ts`'s `account.emailVerified` doc
+        // comment for why the previous plugin-based approach was wrong.
       },
     },
 
@@ -375,11 +376,15 @@ function buildAuth() {
       // Security audit follow-up (2026-09-15): `data.user` here is Better
       // Auth's core `User` shape, which includes a real `emailVerified`
       // boolean (confirmed against `@better-auth/core`'s
-      // `sendResetPassword` type) — NOT the same value as
-      // `session.user.emailVerified` on the client, which
-      // `lib/auth/email-verified-plugin.ts`'s own doc comment documents as
-      // unreliable for that specific response path; this server-side
-      // callback isn't affected by that quirk.
+      // `sendResetPassword` type). This callback fetches the user fresh
+      // via `findUserByEmail`, a different internal path than the one
+      // `getSessionFromCtx()` used — the latter is what produced the real,
+      // confirmed `EMAIL_ALREADY_VERIFIED` bug fixed 2026-09-17 (see
+      // `lib/db/schema.ts`'s `account.emailVerified` doc comment); a live
+      // test confirmed this specific path was never affected (an
+      // unverified account correctly received a real reset link, not the
+      // "verify first" notice) — moot now regardless, since `emailVerified`
+      // is a plain native boolean everywhere as of that fix.
       sendResetPassword: async (data: { user: { email: string; emailVerified: boolean }; url: string }) => {
         const content = data.user.emailVerified
           ? passwordResetEmail({ url: data.url })
@@ -422,6 +427,26 @@ function buildAuth() {
             await createProfileForNewAccount(user.id);
           },
         },
+        // Real production bug fix (2026-09-17): keeps `account.
+        // email_verified_at` (the project's audit-timestamp convention)
+        // in sync with the native `emailVerified` boolean Better Auth
+        // itself now reads/writes directly — see `lib/db/schema.ts`'s
+        // `account.emailVerified` doc comment for the full history. Only
+        // ever SETS it (COALESCE preserves an existing timestamp across
+        // any later, unrelated user-row update) — clearing on
+        // un-verification isn't a real scenario Better Auth exposes, and
+        // `deleteAccount`'s anonymization path already nulls both columns
+        // directly and independently of this hook.
+        update: {
+          after: async (user) => {
+            if (user.emailVerified) {
+              await db
+                .update(schema.account)
+                .set({ emailVerifiedAt: sql`COALESCE(${schema.account.emailVerifiedAt}, now())` })
+                .where(eq(schema.account.id, user.id));
+            }
+          },
+        },
       },
       session: {
         create: {
@@ -454,7 +479,6 @@ function buildAuth() {
       },
     },
 
-    plugins: [emailVerifiedTimestampPlugin],
   });
 }
 

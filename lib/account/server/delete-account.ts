@@ -449,6 +449,11 @@ export async function deleteAccount(request: DeleteAccountRequest, dbOverride?: 
               displayName: null,
               avatarUrl: null,
               emailVerifiedAt: null,
+              // 2026-09-17: emailVerified (the native boolean Better Auth
+              // now reads directly — see lib/db/schema.ts's doc comment)
+              // must be reset alongside emailVerifiedAt so an anonymized
+              // account shows as unverified consistently in both columns.
+              emailVerified: false,
               status: "deleted",
               updatedAt: new Date().toISOString(),
             })
