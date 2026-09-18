@@ -9,7 +9,7 @@ export default function WelcomePage() {
         <p className="max-w-sm text-zinc-600 dark:text-zinc-400">
           Παρακολουθήστε τα φάρμακά σας, το πρόγραμμα λήψης και το απόθεμά σας — ακόμα και χωρίς σύνδεση στο διαδίκτυο.
         </p>
-        <p className="text-sm text-zinc-500 dark:text-zinc-500">Διαθέσιμο προς το παρόν μόνο στα Ελληνικά.</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Διαθέσιμο προς το παρόν μόνο στα Ελληνικά.</p>
       </div>
 
       <div className="flex w-full max-w-xs flex-col gap-3">

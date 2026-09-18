@@ -110,7 +110,7 @@ export default function CalendarMonthPage() {
         </p>
       )}
 
-      <div className="grid grid-cols-7 gap-1 text-center text-xs text-zinc-500 dark:text-zinc-500" aria-hidden="true">
+      <div className="grid grid-cols-7 gap-1 text-center text-sm text-zinc-600 dark:text-zinc-400" aria-hidden="true">
         {WEEKDAY_INITIALS.map((initial, i) => (
           <span key={i}>{initial}</span>
         ))}

@@ -133,7 +133,10 @@ export default function MedicationsPage() {
                     {names.get(med.id) ?? "…"}
                   </Link>
                   {lowStockIds.has(med.id) && (
-                    <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                      <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true" focusable="false" fill="currentColor" className="shrink-0">
+                        <path d="M10 2 1 18h18L10 2Zm0 5a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm0 8a1.25 1.25 0 1 1 0-2.5A1.25 1.25 0 0 1 10 15Z" />
+                      </svg>
                       Χαμηλό απόθεμα
                     </span>
                   )}
@@ -148,7 +151,7 @@ export default function MedicationsPage() {
                       Φωτογραφία
                     </Link>
                   ) : (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-500">Φωτογραφία μετά τον συγχρονισμό</p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">Φωτογραφία μετά τον συγχρονισμό</p>
                   )}
                 </div>
                 <SyncStatusChip state={med.syncState} />

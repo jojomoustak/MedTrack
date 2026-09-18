@@ -85,7 +85,7 @@ export function InventoryCorrectionForm({
           step="any"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-transparent"
+          className="min-h-12 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-zinc-900"
         />
       </label>
 
@@ -96,7 +96,7 @@ export function InventoryCorrectionForm({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="π.χ. Καταμέτρηση, χαμένο δισκίο, λάθος καταχώρηση"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-transparent"
+          className="min-h-12 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-zinc-900"
         />
       </label>
 

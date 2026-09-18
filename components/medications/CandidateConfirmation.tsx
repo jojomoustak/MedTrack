@@ -3,6 +3,8 @@
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import { SEED_PLACEHOLDER_SOURCE } from "@/lib/domain/catalog";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { FORM_LABELS } from "@/components/medications/DetailsStep";
+import type { MedicationForm } from "@/lib/domain/user-medication";
 
 export interface CandidateConfirmationProps {
   product: CatalogProduct;
@@ -55,12 +57,12 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
           {product.form && (
             <>
               <dt className="text-zinc-500">Μορφή</dt>
-              <dd>{product.form}</dd>
+              <dd>{FORM_LABELS[product.form as MedicationForm] ?? product.form}</dd>
             </>
           )}
         </dl>
         {product.regulatorySource === SEED_PLACEHOLDER_SOURCE && (
-          <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-500">
+          <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
             Δοκιμαστικά δεδομένα καταλόγου — όχι επίσημη πηγή.
           </p>
         )}

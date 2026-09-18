@@ -35,7 +35,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
           Σύνδεση
         </Link>
       </p>
-      <p className="text-xs text-zinc-500 dark:text-zinc-500">
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">
         Δημιουργώντας λογαριασμό, συμφωνείτε με την{" "}
         <Link href="/privacy" className="underline">
           Πολιτική Απορρήτου

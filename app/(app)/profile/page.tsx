@@ -103,7 +103,7 @@ export default function ProfilePage() {
 
       <EmailVerificationBanner email={data?.user?.email ?? null} />
 
-      <p className="text-sm text-zinc-500 dark:text-zinc-500">Ρυθμίσεις, προσβασιμότητα και κατάσταση συγχρονισμού έρχονται σύντομα.</p>
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">Ρυθμίσεις, προσβασιμότητα και κατάσταση συγχρονισμού έρχονται σύντομα.</p>
 
       <ReminderPermissionToggle profileId={profileId} />
 

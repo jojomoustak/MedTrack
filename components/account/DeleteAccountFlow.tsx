@@ -48,6 +48,17 @@ export function DeleteAccountFlow() {
     stepContainerRef.current?.focus();
   }, [step]);
 
+  // UX audit (2026-09-18): none of the three pre-confirmation steps had
+  // any back/cancel affordance — the OS/WebView back gesture was the only
+  // way out, unlike every other multi-step flow in the app
+  // (`AddMedicationFlow`, the schedule builders, `DeleteMedicationSection`'s
+  // own two-tap confirm). Worth fixing precisely because this is the
+  // highest-stakes, most irreversible flow in the app.
+  function handleCancel() {
+    playSound("button");
+    router.push("/profile");
+  }
+
   async function goToSummary() {
     playSound("button");
     setSummaryError(null);
@@ -128,13 +139,22 @@ export function DeleteAccountFlow() {
           <p>Περιλαμβάνει όλα τα δεδομένα του λογαριασμού σας: φάρμακα, προγράμματα λήψης, ιστορικό δόσεων, απόθεμα και λίστες αγορών.</p>
           <p>Μόλις ολοκληρωθεί, αυτά τα δεδομένα δεν μπορούν να ανακτηθούν.</p>
         </div>
-        <button
-          type="button"
-          onClick={goToSummary}
-          className="min-h-12 self-start rounded-full bg-red-700 px-5 py-3 font-medium text-white"
-        >
-          Συνέχεια
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="min-h-12 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+          >
+            Άκυρο
+          </button>
+          <button
+            type="button"
+            onClick={goToSummary}
+            className="min-h-12 rounded-full bg-red-700 px-5 py-3 font-medium text-white"
+          >
+            Συνέχεια
+          </button>
+        </div>
         {summaryError && (
           <p role="alert" className="text-sm text-red-700 dark:text-red-400">
             {summaryError}
@@ -153,13 +173,22 @@ export function DeleteAccountFlow() {
           <li>{summary.doseEvents} καταγεγραμμένες δόσεις</li>
           <li>{summary.lists} λίστες</li>
         </ul>
-        <button
-          type="button"
-          onClick={goToConfirm}
-          className="min-h-12 self-start rounded-full bg-red-700 px-5 py-3 font-medium text-white"
-        >
-          Συνέχεια
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="min-h-12 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+          >
+            Άκυρο
+          </button>
+          <button
+            type="button"
+            onClick={goToConfirm}
+            className="min-h-12 rounded-full bg-red-700 px-5 py-3 font-medium text-white"
+          >
+            Συνέχεια
+          </button>
+        </div>
       </div>
     );
   }
@@ -192,14 +221,23 @@ export function DeleteAccountFlow() {
           </p>
         )}
 
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={offline || confirmText !== CONFIRM_PHRASE}
-          className="min-h-12 self-start rounded-full bg-red-700 px-5 py-3 font-medium text-white disabled:opacity-50"
-        >
-          Οριστική διαγραφή λογαριασμού
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="min-h-12 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+          >
+            Άκυρο
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={offline || confirmText !== CONFIRM_PHRASE}
+            className="min-h-12 rounded-full bg-red-700 px-5 py-3 font-medium text-white disabled:opacity-50"
+          >
+            Οριστική διαγραφή λογαριασμού
+          </button>
+        </div>
       </div>
     );
   }

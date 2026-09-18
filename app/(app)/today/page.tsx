@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useProfileId, useAccountId } from "@/components/shell/CurrentProfileContext";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
+import { useLowStockMedicationIds } from "@/lib/inventory/client/use-low-stock-medications";
 import { useTodayDoseEvents, allTodayDosesResolved } from "@/components/today/use-today-dose-events";
 import { DoseCard } from "@/components/today/DoseCard";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
@@ -52,6 +53,34 @@ function pushNativeRemindersAfterTransition(profileId: string | null): void {
 }
 
 /**
+ * Journey 5's Today banner — same icon+text cue as `InventorySummary`
+ * (medication detail) and the Medications list badge, never color alone.
+ * Non-blocking: rendered above the dose list, never gates it.
+ */
+function LowStockBanner({ names }: { names: string[] }) {
+  const label = names.length === 1 ? `${names[0]} — χαμηλό απόθεμα.` : `${names.length} φάρμακα με χαμηλό απόθεμα: ${names.join(", ")}.`;
+  return (
+    <Link
+      href="/medications"
+      onClick={() => playSound("button")}
+      role="status"
+      className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+    >
+      <LowStockIcon />
+      {label}
+    </Link>
+  );
+}
+
+function LowStockIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false" fill="currentColor" className="shrink-0">
+      <path d="M10 2 1 18h18L10 2Zm0 5a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm0 8a1.25 1.25 0 1 1 0-2.5A1.25 1.25 0 0 1 10 15Z" />
+    </svg>
+  );
+}
+
+/**
  * Today (Phase 3 §2.2) — the daily adherence loop's home screen. Real
  * dose data now that Phase 10's schedule/dose-event domain exists (was a
  * permanent placeholder before, per this file's own prior history).
@@ -61,6 +90,13 @@ export default function TodayPage() {
   const accountId = useAccountId();
   const { status: medsStatus, medications } = useMedicationsList(profileId);
   const names = useDisplayNames(medications);
+  // Journey 5 (Phase 3 §3 / Phase 0 Maria persona): "same non-color
+  // low-stock cue... Today (banner)... Medications list (badge)...
+  // medication detail (inline banner)." The latter two already existed
+  // (`InventorySummary`, `app/(app)/medications/page.tsx`) — Today's own
+  // banner was the missing one (UX audit, 2026-09-18).
+  const lowStockIds = useLowStockMedicationIds(profileId, medications);
+  const lowStockNames = [...lowStockIds].map((id) => names.get(id)).filter((n): n is string => Boolean(n));
   // A dose crossed from "not yet due" to "due now" while this page stayed
   // open (`useTodayDoseEvents`'s own doc comment) — the in-app chime,
   // separate from the native reminder notification (Phase 11), which
@@ -146,8 +182,13 @@ export default function TodayPage() {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
         <h1 className="text-xl font-semibold">Σήμερα</h1>
+        {lowStockNames.length > 0 && (
+          <div className="w-full max-w-sm">
+            <LowStockBanner names={lowStockNames} />
+          </div>
+        )}
         <p className="max-w-sm text-zinc-600 dark:text-zinc-400">Δεν έχετε προγραμματισμένες δόσεις για σήμερα.</p>
-        <p className="max-w-sm text-sm text-zinc-500 dark:text-zinc-500">
+        <p className="max-w-sm text-sm text-zinc-500 dark:text-zinc-400">
           Μπορείτε να προσθέσετε πρόγραμμα δόσεων όταν προσθέτετε ένα φάρμακο.
         </p>
         <Link href="/medications" className="min-h-12 text-sm font-medium underline">
@@ -162,6 +203,8 @@ export default function TodayPage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-xl font-semibold">Σήμερα</h1>
+
+      {lowStockNames.length > 0 && <LowStockBanner names={lowStockNames} />}
 
       {needsAttention.length > 0 && (
         <section className="flex flex-col gap-2">

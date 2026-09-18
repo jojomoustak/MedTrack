@@ -32,7 +32,7 @@ export function ReminderPermissionToggle({ profileId, platform = new MedianMobil
     return (
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Ειδοποιήσεις υπενθύμισης</h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-500">Διαθέσιμες μόνο μέσω της εφαρμογής MedTracking για κινητά.</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Διαθέσιμες μόνο μέσω της εφαρμογής MedTracking για κινητά.</p>
       </section>
     );
   }
@@ -75,7 +75,7 @@ export function ReminderPermissionToggle({ profileId, platform = new MedianMobil
   return (
     <section className="flex flex-col gap-2">
       <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Ειδοποιήσεις υπενθύμισης</h2>
-      <p className="text-sm text-zinc-500 dark:text-zinc-500">
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">
         Οι υπενθυμίσεις δόσεων λειτουργούν στη συσκευή σας ακόμα και χωρίς σύνδεση στο διαδίκτυο. Χρειάζονται άδεια ειδοποιήσεων.
       </p>
 

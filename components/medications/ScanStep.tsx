@@ -436,7 +436,7 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
       <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
         Αναζήτηση σε επίσημες πηγές
       </p>
-      <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-500">
+      <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
         Αντιγράψτε τον κωδικό και αναζητήστε τον στον ιστότοπο του Εθνικού Οργανισμού Φαρμάκων (ΕΟΦ) ή
         του Ευρωπαϊκού Οργανισμού Φαρμάκων (EMA). Τα αποτελέσματα εμφανίζονται στον ιστότοπό τους — το
         MedTracking δεν τα διαβάζει ούτε τα συμπληρώνει αυτόματα.
@@ -446,7 +446,7 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
         <button
           type="button"
           onClick={handleCopy}
-          className="min-h-8 shrink-0 rounded-full border border-zinc-300 px-3 text-xs font-medium dark:border-zinc-700"
+          className="min-h-12 shrink-0 rounded-full border border-zinc-300 px-3 text-xs font-medium dark:border-zinc-700"
         >
           {copied ? "Αντιγράφηκε ✓" : "Αντιγραφή"}
         </button>
@@ -456,7 +456,7 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
           href="https://services.eof.gr/human-search/home.xhtml"
           target="_blank"
           rel="noopener noreferrer"
-          className="min-h-10 rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium underline dark:border-zinc-700"
+          className="flex min-h-12 items-center justify-center rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium underline dark:border-zinc-700"
         >
           Αναζήτηση στον ΕΟΦ (eof.gr)
         </a>
@@ -464,7 +464,7 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
           href="https://www.ema.europa.eu/en/medicines"
           target="_blank"
           rel="noopener noreferrer"
-          className="min-h-10 rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium underline dark:border-zinc-700"
+          className="flex min-h-12 items-center justify-center rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium underline dark:border-zinc-700"
         >
           Αναζήτηση στον EMA (ema.europa.eu)
         </a>

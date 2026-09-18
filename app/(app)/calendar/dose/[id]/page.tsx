@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
+import { playSound } from "@/lib/sound/client/play-sound";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
@@ -36,6 +36,7 @@ function unitLabel(unit: string | null): string {
  */
 export default function DoseHistoryDetailPage() {
   const profileId = useProfileId();
+  const router = useRouter();
   const params = useParams<{ id: string }>();
   const [dose, setDose] = useState<DoseEventRecord | null | undefined>(undefined);
   const { medications } = useMedicationsList(profileId);
@@ -59,9 +60,20 @@ export default function DoseHistoryDetailPage() {
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-4 p-4">
-      <Link href="/calendar/timeline" className="min-h-12 text-sm font-medium underline">
+      {/* UX audit (2026-09-18): was hardcoded to /calendar/timeline
+          regardless of whether the user actually came from Day view or
+          Timeline — router.back() returns to whichever one actually
+          linked here (both do, via /calendar/dose/[id]). */}
+      <button
+        type="button"
+        onClick={() => {
+          playSound("button");
+          router.back();
+        }}
+        className="min-h-12 self-start text-sm font-medium underline"
+      >
         ← Πίσω
-      </Link>
+      </button>
 
       {dose === undefined && (
         <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">

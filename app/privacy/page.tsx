@@ -25,7 +25,7 @@ export default function PrivacyPage() {
           ← Αρχική
         </Link>
         <h1 className="text-2xl font-semibold">Πολιτική Απορρήτου</h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-500">Τελευταία ενημέρωση: 15 Σεπτεμβρίου 2026</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Τελευταία ενημέρωση: 15 Σεπτεμβρίου 2026</p>
       </div>
 
       <div

@@ -85,12 +85,12 @@ export function AddPackageForm({
             step="any"
             value={quantityValue}
             onChange={(e) => setQuantityValue(e.target.value)}
-            className="min-h-12 w-24 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-transparent"
+            className="min-h-12 w-24 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-zinc-900"
           />
           <select
             value={quantityUnit}
             onChange={(e) => setQuantityUnit(e.target.value)}
-            className="min-h-12 flex-1 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-transparent"
+            className="min-h-12 flex-1 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-zinc-900"
           >
             {Object.entries(FORM_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -107,7 +107,7 @@ export function AddPackageForm({
           type="text"
           value={batchNumber}
           onChange={(e) => setBatchNumber(e.target.value)}
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-transparent"
+          className="min-h-12 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-zinc-900"
         />
       </label>
 
@@ -117,7 +117,7 @@ export function AddPackageForm({
           type="date"
           value={expiryDate}
           onChange={(e) => setExpiryDate(e.target.value)}
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-transparent"
+          className="min-h-12 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-zinc-900"
         />
       </label>
 

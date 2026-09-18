@@ -60,7 +60,12 @@ export default function MedicationPhotoPage() {
             type="button"
             onClick={() => {
               playSound("button");
-              router.push("/medications");
+              // UX audit (2026-09-18): Phase 3 §3 Journey 1 ends onboarding
+              // on Today ("first dose now visible") — this used to route
+              // to the medications list instead, so a first-time user
+              // never saw the reassuring payoff the product's own
+              // information architecture is built around.
+              router.push("/today");
             }}
             className="min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
           >

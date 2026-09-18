@@ -239,7 +239,7 @@ export default function PurchaseListDetailPage() {
 
       {status === "ready" && removed.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-500">Δεν χρειάζονται πια</h2>
+          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Δεν χρειάζονται πια</h2>
           <ul className="flex flex-col gap-2" aria-label="Δεν χρειάζονται πια">
             {removed.map((item) => (
               <li key={item.id} className="flex min-h-12 items-center gap-3 rounded-xl border border-dashed border-zinc-200 px-4 py-3 opacity-60 dark:border-zinc-800">

@@ -63,7 +63,7 @@ export function ReviewStep({
           {form && (
             <>
               <dt className="text-zinc-500">Μορφή</dt>
-              <dd>{form}</dd>
+              <dd>{FORM_LABELS[form as MedicationForm] ?? form}</dd>
             </>
           )}
           {strengthValue && (
@@ -75,7 +75,7 @@ export function ReviewStep({
             </>
           )}
           <dt className="text-zinc-500">Μονάδα αποθέματος</dt>
-          <dd>{inventoryUnit}</dd>
+          <dd>{FORM_LABELS[inventoryUnit as MedicationForm] ?? inventoryUnit}</dd>
         </dl>
       </div>
 
@@ -117,10 +117,10 @@ export function ReviewStep({
               onChange={(e) => onInitialQuantityValueChange(e.target.value)}
               placeholder={`π.χ. 30 ${inventoryUnit}`}
               aria-label="Αρχική ποσότητα"
-              className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-transparent"
+              className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
             />
           </label>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-500">
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
             Αν το συμπληρώσετε, θα δημιουργηθεί μια πραγματική συσκευασία στο απόθεμά σας.
           </p>
         </div>

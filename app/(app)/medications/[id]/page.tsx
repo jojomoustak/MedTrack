@@ -165,7 +165,7 @@ export default function MedicationDetailPage() {
           Φωτογραφία
         </Link>
       ) : (
-        <p className="text-sm text-zinc-500 dark:text-zinc-500">Φωτογραφία μετά τον συγχρονισμό</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Φωτογραφία μετά τον συγχρονισμό</p>
       )}
     </div>
   );

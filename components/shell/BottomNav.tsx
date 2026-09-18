@@ -30,7 +30,7 @@ export function BottomNav() {
             onClick={() => playSound("button")}
             aria-current={active ? "page" : undefined}
             className={`flex min-h-12 flex-col items-center justify-center border-t-2 py-2 text-xs ${
-              active ? "border-zinc-900 font-semibold text-zinc-900 dark:border-zinc-50 dark:text-zinc-50" : "border-transparent font-medium text-zinc-500 dark:text-zinc-500"
+              active ? "border-zinc-900 font-semibold text-zinc-900 dark:border-zinc-50 dark:text-zinc-50" : "border-transparent font-medium text-zinc-500 dark:text-zinc-400"
             }`}
           >
             {tab.label}
