@@ -20,7 +20,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
   const googleError = mapGoogleAuthError(error ?? null);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-zinc-50 px-4 py-12 dark:bg-black">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-zinc-50 px-4 py-12 dark:bg-black">
       <h1 className="text-2xl font-semibold">Δημιουργία λογαριασμού</h1>
       {googleError && (
         <p role="alert" className="w-full max-w-sm text-sm text-red-700 dark:text-red-400">

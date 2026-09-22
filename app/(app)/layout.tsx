@@ -43,7 +43,7 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
 
   if (session.status === "loading") {
     return (
-      <main className="flex min-h-screen items-center justify-center">
+      <main className="flex min-h-dvh items-center justify-center">
         <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
           Φόρτωση…
         </p>
@@ -59,7 +59,7 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
 
   return (
     <CurrentProfileProvider profileId={session.profileId} accountId={session.accountId}>
-      <div className="flex min-h-screen flex-col">
+      <div className="flex min-h-dvh flex-col">
         <AppBar />
         <OfflineBanner />
         <div className="flex-1 pb-20">{children}</div>

@@ -57,16 +57,11 @@ export default function MedicationsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Φάρμακα</h1>
-        <Link
-          href="/medications/add"
-          onClick={() => playSound("button")}
-          className="flex min-h-12 items-center justify-center rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
-        >
-          Προσθήκη
-        </Link>
-      </div>
+      {/* UX feedback (2026-09-22): "add" used to also live here, top-right
+          — redundant with `AddMedicationFab` (fixed bottom-right on this
+          same screen) and wrongly placed for a primary action. One add
+          entry point now, in the conventional mobile position. */}
+      <h1 className="text-xl font-semibold">Φάρμακα</h1>
 
       <div role="tablist" aria-label="Φίλτρο φαρμάκων" className="flex gap-2">
         {SEGMENTS.map((s) => (

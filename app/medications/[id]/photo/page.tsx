@@ -31,7 +31,7 @@ export default function MedicationPhotoPage() {
   }, [session.status, router]);
 
   return (
-    <main className="min-h-screen bg-zinc-50 dark:bg-black">
+    <main className="min-h-dvh bg-zinc-50 dark:bg-black">
       <OfflineBanner />
       <div className="mx-auto flex max-w-md items-center gap-3 px-4 py-4">
         <Link href="/medications" aria-label="Πίσω στα φάρμακα" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">

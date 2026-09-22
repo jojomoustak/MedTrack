@@ -98,29 +98,36 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <h1 className="text-xl font-semibold">Προφίλ</h1>
-      {data?.user?.email && <p className="text-zinc-600 dark:text-zinc-400">{data.user.email}</p>}
+      <div>
+        <h1 className="text-xl font-semibold">Προφίλ</h1>
+        {data?.user?.email && <p className="text-sm text-zinc-600 dark:text-zinc-400">{data.user.email}</p>}
+      </div>
 
       <EmailVerificationBanner email={data?.user?.email ?? null} />
 
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">Ρυθμίσεις, προσβασιμότητα και κατάσταση συγχρονισμού έρχονται σύντομα.</p>
+      {/* UX feedback (2026-09-22): flat, ungrouped rows read as an
+          unfinished checklist rather than a real settings screen — each
+          topic now sits in its own card, the same shadow-in-light/
+          border-in-dark treatment every other list/detail surface in the
+          app already uses, so this screen finally looks like it belongs
+          to the same app. */}
+      <div className="rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-4">
+        <ReminderPermissionToggle profileId={profileId} />
+      </div>
 
-      <ReminderPermissionToggle profileId={profileId} />
-
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Σύνδεση λογαριασμών</h2>
+      <section className="flex flex-col gap-3 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-4">
+        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Λογαριασμός</h2>
         <GoogleAuthButton mode="link" callbackURL="/profile" label="Σύνδεση λογαριασμού Google" />
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+        >
+          Αποσύνδεση
+        </button>
       </section>
 
-      <button
-        type="button"
-        onClick={handleSignOut}
-        className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
-      >
-        Αποσύνδεση
-      </button>
-
-      <section className="flex flex-col gap-2">
+      <section className="flex flex-col gap-2 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-4">
         <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Τα δεδομένα μου</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Κατεβάστε ένα αντίγραφο όλων των δεδομένων του λογαριασμού σας — φάρμακα, προγράμματα, δόσεις, απόθεμα και λίστες.
@@ -141,7 +148,7 @@ export default function ProfilePage() {
         </button>
       </section>
 
-      <section className="mt-6 flex flex-col gap-2 rounded-lg border-2 border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
+      <section className="flex flex-col gap-2 rounded-xl border-2 border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
         <div className="flex items-center gap-2 text-red-800 dark:text-red-300">
           <WarningIcon />
           <span className="font-medium">Μη αναστρέψιμη ενέργεια</span>

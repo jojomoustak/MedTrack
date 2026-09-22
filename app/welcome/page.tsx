@@ -3,7 +3,7 @@ import Link from "next/link";
 /** Phase 3 §2.1 "Welcome / intro" — value proposition, states Greek-only UI at launch. */
 export default function WelcomePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-zinc-50 px-6 py-12 text-center dark:bg-black">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-zinc-50 px-6 py-12 text-center dark:bg-black">
       <div className="flex flex-col gap-3">
         <h1 className="text-3xl font-semibold">MedTracking</h1>
         <p className="max-w-sm text-zinc-600 dark:text-zinc-400">
