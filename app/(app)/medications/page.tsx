@@ -80,7 +80,7 @@ export default function MedicationsPage() {
             }}
             className={`min-h-12 rounded-full border px-4 py-2 text-sm font-medium ${
               segment === s.key
-                ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
+                ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950"
                 : "border-zinc-300 dark:border-zinc-700"
             }`}
           >
@@ -102,7 +102,7 @@ export default function MedicationsPage() {
             <Link
               href="/medications/add"
               onClick={() => playSound("button")}
-              className="flex min-h-12 items-center justify-center rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+              className="flex min-h-12 items-center justify-center rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
             >
               Προσθήκη φαρμάκου
             </Link>
@@ -115,7 +115,7 @@ export default function MedicationsPage() {
           {visible.map((med) => {
             const isFavorite = favoriteIds.has(med.id);
             return (
-              <li key={med.id} className="flex min-h-12 items-center justify-between gap-2 rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+              <li key={med.id} className="flex min-h-12 items-center justify-between gap-2 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-4 py-3">
                 <button
                   type="button"
                   onClick={() => {

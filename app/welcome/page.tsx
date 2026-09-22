@@ -15,7 +15,7 @@ export default function WelcomePage() {
       <div className="flex w-full max-w-xs flex-col gap-3">
         <Link
           href="/register"
-          className="flex min-h-12 items-center justify-center rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+          className="flex min-h-12 items-center justify-center rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
         >
           Δημιουργία λογαριασμού
         </Link>

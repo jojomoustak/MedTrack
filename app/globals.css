@@ -5,10 +5,35 @@
   --foreground: #171717;
 }
 
+/*
+ * Accent color (UX polish pass, 2026-09-22 — user direction: "a calm
+ * accent color", referencing Apple's own restrained apps). Teal, not the
+ * far more common default blue — deliberately: this app already uses
+ * red/amber/green for status (danger/warning/success), so the one brand
+ * accent needed to sit apart from all three at a glance, and teal carries
+ * an established calm/health association without being a literal medical-
+ * cross green or an alarm color. Registered as real theme tokens (not
+ * just Tailwind's built-in `teal-*`) so `bg-accent-700`/`text-accent-600`/
+ * etc. document THIS specific choice as the one deliberate brand color,
+ * distinct from reaching for teal as an arbitrary incidental value — used
+ * only for primary actions and active/selected state (Restrained
+ * strategy: neutrals everywhere else).
+ */
+@theme {
+  --color-accent-50: #f0fdfa;
+  --color-accent-100: #ccfbf1;
+  --color-accent-400: #2dd4bf;
+  --color-accent-500: #14b8a6;
+  --color-accent-600: #0d9488;
+  --color-accent-700: #0f766e;
+  --color-accent-800: #115e59;
+  --color-accent-950: #042f2e;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -22,5 +47,11 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* UX polish pass (2026-09-22): this was hardcoded to Arial/Helvetica,
+     completely overriding the Geist Sans typeface this app used to set up
+     — and even Geist itself turned out to ship no Greek glyphs at all
+     (this app's UI is almost entirely Greek), so neither piece of that
+     setup ever actually reached what a user sees. Now Inter, which has
+     real Greek coverage (see app/layout.tsx). */
+  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }

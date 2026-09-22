@@ -110,7 +110,7 @@ export function PackageList({
   return (
     <ul className="flex flex-col gap-2" aria-label="Συσκευασίες">
       {sorted.map((pkg) => (
-        <li key={pkg.id} className="flex flex-col gap-1 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
+        <li key={pkg.id} className="flex flex-col gap-1 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-3">
           <div className="flex items-center justify-between">
             <p className="font-medium">
               {computePackageRemainingStock(transactions, pkg.id)} / {pkg.initialQuantityValue} {unitLabel(pkg.quantityUnit)}

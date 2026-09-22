@@ -170,7 +170,7 @@ export default function TodayPage() {
         <p className="max-w-sm text-zinc-600 dark:text-zinc-400">Δεν έχετε προσθέσει ακόμα κανένα φάρμακο.</p>
         <Link
           href="/medications/add"
-          className="flex min-h-12 items-center justify-center rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+          className="flex min-h-12 items-center justify-center rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
         >
           Προσθήκη πρώτου φαρμάκου
         </Link>

@@ -300,7 +300,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
           <img
             src={photoUrl}
             alt="Φωτογραφία φαρμάκου"
-            className="max-h-64 w-full rounded-xl border border-zinc-200 object-contain dark:border-zinc-800"
+            className="max-h-64 w-full rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 object-contain"
           />
         )}
 

@@ -58,7 +58,7 @@ export function InventoryCorrectionForm({
           aria-checked={direction === "remove"}
           onClick={() => setDirection("remove")}
           className={`min-h-12 flex-1 rounded-full border px-4 py-2 text-sm font-medium ${
-            direction === "remove" ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900" : "border-zinc-300 dark:border-zinc-700"
+            direction === "remove" ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950" : "border-zinc-300 dark:border-zinc-700"
           }`}
         >
           Αφαίρεση
@@ -69,7 +69,7 @@ export function InventoryCorrectionForm({
           aria-checked={direction === "add"}
           onClick={() => setDirection("add")}
           className={`min-h-12 flex-1 rounded-full border px-4 py-2 text-sm font-medium ${
-            direction === "add" ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900" : "border-zinc-300 dark:border-zinc-700"
+            direction === "add" ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950" : "border-zinc-300 dark:border-zinc-700"
           }`}
         >
           Προσθήκη
@@ -109,7 +109,7 @@ export function InventoryCorrectionForm({
       <button
         type="submit"
         disabled={submitting}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-zinc-950"
       >
         {submitting ? "Αποθήκευση…" : "Διόρθωση αποθέματος"}
       </button>

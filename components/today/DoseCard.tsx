@@ -125,7 +125,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
     <div
       role="group"
       aria-label={buildAriaLabel(medicationName, dose.quantityValue, unitLabel(dose.quantityUnit), timeLabel, label, availableActions)}
-      className="flex flex-col gap-2 rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-800"
+      className="flex flex-col gap-2 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-4 py-3"
       data-dose-status={displayStatus}
     >
       <div className="flex items-start justify-between gap-2">
@@ -177,7 +177,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
           <button
             type="button"
             onClick={() => startUndoWindow("taken")}
-            className="min-h-14 flex-1 rounded-full bg-zinc-900 px-3 py-3 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+            className="min-h-14 flex-1 rounded-full bg-accent-700 px-3 py-3 text-sm font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
           >
             Έλαβα
           </button>

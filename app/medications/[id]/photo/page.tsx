@@ -67,7 +67,7 @@ export default function MedicationPhotoPage() {
               // information architecture is built around.
               router.push("/today");
             }}
-            className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+            className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
           >
             Ολοκλήρωση
           </button>

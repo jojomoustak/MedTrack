@@ -42,7 +42,7 @@ export function EntryChooser({ onChoose, scanAvailable }: EntryChooserProps) {
         className={
           scanAvailable
             ? "flex min-h-12 items-center rounded-xl border border-zinc-300 px-4 py-3 text-left hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-            : "flex min-h-12 items-center justify-between rounded-xl border border-zinc-200 px-4 py-3 text-left text-zinc-400 dark:border-zinc-800 dark:text-zinc-600"
+            : "flex min-h-12 items-center justify-between rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-4 py-3 text-left text-zinc-400 dark:text-zinc-600"
         }
       >
         <span>

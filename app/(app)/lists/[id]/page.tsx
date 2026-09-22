@@ -92,7 +92,7 @@ export default function PurchaseListDetailPage() {
         <h1 className="text-xl font-semibold">{list?.name ?? "…"}</h1>
       </div>
 
-      <form onSubmit={handleAdd} className="flex flex-col gap-2 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
+      <form onSubmit={handleAdd} className="flex flex-col gap-2 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-3">
         <label htmlFor="new-item-medication" className="sr-only">
           Φάρμακο ή νέο είδος
         </label>
@@ -142,7 +142,7 @@ export default function PurchaseListDetailPage() {
           <button
             type="submit"
             disabled={(usingFreeText && !label.trim()) || adding}
-            className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+            className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white disabled:opacity-50 dark:bg-accent-500 dark:text-zinc-950"
           >
             Προσθήκη
           </button>
@@ -162,7 +162,7 @@ export default function PurchaseListDetailPage() {
           <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Προς αγορά</h2>
           <ul className="flex flex-col gap-2" aria-label="Προς αγορά">
             {pending.map((item) => (
-              <li key={item.id} className="flex min-h-12 items-center gap-3 rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+              <li key={item.id} className="flex min-h-12 items-center gap-3 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-4 py-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -203,7 +203,7 @@ export default function PurchaseListDetailPage() {
           <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Αγορασμένα</h2>
           <ul className="flex flex-col gap-2" aria-label="Αγορασμένα">
             {purchased.map((item) => (
-              <li key={item.id} className="flex flex-col gap-2 rounded-xl border border-zinc-200 px-4 py-3 opacity-70 dark:border-zinc-800">
+              <li key={item.id} className="flex flex-col gap-2 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-4 py-3 opacity-70">
                 <div className="flex min-h-12 items-center gap-3">
                   <button
                     type="button"
@@ -212,7 +212,7 @@ export default function PurchaseListDetailPage() {
                       void markPending(item.id);
                     }}
                     aria-label={`Αναίρεση αγοράς "${itemDisplayName(item)}"`}
-                    className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900"
+                    className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-full bg-accent-700 text-white dark:bg-accent-500 dark:text-zinc-950"
                   >
                     ✓
                   </button>

@@ -29,7 +29,7 @@ export function CalendarSegmentedNav({ active, dateParam }: { active: CalendarVi
           }}
           className={`min-h-12 flex-1 rounded-full border px-4 py-2 text-sm font-medium ${
             active === segment.key
-              ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
+              ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950"
               : "border-zinc-300 dark:border-zinc-700"
           }`}
         >

@@ -3,16 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { NavIcon, type NavIconKind } from "@/components/shell/NavIcon";
 
-const TABS = [
-  { href: "/today", label: "Σήμερα" },
-  { href: "/medications", label: "Φάρμακα" },
-  { href: "/calendar", label: "Ημερολόγιο" },
-  { href: "/lists", label: "Λίστες" },
-  { href: "/profile", label: "Προφίλ" },
-] as const;
+const TABS: { href: string; label: string; icon: NavIconKind }[] = [
+  { href: "/today", label: "Σήμερα", icon: "today" },
+  { href: "/medications", label: "Φάρμακα", icon: "medications" },
+  { href: "/calendar", label: "Ημερολόγιο", icon: "calendar" },
+  { href: "/lists", label: "Λίστες", icon: "lists" },
+  { href: "/profile", label: "Προφίλ", icon: "profile" },
+];
 
-/** Phase 3 §1: persistent bottom tab bar, 5 items, icon+label always visible (icons omitted here — label-first, still meets the "never icon alone" accessibility rule since there's no icon-only affordance). */
+/**
+ * Phase 3 §1: persistent bottom tab bar, 5 items, icon+label always
+ * visible. Real drawn icons (UX polish pass, 2026-09-22 — this bar
+ * previously had none, a real outlier against the icon+label convention
+ * virtually every mobile bottom nav follows) plus the accent color for
+ * the active tab, replacing the plain zinc-900/zinc-50 inversion —
+ * "which tab am I on" is exactly the kind of active/selected state the
+ * one brand accent exists for.
+ */
 export function BottomNav() {
   const pathname = usePathname();
 
@@ -29,10 +38,11 @@ export function BottomNav() {
             href={tab.href}
             onClick={() => playSound("button")}
             aria-current={active ? "page" : undefined}
-            className={`flex min-h-12 flex-col items-center justify-center border-t-2 py-2 text-xs ${
-              active ? "border-zinc-900 font-semibold text-zinc-900 dark:border-zinc-50 dark:text-zinc-50" : "border-transparent font-medium text-zinc-500 dark:text-zinc-400"
+            className={`flex min-h-12 flex-col items-center justify-center gap-0.5 border-t-2 py-2 text-xs ${
+              active ? "border-accent-700 font-semibold text-accent-700 dark:border-accent-400 dark:text-accent-400" : "border-transparent font-medium text-zinc-500 dark:text-zinc-400"
             }`}
           >
+            <NavIcon kind={tab.icon} active={active} />
             {tab.label}
           </Link>
         );

@@ -16,7 +16,7 @@ export function AddMedicationFab() {
       href="/medications/add"
       onClick={() => playSound("button")}
       aria-label="Προσθήκη φαρμάκου"
-      className="fixed right-4 bottom-20 flex min-h-14 min-w-14 items-center justify-center rounded-full bg-zinc-900 px-5 py-4 font-medium text-white shadow-lg dark:bg-zinc-50 dark:text-zinc-900"
+      className="fixed right-4 bottom-20 flex min-h-14 min-w-14 items-center justify-center rounded-full bg-accent-700 px-5 py-4 font-medium text-white shadow-lg dark:bg-accent-500 dark:text-zinc-950"
     >
       + Φάρμακο
     </Link>

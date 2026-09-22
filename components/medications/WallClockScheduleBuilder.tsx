@@ -114,7 +114,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
             onClick={() => { playSound("button"); setSpecificDays(false); }}
             aria-pressed={!specificDays}
             className={`min-h-12 flex-1 rounded-full border px-4 py-2 text-sm font-medium ${
-              !specificDays ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900" : "border-zinc-300 dark:border-zinc-700"
+              !specificDays ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950" : "border-zinc-300 dark:border-zinc-700"
             }`}
           >
             Κάθε μέρα
@@ -124,7 +124,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
             onClick={() => { playSound("button"); setSpecificDays(true); }}
             aria-pressed={specificDays}
             className={`min-h-12 flex-1 rounded-full border px-4 py-2 text-sm font-medium ${
-              specificDays ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900" : "border-zinc-300 dark:border-zinc-700"
+              specificDays ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950" : "border-zinc-300 dark:border-zinc-700"
             }`}
           >
             Συγκεκριμένες ημέρες
@@ -143,7 +143,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
                   aria-pressed={checked}
                   aria-label={full}
                   className={`flex h-12 w-12 items-center justify-center rounded-full border text-sm font-medium ${
-                    checked ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900" : "border-zinc-300 dark:border-zinc-700"
+                    checked ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950" : "border-zinc-300 dark:border-zinc-700"
                   }`}
                 >
                   {abbr}
@@ -164,7 +164,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
         <button type="button" onClick={() => { playSound("button"); onBack(); }} className="min-h-12 flex-1 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700">
           Πίσω
         </button>
-        <button type="submit" className="min-h-12 flex-1 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900">
+        <button type="submit" className="min-h-12 flex-1 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950">
           Συνέχεια
         </button>
       </div>

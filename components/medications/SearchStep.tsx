@@ -88,7 +88,7 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
           <button
             type="button"
             onClick={() => { playSound("button"); onFallbackToManual(); }}
-            className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+            className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
           >
             Συνέχεια με χειροκίνητη καταχώριση
           </button>

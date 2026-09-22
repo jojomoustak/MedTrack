@@ -1,12 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SyncManagerBootstrap } from "@/components/shell/SyncManagerBootstrap";
 import { SerwistProvider } from "@serwist/turbopack/react";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// UX polish pass (2026-09-22): was Geist Sans, which Google Fonts ships
+// with NO Greek subset at all (confirmed against next/font's own
+// font-data.json) — since this app's UI copy is almost entirely Greek
+// (lang="el" below), that font was invisible to nearly everything a user
+// actually reads; every Greek glyph silently fell back to the browser's
+// generic system sans regardless of this setup. Inter has full Greek
+// coverage, is an established, considered "workhorse" UI face (not a
+// display font), and is the closest widely-available open equivalent in
+// spirit to the system faces Apple's own apps use as this app's chosen
+// visual reference.
+const sans = Inter({
+  variable: "--font-inter",
+  subsets: ["latin", "greek"],
 });
 
 const geistMono = Geist_Mono({
@@ -23,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="el"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${sans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {/*

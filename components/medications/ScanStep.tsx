@@ -271,7 +271,7 @@ export function ScanStep({
         <button
           type="button"
           onClick={() => { playSound("button"); onFallbackToManual(null); }}
-          className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+          className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
         >
           Συνέχεια με χειροκίνητη καταχώριση
         </button>
@@ -295,7 +295,7 @@ export function ScanStep({
             startedRef.current = false;
             void runScan();
           }}
-          className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+          className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
         >
           Δοκιμάστε ξανά
         </button>
@@ -385,7 +385,7 @@ export function ScanStep({
       <button
         type="button"
         onClick={() => { playSound("button"); onFallbackToManual(view.parsed); }}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
       >
         Συνέχεια με χειροκίνητη καταχώριση
       </button>
@@ -432,7 +432,7 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+    <div className="rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-4">
       <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
         Αναζήτηση σε επίσημες πηγές
       </p>

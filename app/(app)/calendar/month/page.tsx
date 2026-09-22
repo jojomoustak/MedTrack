@@ -144,7 +144,7 @@ export default function CalendarMonthPage() {
                   only an invisible aria-current). */}
               <span
                 className={`flex h-6 w-6 items-center justify-center rounded-full tabular-nums ${
-                  isToday ? "bg-zinc-900 font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900" : ""
+                  isToday ? "bg-accent-700 font-semibold text-white dark:bg-accent-500 dark:text-zinc-950" : ""
                 }`}
               >
                 {cellDate.getDate()}

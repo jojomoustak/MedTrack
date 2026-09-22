@@ -120,7 +120,7 @@ export function EditMedicationForm({
                   }}
                   className={`min-h-12 rounded-full border px-4 py-2 text-sm ${
                     customForm === option
-                      ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
+                      ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950"
                       : "border-zinc-300 dark:border-zinc-700"
                   }`}
                 >
@@ -232,7 +232,7 @@ export function EditMedicationForm({
       <button
         type="submit"
         disabled={submitting}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-zinc-950"
       >
         {submitting ? "Αποθήκευση…" : "Αποθήκευση"}
       </button>

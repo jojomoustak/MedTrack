@@ -115,7 +115,7 @@ export default function MedicationDetailPage() {
         )}
       </div>
 
-      <section className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+      <section className="rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-4">
         <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Πρόγραμμα δόσεων</h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           {activeSchedule ? describeSchedule(activeSchedule) : "Χωρίς πρόγραμμα ακόμα."}
