@@ -129,25 +129,34 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
       data-dose-status={displayStatus}
     >
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-medium">
-            {timeLabel} — {medicationName}
-          </p>
-          {dose.quantityValue && (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {dose.quantityValue} {unitLabel(dose.quantityUnit)}
-            </p>
+        <div className="flex min-w-0 items-start gap-3">
+          {/* A distinct time "block" rather than inline text next to the
+              name — tabular-nums keeps digit widths steady down a whole
+              list of cards (impeccable craft: numerals in tabular data are
+              a browser default until themed on purpose). This is the
+              scannable anchor for a medication-timing app; the name reads
+              second. */}
+          {timeLabel && (
+            <span className="shrink-0 pt-0.5 text-base font-semibold tabular-nums leading-none text-zinc-900 dark:text-zinc-50">{timeLabel}</span>
           )}
-          {/* `aria-live` scoped to just this line, not the whole card, so a
-              status change (e.g. tapping Έλαβα) is announced to a screen
-              reader without re-announcing the medication name/quantity
-              alongside it every time (accessibility audit, Phase 15
-              Hardening). */}
-          {label && (
-            <p aria-live="polite" className="text-sm text-zinc-600 dark:text-zinc-400">
-              {label}
-            </p>
-          )}
+          <div className="min-w-0">
+            <p className="font-medium">{medicationName}</p>
+            {dose.quantityValue && (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                {dose.quantityValue} {unitLabel(dose.quantityUnit)}
+              </p>
+            )}
+            {/* `aria-live` scoped to just this line, not the whole card, so a
+                status change (e.g. tapping Έλαβα) is announced to a screen
+                reader without re-announcing the medication name/quantity
+                alongside it every time (accessibility audit, Phase 15
+                Hardening). */}
+            {label && (
+              <p aria-live="polite" className="text-sm text-zinc-600 dark:text-zinc-400">
+                {label}
+              </p>
+            )}
+          </div>
         </div>
         {dose.syncState !== "synced" && <SyncStatusChip state={dose.syncState} onRetry={onRetrySync ? () => onRetrySync(dose.id) : undefined} />}
       </div>
@@ -157,7 +166,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
           type="button"
           onClick={cancelUndo}
           aria-live="polite"
-          className="min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium underline dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium underline dark:border-zinc-700"
         >
           Αναίρεση — {label}
         </button>
@@ -196,7 +205,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
         <button
           type="button"
           onClick={() => startUndoWindow("taken_late")}
-          className="min-h-14 self-start rounded-full border border-zinc-300 px-4 py-3 text-sm font-medium dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-14 self-start rounded-full border border-zinc-300 px-4 py-3 text-sm font-medium dark:border-zinc-700"
         >
           Το πήρα, καταγραφή ως αργοπορημένη λήψη
         </button>

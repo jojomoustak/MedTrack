@@ -90,7 +90,7 @@ export function EmailVerificationBanner({ email }: { email: string | null }) {
           onClick={handleResend}
           disabled={!email || resend === "sending" || onCooldown}
           aria-busy={resend === "sending"}
-          className="min-h-12 rounded-full border border-amber-400 px-4 py-2 font-medium text-amber-900 disabled:opacity-60 dark:border-amber-600 dark:text-amber-100"
+          className="inline-flex items-center justify-center min-h-12 rounded-full border border-amber-400 px-4 py-2 font-medium text-amber-900 disabled:opacity-60 dark:border-amber-600 dark:text-amber-100"
         >
           {resend === "sending" ? "Αποστολή…" : onCooldown ? "Στάλθηκε — δοκιμάστε ξανά σε λίγο" : "Επαναποστολή email επιβεβαίωσης"}
         </button>
@@ -100,7 +100,7 @@ export function EmailVerificationBanner({ email }: { email: string | null }) {
             playSound("button");
             setDismissed(true);
           }}
-          className="min-h-12 px-2 font-medium underline"
+          className="inline-flex items-center justify-center min-h-12 px-2 font-medium underline"
         >
           Παράβλεψη
         </button>

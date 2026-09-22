@@ -1,6 +1,7 @@
 "use client";
 
 import { playSound } from "@/lib/sound/client/play-sound";
+import { ChevronIcon } from "@/components/calendar/ChevronIcon";
 
 export interface DateNavigatorProps {
   date: Date;
@@ -27,12 +28,15 @@ export function DateNavigator({ date, onPrevDay, onNextDay, onToday }: DateNavig
           onPrevDay();
         }}
         aria-label="Προηγούμενη ημέρα"
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 text-lg dark:border-zinc-700"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 dark:border-zinc-700"
       >
-        ‹
+        <ChevronIcon direction="left" />
       </button>
       <div className="flex flex-col items-center">
-        <p className="font-medium capitalize">{label}</p>
+        <p className="text-base font-semibold capitalize">
+          {label}
+          {isToday && <span className="ml-1.5 align-middle text-xs font-medium text-zinc-500 dark:text-zinc-400">· σήμερα</span>}
+        </p>
         {!isToday && (
           <button
             type="button"
@@ -40,7 +44,7 @@ export function DateNavigator({ date, onPrevDay, onNextDay, onToday }: DateNavig
               playSound("button");
               onToday();
             }}
-            className="min-h-12 text-sm font-medium underline"
+            className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline"
           >
             Σήμερα
           </button>
@@ -53,9 +57,9 @@ export function DateNavigator({ date, onPrevDay, onNextDay, onToday }: DateNavig
           onNextDay();
         }}
         aria-label="Επόμενη ημέρα"
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 text-lg dark:border-zinc-700"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 dark:border-zinc-700"
       >
-        ›
+        <ChevronIcon direction="right" />
       </button>
     </div>
   );

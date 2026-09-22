@@ -278,7 +278,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
                 setPollExhausted(false);
                 setPollNonce((n) => n + 1);
               }}
-              className="min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+              className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
             >
               Δοκιμή ξανά
             </button>
@@ -359,7 +359,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
               }}
               disabled={busy}
               aria-busy={busy}
-              className="min-h-12 rounded-full border border-red-300 px-4 py-2 text-sm font-medium text-red-700 disabled:opacity-60 dark:border-red-900 dark:text-red-400"
+              className="inline-flex items-center justify-center min-h-12 rounded-full border border-red-300 px-4 py-2 text-sm font-medium text-red-700 disabled:opacity-60 dark:border-red-900 dark:text-red-400"
             >
               Αφαίρεση
             </button>

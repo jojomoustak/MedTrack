@@ -253,7 +253,7 @@ export function ScanStep({
         <p role="status" aria-live="polite" className="text-sm text-zinc-600 dark:text-zinc-400">
           {view.phase === "scanning" ? "Άνοιγμα κάμερας…" : "Αναζήτηση φαρμάκου…"}
         </p>
-        <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="min-h-12 text-sm font-medium underline">
+        <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
           Ακύρωση
         </button>
       </div>
@@ -271,11 +271,11 @@ export function ScanStep({
         <button
           type="button"
           onClick={() => { playSound("button"); onFallbackToManual(null); }}
-          className="min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+          className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
         >
           Συνέχεια με χειροκίνητη καταχώριση
         </button>
-        <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="min-h-12 self-start text-sm font-medium underline">
+        <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium underline">
           ← Πίσω
         </button>
       </div>
@@ -295,18 +295,18 @@ export function ScanStep({
             startedRef.current = false;
             void runScan();
           }}
-          className="min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+          className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
         >
           Δοκιμάστε ξανά
         </button>
         <button
           type="button"
           onClick={() => { playSound("button"); onFallbackToManual(null); }}
-          className="min-h-12 text-sm font-medium underline"
+          className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline"
         >
           Συνέχεια με χειροκίνητη καταχώριση
         </button>
-        <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="min-h-12 self-start text-sm font-medium underline">
+        <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium underline">
           ← Πίσω
         </button>
       </div>
@@ -385,11 +385,11 @@ export function ScanStep({
       <button
         type="button"
         onClick={() => { playSound("button"); onFallbackToManual(view.parsed); }}
-        className="min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
       >
         Συνέχεια με χειροκίνητη καταχώριση
       </button>
-      <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="min-h-12 self-start text-sm font-medium underline">
+      <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium underline">
         ← Πίσω
       </button>
     </div>
@@ -446,7 +446,7 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
         <button
           type="button"
           onClick={handleCopy}
-          className="min-h-12 shrink-0 rounded-full border border-zinc-300 px-3 text-xs font-medium dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-12 shrink-0 rounded-full border border-zinc-300 px-3 text-xs font-medium dark:border-zinc-700"
         >
           {copied ? "Αντιγράφηκε ✓" : "Αντιγραφή"}
         </button>

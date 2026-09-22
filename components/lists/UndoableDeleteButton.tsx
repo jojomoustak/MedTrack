@@ -51,7 +51,7 @@ export function UndoableDeleteButton({ label, onConfirm }: { label: string; onCo
         type="button"
         onClick={cancel}
         aria-live="polite"
-        className="min-h-12 min-w-12 rounded-full border border-zinc-300 px-3 text-sm font-medium underline dark:border-zinc-700"
+        className="inline-flex items-center justify-center min-h-12 min-w-12 rounded-full border border-zinc-300 px-3 text-sm font-medium underline dark:border-zinc-700"
       >
         Αναίρεση
       </button>
@@ -59,7 +59,7 @@ export function UndoableDeleteButton({ label, onConfirm }: { label: string; onCo
   }
 
   return (
-    <button type="button" onClick={startDelete} aria-label={label} className="min-h-12 min-w-12 text-sm font-medium text-red-700 dark:text-red-400">
+    <button type="button" onClick={startDelete} aria-label={label} className="inline-flex items-center justify-center min-h-12 min-w-12 text-sm font-medium text-red-700 dark:text-red-400">
       Διαγραφή
     </button>
   );

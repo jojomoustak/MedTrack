@@ -31,7 +31,7 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
           playSound("button");
           onBack();
         }}
-        className="min-h-12 self-start text-sm font-medium underline"
+        className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium underline"
       >
         ← Πίσω στα αποτελέσματα
       </button>
@@ -100,7 +100,7 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
           playSound("button");
           onConfirm();
         }}
-        className="min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
       >
         Επιβεβαίωση — είναι αυτό το φάρμακο
       </button>

@@ -62,11 +62,11 @@ export function ScheduleKindChooser({ onChoose, onSkip, onBack }: ScheduleKindCh
         </button>
       </div>
 
-      <button type="button" onClick={() => { playSound("button"); onSkip(); }} className="min-h-12 self-start text-sm font-medium underline">
+      <button type="button" onClick={() => { playSound("button"); onSkip(); }} className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium underline">
         Παράλειψη — θα προσθέσω πρόγραμμα αργότερα
       </button>
 
-      <button type="button" onClick={() => { playSound("button"); onBack(); }} className="min-h-12 self-start rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700">
+      <button type="button" onClick={() => { playSound("button"); onBack(); }} className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700">
         Πίσω
       </button>
     </div>

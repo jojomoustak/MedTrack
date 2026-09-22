@@ -82,7 +82,7 @@ export function ReviewStep({
       <div className="rounded-xl border border-zinc-300 p-4 dark:border-zinc-700">
         <div className="flex items-center justify-between">
           <h3 className="font-medium">Πρόγραμμα δόσεων</h3>
-          <button type="button" onClick={onEditSchedule} className="min-h-12 text-sm font-medium underline">
+          <button type="button" onClick={onEditSchedule} className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
             {schedule ? "Επεξεργασία" : "Προσθήκη"}
           </button>
         </div>
@@ -140,7 +140,7 @@ export function ReviewStep({
         }}
         disabled={submitting}
         aria-busy={submitting}
-        className="min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
       >
         {submitting ? "Αποθήκευση…" : "Ολοκλήρωση"}
       </button>

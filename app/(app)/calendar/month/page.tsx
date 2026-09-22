@@ -7,6 +7,7 @@ import { CalendarSegmentedNav } from "@/components/calendar/CalendarSegmentedNav
 import { dateToParam, paramToDate } from "@/components/calendar/date-param";
 import { useDoseSummaryForMonth, daySummaryToMarkerKind, type DaySummary } from "@/components/calendar/use-dose-summary-for-month";
 import { DoseStatusGlyph, DOSE_MARKER_LABEL, type DoseMarkerKind } from "@/components/calendar/DoseStatusGlyph";
+import { ChevronIcon } from "@/components/calendar/ChevronIcon";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 const WEEKDAY_INITIALS = ["Κυ", "Δε", "Τρ", "Τε", "Πε", "Πα", "Σα"];
@@ -77,11 +78,11 @@ export default function CalendarMonthPage() {
             shiftMonth(-1);
           }}
           aria-label="Προηγούμενος μήνας"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 text-lg dark:border-zinc-700"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 dark:border-zinc-700"
         >
-          ‹
+          <ChevronIcon direction="left" />
         </button>
-        <p className="font-medium capitalize">{monthLabel}</p>
+        <p className="text-base font-semibold capitalize">{monthLabel}</p>
         <button
           type="button"
           onClick={() => {
@@ -89,9 +90,9 @@ export default function CalendarMonthPage() {
             shiftMonth(1);
           }}
           aria-label="Επόμενος μήνας"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 text-lg dark:border-zinc-700"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 dark:border-zinc-700"
         >
-          ›
+          <ChevronIcon direction="right" />
         </button>
       </div>
 
@@ -135,7 +136,19 @@ export default function CalendarMonthPage() {
                 inMonth ? "border-zinc-200 dark:border-zinc-800" : "border-transparent opacity-40"
               } ${isSelected ? "border-2 border-zinc-900 dark:border-zinc-50" : ""}`}
             >
-              <span>{cellDate.getDate()}</span>
+              {/* A filled circle marks TODAY specifically, independent of
+                  the cell's own border (which marks the currently-SELECTED
+                  day) — two different facts, so two different, simultaneous
+                  cues (both real calendar apps' own convention, and this
+                  view previously had no visual "today" marker at all,
+                  only an invisible aria-current). */}
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-full tabular-nums ${
+                  isToday ? "bg-zinc-900 font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900" : ""
+                }`}
+              >
+                {cellDate.getDate()}
+              </span>
               {markerKind && <DoseStatusGlyph kind={markerKind} className="h-4 w-4" />}
             </button>
           );

@@ -135,7 +135,7 @@ export function AddPackageForm({
       <button
         type="submit"
         disabled={submitting}
-        className="min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
       >
         {submitting ? "Αποθήκευση…" : "Προσθήκη"}
       </button>

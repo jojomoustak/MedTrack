@@ -82,7 +82,7 @@ export default function MedicationDetailPage() {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
         <p className="text-zinc-600 dark:text-zinc-400">Το φάρμακο δεν βρέθηκε.</p>
-        <Link href="/medications" onClick={() => playSound("button")} className="min-h-12 text-sm font-medium underline">
+        <Link href="/medications" onClick={() => playSound("button")} className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
           Πίσω στα φάρμακα
         </Link>
       </div>
@@ -94,13 +94,13 @@ export default function MedicationDetailPage() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 p-4">
       <div className="flex items-center justify-between gap-3">
-        <Link href="/medications" onClick={() => playSound("button")} aria-label="Πίσω στα φάρμακα" className="min-h-12 text-sm font-medium underline">
+        <Link href="/medications" onClick={() => playSound("button")} aria-label="Πίσω στα φάρμακα" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
           ← Πίσω
         </Link>
         <Link
           href={`/medications/${medication.id}/edit`}
           onClick={() => playSound("button")}
-          className="min-h-12 rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-12 rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
         >
           Επεξεργασία
         </Link>
@@ -161,7 +161,7 @@ export default function MedicationDetailPage() {
       )}
 
       {medication.syncState === "synced" ? (
-        <Link href={`/medications/${medication.id}/photo`} onClick={() => playSound("button")} className="min-h-12 text-sm font-medium underline">
+        <Link href={`/medications/${medication.id}/photo`} onClick={() => playSound("button")} className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
           Φωτογραφία
         </Link>
       ) : (

@@ -143,14 +143,14 @@ export function DeleteAccountFlow() {
           <button
             type="button"
             onClick={handleCancel}
-            className="min-h-12 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+            className="inline-flex items-center justify-center min-h-12 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
           >
             Άκυρο
           </button>
           <button
             type="button"
             onClick={goToSummary}
-            className="min-h-12 rounded-full bg-red-700 px-5 py-3 font-medium text-white"
+            className="inline-flex items-center justify-center min-h-12 rounded-full bg-red-700 px-5 py-3 font-medium text-white"
           >
             Συνέχεια
           </button>
@@ -177,14 +177,14 @@ export function DeleteAccountFlow() {
           <button
             type="button"
             onClick={handleCancel}
-            className="min-h-12 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+            className="inline-flex items-center justify-center min-h-12 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
           >
             Άκυρο
           </button>
           <button
             type="button"
             onClick={goToConfirm}
-            className="min-h-12 rounded-full bg-red-700 px-5 py-3 font-medium text-white"
+            className="inline-flex items-center justify-center min-h-12 rounded-full bg-red-700 px-5 py-3 font-medium text-white"
           >
             Συνέχεια
           </button>
@@ -225,7 +225,7 @@ export function DeleteAccountFlow() {
           <button
             type="button"
             onClick={handleCancel}
-            className="min-h-12 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+            className="inline-flex items-center justify-center min-h-12 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
           >
             Άκυρο
           </button>
@@ -233,7 +233,7 @@ export function DeleteAccountFlow() {
             type="button"
             onClick={handleDelete}
             disabled={offline || confirmText !== CONFIRM_PHRASE}
-            className="min-h-12 rounded-full bg-red-700 px-5 py-3 font-medium text-white disabled:opacity-50"
+            className="inline-flex items-center justify-center min-h-12 rounded-full bg-red-700 px-5 py-3 font-medium text-white disabled:opacity-50"
           >
             Οριστική διαγραφή λογαριασμού
           </button>

@@ -61,7 +61,7 @@ export default function MedicationsPage() {
         <Link
           href="/medications/add"
           onClick={() => playSound("button")}
-          className="min-h-12 rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+          className="flex min-h-12 items-center justify-center rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
         >
           Προσθήκη
         </Link>

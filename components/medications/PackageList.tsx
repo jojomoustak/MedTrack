@@ -126,7 +126,7 @@ export function PackageList({
               type="button"
               onClick={() => void handleOpen(pkg)}
               disabled={pendingId === pkg.id}
-              className="min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-zinc-700"
+              className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-zinc-700"
             >
               Άνοιγμα
             </button>
@@ -136,7 +136,7 @@ export function PackageList({
               type="button"
               onClick={() => void handleDiscard(pkg)}
               disabled={pendingId === pkg.id}
-              className="min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-zinc-700"
+              className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-zinc-700"
             >
               Απόρριψη
             </button>

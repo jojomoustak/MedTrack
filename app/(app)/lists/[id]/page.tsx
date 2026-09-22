@@ -142,7 +142,7 @@ export default function PurchaseListDetailPage() {
           <button
             type="submit"
             disabled={(usingFreeText && !label.trim()) || adding}
-            className="min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+            className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
           >
             Προσθήκη
           </button>
@@ -187,7 +187,7 @@ export default function PurchaseListDetailPage() {
                     void markRemoved(item.id);
                   }}
                   aria-label={`Δεν χρειάζεται πια "${itemDisplayName(item)}"`}
-                  className="min-h-12 min-w-12 text-sm font-medium text-zinc-600 dark:text-zinc-400"
+                  className="inline-flex items-center justify-center min-h-12 min-w-12 text-sm font-medium text-zinc-600 dark:text-zinc-400"
                 >
                   Όχι πια
                 </button>
@@ -226,7 +226,7 @@ export default function PurchaseListDetailPage() {
                   <Link
                     href={`/medications/${item.userMedicationId}/packages/add`}
                     onClick={() => playSound("button")}
-                    className="min-h-12 text-sm font-medium underline"
+                    className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline"
                   >
                     Προσθήκη στο απόθεμα
                   </Link>
@@ -253,7 +253,7 @@ export default function PurchaseListDetailPage() {
                     void markPending(item.id);
                   }}
                   aria-label={`Επαναφορά "${itemDisplayName(item)}" στη λίστα`}
-                  className="min-h-12 min-w-12 text-sm font-medium underline"
+                  className="inline-flex items-center justify-center min-h-12 min-w-12 text-sm font-medium underline"
                 >
                   Επαναφορά
                 </button>

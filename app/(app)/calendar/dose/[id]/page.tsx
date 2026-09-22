@@ -70,7 +70,7 @@ export default function DoseHistoryDetailPage() {
           playSound("button");
           router.back();
         }}
-        className="min-h-12 self-start text-sm font-medium underline"
+        className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium underline"
       >
         ← Πίσω
       </button>

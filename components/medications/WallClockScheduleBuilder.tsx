@@ -100,7 +100,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
         <button
           type="button"
           onClick={addTimeRow}
-          className="min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
         >
           + Προσθήκη ώρας
         </button>

@@ -88,7 +88,7 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
           <button
             type="button"
             onClick={() => { playSound("button"); onFallbackToManual(); }}
-            className="min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+            className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
           >
             Συνέχεια με χειροκίνητη καταχώριση
           </button>
@@ -99,7 +99,7 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
         <button
           type="button"
           onClick={() => { playSound("button"); onFallbackToManual(); }}
-          className="min-h-12 self-start text-sm font-medium text-zinc-700 underline dark:text-zinc-300"
+          className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium text-zinc-700 underline dark:text-zinc-300"
         >
           Προτιμώ χειροκίνητη καταχώριση
         </button>

@@ -34,7 +34,7 @@ export default function MedicationPhotoPage() {
     <main className="min-h-screen bg-zinc-50 dark:bg-black">
       <OfflineBanner />
       <div className="mx-auto flex max-w-md items-center gap-3 px-4 py-4">
-        <Link href="/medications" aria-label="Πίσω στα φάρμακα" className="min-h-12 text-sm font-medium underline">
+        <Link href="/medications" aria-label="Πίσω στα φάρμακα" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
           ← Πίσω
         </Link>
         <h1 className="text-xl font-semibold">Φωτογραφία φαρμάκου</h1>
@@ -67,7 +67,7 @@ export default function MedicationPhotoPage() {
               // information architecture is built around.
               router.push("/today");
             }}
-            className="min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+            className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
           >
             Ολοκλήρωση
           </button>

@@ -90,7 +90,7 @@ export default function AddPackagePage() {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
         <p className="text-zinc-600 dark:text-zinc-400">Το φάρμακο δεν βρέθηκε.</p>
-        <Link href="/medications" className="min-h-12 text-sm font-medium underline">
+        <Link href="/medications" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
           Πίσω στα φάρμακα
         </Link>
       </div>
@@ -100,7 +100,7 @@ export default function AddPackagePage() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 p-4">
       <div className="flex items-center gap-3">
-        <Link href={`/medications/${params.id}`} aria-label="Πίσω" className="min-h-12 text-sm font-medium underline">
+        <Link href={`/medications/${params.id}`} aria-label="Πίσω" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
           ← Πίσω
         </Link>
         <h1 className="text-xl font-semibold">Προσθήκη συσκευασίας</h1>

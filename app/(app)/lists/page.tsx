@@ -42,7 +42,7 @@ export default function ListsPage() {
         <button
           type="submit"
           disabled={!newName.trim() || creating}
-          className="min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+          className="inline-flex items-center justify-center min-h-12 rounded-full bg-zinc-900 px-5 py-2 font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
         >
           Προσθήκη
         </button>

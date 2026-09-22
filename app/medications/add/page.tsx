@@ -25,7 +25,7 @@ export default function AddMedicationPage() {
     <main className="min-h-screen bg-zinc-50 dark:bg-black">
       <OfflineBanner />
       <div className="mx-auto flex max-w-md items-center gap-3 px-4 py-4">
-        <Link href="/medications" aria-label="Πίσω στα φάρμακα" className="min-h-12 text-sm font-medium underline">
+        <Link href="/medications" aria-label="Πίσω στα φάρμακα" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
           ← Πίσω
         </Link>
         <h1 className="text-xl font-semibold">Προσθήκη φαρμάκου</h1>

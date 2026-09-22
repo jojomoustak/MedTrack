@@ -115,7 +115,7 @@ export default function ProfilePage() {
       <button
         type="button"
         onClick={handleSignOut}
-        className="min-h-12 self-start rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+        className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
       >
         Αποσύνδεση
       </button>
@@ -123,7 +123,7 @@ export default function ProfilePage() {
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Τα δεδομένα μου</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Λήψη όλων των δεδομένων του λογαριασμού σας (φάρμακα, προγράμματα, δόσεις, απόθεμα, λίστες) σε μορφή JSON.
+          Κατεβάστε ένα αντίγραφο όλων των δεδομένων του λογαριασμού σας — φάρμακα, προγράμματα, δόσεις, απόθεμα και λίστες.
         </p>
         {exportError && (
           <p role="alert" className="text-sm text-red-700 dark:text-red-400">
@@ -135,7 +135,7 @@ export default function ProfilePage() {
           onClick={handleExport}
           disabled={exporting}
           aria-busy={exporting}
-          className="min-h-12 self-start rounded-full border border-zinc-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-zinc-700"
         >
           {exporting ? "Λήψη…" : "Λήψη των δεδομένων μου"}
         </button>
@@ -146,7 +146,7 @@ export default function ProfilePage() {
           <WarningIcon />
           <span className="font-medium">Μη αναστρέψιμη ενέργεια</span>
         </div>
-        <Link href="/profile/delete" className="min-h-12 rounded-full bg-red-700 px-5 py-3 text-center font-medium text-white">
+        <Link href="/profile/delete" className="inline-flex items-center justify-center min-h-12 rounded-full bg-red-700 px-5 py-3 text-center font-medium text-white">
           Διαγραφή λογαριασμού / Διαγραφή δεδομένων υγείας
         </Link>
       </section>
