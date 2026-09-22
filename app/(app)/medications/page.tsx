@@ -63,18 +63,14 @@ export default function MedicationsPage() {
           entry point now, in the conventional mobile position. */}
       <h1 className="text-xl font-semibold">Φάρμακα</h1>
 
-      {/* UX feedback (2026-09-22): the previous fix (flex-1 + truncate)
-          shrank these below what the real Inter/Greek text needs, clipping
-          labels — measured and confirmed against the actual compiled font,
-          not guessed. Full text is non-negotiable, so this row scrolls
-          itself (contained, shrink-0 buttons) instead of shrinking or
-          clipping; nothing escapes to a page-level scrollbar. */}
-      <div
-        role="tablist"
-        aria-label="Φίλτρο φαρμάκων"
-        className="flex gap-2 overflow-x-auto"
-        style={{ maskImage: "linear-gradient(to right, black calc(100% - 24px), transparent)", WebkitMaskImage: "linear-gradient(to right, black calc(100% - 24px), transparent)" }}
-      >
+      {/* UX feedback (2026-09-22): both prior fixes here were wrong —
+          shrinking (flex-1+truncate) clipped the labels, scrolling
+          (overflow-x-auto) left the last tab visibly cut off at the edge
+          on real narrow Android widths (confirmed: fine at 390px, clipped
+          at 360px, a common real device width). Wrapping is the only
+          option that can never leave a tab off-screen or hidden at any
+          width — it just takes a second row on narrow phones. */}
+      <div role="tablist" aria-label="Φίλτρο φαρμάκων" className="flex flex-wrap gap-2">
         {SEGMENTS.map((s) => (
           <button
             key={s.key}
@@ -85,7 +81,7 @@ export default function MedicationsPage() {
               playSound("button");
               setSegment(s.key);
             }}
-            className={`min-h-12 shrink-0 rounded-full border px-4 py-2 text-sm font-medium ${
+            className={`min-h-12 rounded-full border px-4 py-2 text-sm font-medium ${
               segment === s.key
                 ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950"
                 : "border-zinc-300 dark:border-zinc-700"
