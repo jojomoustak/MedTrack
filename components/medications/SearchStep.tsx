@@ -5,6 +5,7 @@ import { useCatalogSearch } from "@/lib/catalog/client/use-catalog-search";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import { CandidateConfirmation } from "@/components/medications/CandidateConfirmation";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { formatQuantity } from "@/lib/domain/quantity";
 
 export interface SearchStepProps {
   onConfirmCandidate: (product: CatalogProduct) => void;
@@ -12,7 +13,7 @@ export interface SearchStepProps {
 }
 
 function formatSubtitle(product: CatalogProduct): string {
-  const parts = [product.activeIngredient, product.strengthValue ? `${product.strengthValue}${product.strengthUnit ?? ""}` : null].filter(Boolean);
+  const parts = [product.activeIngredient, product.strengthValue ? `${formatQuantity(product.strengthValue)}${product.strengthUnit ?? ""}` : null].filter(Boolean);
   return parts.join(" · ");
 }
 

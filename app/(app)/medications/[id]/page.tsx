@@ -13,6 +13,7 @@ import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-sc
 import { recordMedicationInteraction } from "@/lib/medications/client/record-interaction";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
+import { formatQuantity } from "@/lib/domain/quantity";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { MedicationForm } from "@/lib/domain/user-medication";
@@ -22,7 +23,7 @@ function unitLabel(unit: string): string {
 }
 
 function describeSchedule(schedule: MedicationScheduleRecord): string {
-  const quantity = `${schedule.doseQuantityValue} ${unitLabel(schedule.doseQuantityUnit)}`;
+  const quantity = `${formatQuantity(schedule.doseQuantityValue)} ${unitLabel(schedule.doseQuantityUnit)}`;
   if (schedule.scheduleKind === "prn") return `Όποτε χρειάζεται — ${quantity}`;
   if (schedule.scheduleKind === "every_n_hours") return `Κάθε ${schedule.intervalHours} ώρες — ${quantity}`;
   const times = (schedule.timesOfDay ?? []).join(", ");
@@ -110,7 +111,7 @@ export default function MedicationDetailPage() {
         <h1 className="text-xl font-semibold">{names.get(medication.id) ?? "…"}</h1>
         {medication.customStrengthValue && (
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            {medication.customStrengthValue} {medication.customStrengthUnit}
+            {formatQuantity(medication.customStrengthValue)} {medication.customStrengthUnit}
           </p>
         )}
       </div>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { formatQuantity } from "@/lib/domain/quantity";
 import type { DoseEventRecord, DoseEventStatus } from "@/lib/domain/dose-event";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
@@ -143,7 +144,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
             <p className="font-medium">{medicationName}</p>
             {dose.quantityValue && (
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                {dose.quantityValue} {unitLabel(dose.quantityUnit)}
+                {formatQuantity(dose.quantityValue)} {unitLabel(dose.quantityUnit)}
               </p>
             )}
             {/* `aria-live` scoped to just this line, not the whole card, so a

@@ -2,6 +2,7 @@
 
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { formatQuantity } from "@/lib/domain/quantity";
 import type { ScheduleDraft } from "@/lib/domain/schedule-draft";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
@@ -24,7 +25,7 @@ export interface ReviewStepProps {
 }
 
 function describeSchedule(schedule: ScheduleDraft): string {
-  const quantity = `${schedule.doseQuantityValue} ${FORM_LABELS[schedule.doseQuantityUnit as MedicationForm] ?? schedule.doseQuantityUnit}`;
+  const quantity = `${formatQuantity(schedule.doseQuantityValue)} ${FORM_LABELS[schedule.doseQuantityUnit as MedicationForm] ?? schedule.doseQuantityUnit}`;
   if (schedule.scheduleKind === "prn") {
     return `Όποτε χρειάζεται — ${quantity}`;
   }
@@ -70,7 +71,7 @@ export function ReviewStep({
             <>
               <dt className="text-zinc-500">Περιεκτικότητα</dt>
               <dd>
-                {strengthValue} {strengthUnit}
+                {formatQuantity(strengthValue)} {strengthUnit}
               </dd>
             </>
           )}

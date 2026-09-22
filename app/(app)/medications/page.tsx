@@ -10,6 +10,7 @@ import { useFavoriteMedications } from "@/lib/medications/client/use-favorite-me
 import { useRecentMedications } from "@/lib/medications/client/use-recent-medications";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { formatQuantity } from "@/lib/domain/quantity";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
 type Segment = "all" | "active" | "favorites" | "recent";
@@ -142,7 +143,7 @@ export default function MedicationsPage() {
                   )}
                   {med.customStrengthValue && (
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      {med.customStrengthValue} {med.customStrengthUnit}
+                      {formatQuantity(med.customStrengthValue)} {med.customStrengthUnit}
                     </p>
                   )}
                   {/* A freshly-created medication may not exist on the server yet (local-first write) — the photo endpoints need a real server row, so this link only appears once synced (mirrors `MedicationPhotoAttach`'s own gating). */}

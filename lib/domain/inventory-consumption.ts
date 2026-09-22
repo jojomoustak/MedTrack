@@ -24,6 +24,7 @@ import type { MedicationPackageRecord } from "@/lib/domain/medication-package";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import { WEEKDAY_BIT } from "@/lib/domain/medication-schedule";
 import { uuidV5 } from "@/lib/domain/dose-event-generation";
+import { formatQuantity } from "@/lib/domain/quantity";
 
 /**
  * Distinct from `dose-event-generation.ts`'s own namespace — a different
@@ -51,7 +52,7 @@ function toMilliUnits(decimal: string): number {
 }
 
 function fromMilliUnits(milli: number): string {
-  return (milli / MILLI_SCALE).toFixed(3).replace(/\.?0+$/, "") || "0";
+  return formatQuantity((milli / MILLI_SCALE).toFixed(3)) || "0";
 }
 
 /** Current stock for a medication — always the ledger-wide sum, never a stored counter (ADR-010). */

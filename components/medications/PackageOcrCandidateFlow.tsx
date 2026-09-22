@@ -16,6 +16,7 @@ import { MobilePlatformUnavailableError, type MobilePlatform } from "@/lib/platf
 import { CandidateConfirmation } from "@/components/medications/CandidateConfirmation";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { logger } from "@/lib/logging/logger";
+import { formatQuantity } from "@/lib/domain/quantity";
 
 export interface PackageOcrCandidateFlowProps {
   /** The GTIN that came back `VALID_IDENTIFIER_UNRESOLVED` — what a confirmed candidate gets mapped to (spec §12). */
@@ -43,7 +44,7 @@ type FlowState =
 
 function formatCandidateLabel(entry: OfflineIndexEntry): string {
   const parts = [entry.name];
-  if (entry.strengthValue) parts.push(`${entry.strengthValue}${entry.strengthUnit ? ` ${entry.strengthUnit}` : ""}`);
+  if (entry.strengthValue) parts.push(`${formatQuantity(entry.strengthValue)}${entry.strengthUnit ? ` ${entry.strengthUnit}` : ""}`);
   if (entry.form) parts.push(entry.form);
   if (entry.packSizeValue) parts.push(`× ${entry.packSizeValue}${entry.packSizeUnit ? ` ${entry.packSizeUnit}` : ""}`);
   return parts.join(" — ");

@@ -10,6 +10,7 @@ import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { DoseStatusGlyph, DOSE_MARKER_LABEL } from "@/components/calendar/DoseStatusGlyph";
+import { formatQuantity } from "@/lib/domain/quantity";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
@@ -110,7 +111,7 @@ export default function DoseHistoryDetailPage() {
               <div className="flex items-center justify-between gap-2">
                 <dt className="font-medium">Ποσότητα</dt>
                 <dd>
-                  {dose.quantityValue} {unitLabel(dose.quantityUnit)}
+                  {formatQuantity(dose.quantityValue)} {unitLabel(dose.quantityUnit)}
                 </dd>
               </div>
             )}

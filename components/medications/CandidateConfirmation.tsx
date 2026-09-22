@@ -4,6 +4,7 @@ import type { CatalogProduct } from "@/lib/domain/catalog";
 import { SEED_PLACEHOLDER_SOURCE } from "@/lib/domain/catalog";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
+import { formatQuantity } from "@/lib/domain/quantity";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
 export interface CandidateConfirmationProps {
@@ -50,7 +51,7 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
             <>
               <dt className="text-zinc-500">Περιεκτικότητα</dt>
               <dd>
-                {product.strengthValue} {product.strengthUnit}
+                {formatQuantity(product.strengthValue)} {product.strengthUnit}
               </dd>
             </>
           )}

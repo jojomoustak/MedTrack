@@ -9,6 +9,7 @@ import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-t
 import { newId } from "@/lib/domain/ids";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
+import { formatQuantity } from "@/lib/domain/quantity";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
 const STATUS_LABELS: Record<MedicationPackageStatus, string> = {
@@ -113,7 +114,7 @@ export function PackageList({
         <li key={pkg.id} className="flex flex-col gap-1 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-3">
           <div className="flex items-center justify-between">
             <p className="font-medium">
-              {computePackageRemainingStock(transactions, pkg.id)} / {pkg.initialQuantityValue} {unitLabel(pkg.quantityUnit)}
+              {computePackageRemainingStock(transactions, pkg.id)} / {formatQuantity(pkg.initialQuantityValue)} {unitLabel(pkg.quantityUnit)}
             </p>
             <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{STATUS_LABELS[pkg.status]}</span>
           </div>
