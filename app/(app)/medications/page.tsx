@@ -91,18 +91,13 @@ export default function MedicationsPage() {
         </p>
       )}
 
+      {/* UX feedback (2026-09-22): this centered CTA duplicated
+          `AddMedicationFab`, which is always on-screen here (fixed
+          bottom-right) regardless of segment/empty state — one add
+          entry point on this screen is enough. */}
       {status === "ready" && !segmentLoading && visible.length === 0 && (
         <div className="flex flex-col items-center gap-3 p-8 text-center">
           <p className="text-zinc-600 dark:text-zinc-400">{EMPTY_SEGMENT_MESSAGE[segment]}</p>
-          {(segment === "all" || segment === "active") && (
-            <Link
-              href="/medications/add"
-              onClick={() => playSound("button")}
-              className="flex min-h-12 items-center justify-center rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
-            >
-              Προσθήκη φαρμάκου
-            </Link>
-          )}
         </div>
       )}
 

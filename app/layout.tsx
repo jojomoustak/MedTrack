@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SyncManagerBootstrap } from "@/components/shell/SyncManagerBootstrap";
@@ -27,6 +27,22 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "MedTracking",
   description: "Παρακολούθηση φαρμάκων, δόσεων και αποθέματος — ακόμα και χωρίς σύνδεση.",
+};
+
+// UX feedback (2026-09-22): pinch-zoom on the app's own UI chrome (as
+// opposed to zooming a photo or document) is a browser/website affordance
+// this app never intended — Next's default viewport allows it since no
+// `viewport` export existed before. Locked to `1` so the layout behaves
+// like the native Android shell it's wrapped in (Median), not a
+// pan-and-zoom webpage. Doesn't affect the OS-level text-size setting
+// (Android's own "font size"/"display size" accessibility options, which
+// this app's rem-based Tailwind type already respects) — only the
+// separate browser pinch-to-zoom gesture.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
