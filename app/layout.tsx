@@ -51,7 +51,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="el"
       className={`${sans.variable} ${geistMono.variable} h-dvh antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col overflow-x-hidden">
         {/*
           Registers app/sw.ts (served at /serwist/sw.js — see
           app/serwist/[path]/route.ts) so the app shell is available on a

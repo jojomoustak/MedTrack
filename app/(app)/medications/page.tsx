@@ -74,7 +74,7 @@ export default function MedicationsPage() {
               playSound("button");
               setSegment(s.key);
             }}
-            className={`min-h-12 rounded-full border px-4 py-2 text-sm font-medium ${
+            className={`min-h-12 min-w-0 flex-1 truncate rounded-full border px-2 py-2 text-center text-sm font-medium ${
               segment === s.key
                 ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950"
                 : "border-zinc-300 dark:border-zinc-700"

@@ -164,16 +164,13 @@ export default function TodayPage() {
   }
 
   if (medications.length === 0) {
+    // UX feedback (2026-09-22): had its own centered CTA here, duplicating
+    // AddMedicationFab (fixed bottom-right, already on-screen on /today
+    // regardless of this empty state).
     return (
       <div className="flex flex-col items-center gap-4 p-8 text-center">
         <h1 className="text-xl font-semibold">Καλωσήρθατε στο MedTracking</h1>
         <p className="max-w-sm text-zinc-600 dark:text-zinc-400">Δεν έχετε προσθέσει ακόμα κανένα φάρμακο.</p>
-        <Link
-          href="/medications/add"
-          className="flex min-h-12 items-center justify-center rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
-        >
-          Προσθήκη πρώτου φαρμάκου
-        </Link>
       </div>
     );
   }
