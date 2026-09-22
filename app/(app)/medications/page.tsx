@@ -69,7 +69,12 @@ export default function MedicationsPage() {
           not guessed. Full text is non-negotiable, so this row scrolls
           itself (contained, shrink-0 buttons) instead of shrinking or
           clipping; nothing escapes to a page-level scrollbar. */}
-      <div role="tablist" aria-label="Φίλτρο φαρμάκων" className="flex gap-2 overflow-x-auto">
+      <div
+        role="tablist"
+        aria-label="Φίλτρο φαρμάκων"
+        className="flex gap-2 overflow-x-auto"
+        style={{ maskImage: "linear-gradient(to right, black calc(100% - 24px), transparent)", WebkitMaskImage: "linear-gradient(to right, black calc(100% - 24px), transparent)" }}
+      >
         {SEGMENTS.map((s) => (
           <button
             key={s.key}
