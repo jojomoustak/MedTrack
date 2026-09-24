@@ -9,6 +9,7 @@ import { useLowStockMedicationIds } from "@/lib/inventory/client/use-low-stock-m
 import { useFavoriteMedications } from "@/lib/medications/client/use-favorite-medications";
 import { useRecentMedications } from "@/lib/medications/client/use-recent-medications";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
+import { MedicationThumbnail } from "@/components/medications/MedicationThumbnail";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { formatQuantity } from "@/lib/domain/quantity";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
@@ -63,14 +64,13 @@ export default function MedicationsPage() {
           entry point now, in the conventional mobile position. */}
       <h1 className="text-xl font-semibold">Φάρμακα</h1>
 
-      {/* UX feedback (2026-09-22): both prior fixes here were wrong —
-          shrinking (flex-1+truncate) clipped the labels, scrolling
-          (overflow-x-auto) left the last tab visibly cut off at the edge
-          on real narrow Android widths (confirmed: fine at 390px, clipped
-          at 360px, a common real device width). Wrapping is the only
-          option that can never leave a tab off-screen or hidden at any
-          width — it just takes a second row on narrow phones. */}
-      <div role="tablist" aria-label="Φίλτρο φαρμάκων" className="flex flex-wrap gap-2">
+      {/* UX feedback history here: shrinking (flex-1+truncate) clipped
+          labels; scrolling (overflow-x-auto) cut the last tab off at the
+          edge on narrow Android widths; flex-wrap avoided both but left
+          the 4th tab alone on its own row, lower than the rest and visibly
+          lopsided. A fixed 2x2 grid is the one layout where every label
+          stays full-size and every tab sits at the same visual level. */}
+      <div role="tablist" aria-label="Φίλτρο φαρμάκων" className="grid grid-cols-2 gap-2">
         {SEGMENTS.map((s) => (
           <button
             key={s.key}
@@ -126,6 +126,10 @@ export default function MedicationsPage() {
                 >
                   {isFavorite ? "★" : "☆"}
                 </button>
+                {/* Same "needs a real server row" gating as the "Φωτογραφία"
+                    link below — a not-yet-synced medication can't have a
+                    photo on the server yet either. */}
+                {med.syncState === "synced" && <MedicationThumbnail userMedicationId={med.id} />}
                 <div className="min-w-0 flex-1">
                   <Link href={`/medications/${med.id}`} className="font-medium underline-offset-2 hover:underline">
                     {names.get(med.id) ?? "…"}

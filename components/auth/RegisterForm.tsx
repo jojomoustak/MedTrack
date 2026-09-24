@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 
 /**
  * Phase 3 §2.1 "Register". Calls Better Auth's client SDK (ADR-003) —
@@ -58,19 +59,15 @@ export function RegisterForm() {
         />
       </label>
 
-      <label className="flex flex-col gap-1">
-        <span className="font-medium">Κωδικός πρόσβασης</span>
-        <input
-          type="password"
-          required
-          minLength={8}
-          autoComplete="new-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          aria-label="Κωδικός πρόσβασης"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-        />
-      </label>
+      <PasswordInput
+        label="Κωδικός πρόσβασης"
+        value={password}
+        onChange={setPassword}
+        autoComplete="new-password"
+        required
+        minLength={8}
+        ariaLabel="Κωδικός πρόσβασης"
+      />
 
       {error && (
         <p role="alert" className="text-sm text-red-700 dark:text-red-400">

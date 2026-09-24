@@ -9,7 +9,7 @@ vi.mock("next/navigation", () => ({
 
 afterEach(() => cleanup());
 
-describe("AddMedicationFab (Phase 3 §1: visible on Today & Medications only)", () => {
+describe("AddMedicationFab (Phase 3 §1: visible on Today, Medications & Lists)", () => {
   it("renders on /today", async () => {
     currentPath = "/today";
     const { AddMedicationFab } = await import("@/components/shell/AddMedicationFab");
@@ -24,8 +24,15 @@ describe("AddMedicationFab (Phase 3 §1: visible on Today & Medications only)", 
     expect(screen.getByRole("link", { name: /προσθήκη φαρμάκου/i })).toBeTruthy();
   });
 
-  it("does not render on /calendar, /lists, or /profile", async () => {
-    for (const path of ["/calendar", "/lists", "/profile"]) {
+  it("renders on /lists (UX feedback, 2026-09-24: same add-medication FAB everywhere, not a bespoke per-page one)", async () => {
+    currentPath = "/lists";
+    const { AddMedicationFab } = await import("@/components/shell/AddMedicationFab");
+    render(<AddMedicationFab />);
+    expect(screen.getByRole("link", { name: /προσθήκη φαρμάκου/i })).toBeTruthy();
+  });
+
+  it("does not render on /calendar or /profile", async () => {
+    for (const path of ["/calendar", "/profile"]) {
       currentPath = path;
       const { AddMedicationFab } = await import("@/components/shell/AddMedicationFab");
       const { container, unmount } = render(<AddMedicationFab />);

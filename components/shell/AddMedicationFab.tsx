@@ -4,9 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { playSound } from "@/lib/sound/client/play-sound";
 
-const VISIBLE_ON = ["/today", "/medications"];
+const VISIBLE_ON = ["/today", "/medications", "/lists"];
 
-/** Phase 3 §1: FAB "Add Medication" floats above the tab bar, visible on Today & Medications only. */
+/**
+ * Phase 3 §1: FAB "Add Medication" floats above the tab bar, visible on
+ * Today, Medications & Lists. UX feedback (2026-09-24): Lists briefly had
+ * its own bespoke FAB that focused the create-list form instead — reverted
+ * in favor of this same one everywhere, so the floating "+" always means
+ * the same thing across the whole app.
+ */
 export function AddMedicationFab() {
   const pathname = usePathname();
   if (!VISIBLE_ON.some((path) => pathname === path)) return null;

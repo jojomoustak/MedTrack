@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { usePurchaseLists } from "@/lib/lists/client/use-purchase-lists";
@@ -12,7 +12,6 @@ export default function ListsPage() {
   const { status, lists, createList } = usePurchaseLists(profileId);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
-  const nameInputRef = useRef<HTMLInputElement>(null);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -24,17 +23,6 @@ export default function ListsPage() {
     setCreating(false);
   }
 
-  // UX feedback (2026-09-22): every other add-entry-point in the app is a
-  // fixed bottom-right FAB (Today/Medications). Lists' own "add" is a
-  // same-page form, not a separate route to navigate to, so this FAB
-  // brings that form into view and focuses it instead — same landing
-  // spot, same visual language, no new route needed.
-  function focusCreateForm() {
-    playSound("button");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    nameInputRef.current?.focus();
-  }
-
   return (
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-xl font-semibold">Λίστες</h1>
@@ -44,7 +32,6 @@ export default function ListsPage() {
           Όνομα νέας λίστας
         </label>
         <input
-          ref={nameInputRef}
           id="new-list-name"
           type="text"
           value={newName}
@@ -90,15 +77,6 @@ export default function ListsPage() {
           ))}
         </ul>
       )}
-
-      <button
-        type="button"
-        onClick={focusCreateForm}
-        aria-label="Νέα λίστα"
-        className="fixed right-4 bottom-20 flex min-h-14 min-w-14 items-center justify-center rounded-full bg-accent-700 px-5 py-4 font-medium text-white shadow-lg dark:bg-accent-500 dark:text-zinc-950"
-      >
-        + Λίστα
-      </button>
     </div>
   );
 }

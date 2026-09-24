@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 
 /**
  * Reads `token` from the URL query string. Better Auth's reset-link shape
@@ -64,19 +65,15 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4" noValidate>
-      <label className="flex flex-col gap-1">
-        <span className="font-medium">Νέος κωδικός πρόσβασης</span>
-        <input
-          type="password"
-          required
-          minLength={8}
-          autoComplete="new-password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          aria-label="Νέος κωδικός πρόσβασης"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-        />
-      </label>
+      <PasswordInput
+        label="Νέος κωδικός πρόσβασης"
+        value={newPassword}
+        onChange={setNewPassword}
+        autoComplete="new-password"
+        required
+        minLength={8}
+        ariaLabel="Νέος κωδικός πρόσβασης"
+      />
 
       {error && (
         <p role="alert" className="text-sm text-red-700 dark:text-red-400">
