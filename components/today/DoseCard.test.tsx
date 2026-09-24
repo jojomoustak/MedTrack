@@ -1,8 +1,18 @@
 // @vitest-environment jsdom
+import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { DoseCard } from "@/components/today/DoseCard";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
+
+// DoseCard now renders MedicationThumbnail (2026-09-26), which fetches the
+// medication's photo — irrelevant to what this file tests (dose transitions,
+// undo windows), so a fast, always-404 stub keeps every test here isolated
+// from real network I/O rather than threading a DI seam through DoseCard's
+// own props just for this.
+beforeEach(() => {
+  global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404 }) as unknown as typeof fetch;
+});
 
 afterEach(() => cleanup());
 

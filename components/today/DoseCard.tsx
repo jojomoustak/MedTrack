@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
+import { MedicationThumbnail } from "@/components/medications/MedicationThumbnail";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { formatQuantity } from "@/lib/domain/quantity";
@@ -140,6 +141,10 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
           {timeLabel && (
             <span className="shrink-0 pt-0.5 text-base font-semibold tabular-nums leading-none text-zinc-900 dark:text-zinc-50">{timeLabel}</span>
           )}
+          {/* UX feedback (2026-09-26): same photo/camera slot as the
+              Medications list, now here too — a visual anchor for "which
+              medication is this," not just its printed name. */}
+          <MedicationThumbnail userMedicationId={dose.userMedicationId} />
           <div className="min-w-0">
             <p className="font-medium">{medicationName}</p>
             {dose.quantityValue && (
