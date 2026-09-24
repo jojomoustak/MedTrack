@@ -7,5 +7,5 @@ export function MedicationThumbnail({ userMedicationId }: { userMedicationId: st
   const url = useMedicationPhotoThumbnail(userMedicationId);
   if (!url) return null;
 
-  return <img src={url} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />;
+  return <img src={url} alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover" />;
 }

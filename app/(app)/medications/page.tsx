@@ -113,19 +113,7 @@ export default function MedicationsPage() {
           {visible.map((med) => {
             const isFavorite = favoriteIds.has(med.id);
             return (
-              <li key={med.id} className="flex min-h-12 items-center justify-between gap-2 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-4 py-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    playSound("button");
-                    toggleFavorite(med.id);
-                  }}
-                  aria-pressed={isFavorite}
-                  aria-label={isFavorite ? `Αφαίρεση ${names.get(med.id) ?? "φαρμάκου"} από τα αγαπημένα` : `Προσθήκη ${names.get(med.id) ?? "φαρμάκου"} στα αγαπημένα`}
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl ${isFavorite ? "text-amber-500" : "text-zinc-300 dark:text-zinc-600"}`}
-                >
-                  {isFavorite ? "★" : "☆"}
-                </button>
+              <li key={med.id} className="flex min-h-16 items-center justify-between gap-3 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-4 py-3">
                 {/* Same "needs a real server row" gating as the "Φωτογραφία"
                     link below — a not-yet-synced medication can't have a
                     photo on the server yet either. */}
@@ -156,6 +144,21 @@ export default function MedicationsPage() {
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">Φωτογραφία μετά τον συγχρονισμό</p>
                   )}
                 </div>
+                {/* UX feedback (2026-09-24): moved from the leading edge to
+                    trail the row, next to the sync chip, alongside the
+                    thumbnail size bump. */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound("button");
+                    toggleFavorite(med.id);
+                  }}
+                  aria-pressed={isFavorite}
+                  aria-label={isFavorite ? `Αφαίρεση ${names.get(med.id) ?? "φαρμάκου"} από τα αγαπημένα` : `Προσθήκη ${names.get(med.id) ?? "φαρμάκου"} στα αγαπημένα`}
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl ${isFavorite ? "text-amber-500" : "text-zinc-300 dark:text-zinc-600"}`}
+                >
+                  {isFavorite ? "★" : "☆"}
+                </button>
                 <SyncStatusChip state={med.syncState} />
               </li>
             );
