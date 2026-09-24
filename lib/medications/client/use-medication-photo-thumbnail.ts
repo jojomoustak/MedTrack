@@ -2,39 +2,70 @@
 
 import { useEffect, useState } from "react";
 import { fetchMedicationPhoto } from "@/lib/medications/client/photo-api";
+import { DexiePhotoCacheRepository } from "@/lib/medications/client/photo-cache-repository";
+
+export type MedicationPhotoThumbnailStatus = "checking" | "present" | "absent";
 
 /**
- * The medication list's row thumbnail (UX feedback, 2026-09-24) — reuses
- * the existing online-only `fetchMedicationPhoto` (photos have no offline
- * story, see `lib/medications/server/photo.ts`'s header doc) rather than a
- * new batch-listing endpoint; a handful of per-row GETs for a typical
- * medication list is the same cost class this app already pays on the
- * dedicated photo page. Returns `null` while loading, offline, or when
- * there's simply no photo yet — none of those block the row from rendering.
+ * The medication list's row thumbnail. UX feedback (2026-09-26): the
+ * original version fetched over the network on every single mount, even
+ * for a photo already seen on a previous visit — cache-first here (the
+ * same `DexiePhotoCacheRepository` `MedicationPhotoAttach` already uses,
+ * see its own header doc for why photos have no offline-sync story but do
+ * have this local view cache) means a repeat view of this list shows the
+ * photo instantly, with the network call only ever revalidating quietly
+ * in the background rather than blocking what's on screen.
  */
-export function useMedicationPhotoThumbnail(userMedicationId: string): string | null {
+export function useMedicationPhotoThumbnail(userMedicationId: string): { status: MedicationPhotoThumbnailStatus; url: string | null } {
+  const [status, setStatus] = useState<MedicationPhotoThumbnailStatus>("checking");
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     let objectUrl: string | null = null;
+    const cache = new DexiePhotoCacheRepository();
 
-    fetchMedicationPhoto(userMedicationId)
-      .then((result) => {
-        if (cancelled || !result) return;
-        objectUrl = URL.createObjectURL(result.blob);
+    async function load() {
+      const cached = await cache.get(userMedicationId);
+      if (cancelled) return;
+      if (cached) {
+        objectUrl = URL.createObjectURL(cached.blob);
         setUrl(objectUrl);
-      })
-      .catch(() => {
-        // Offline/transient failure — a missing thumbnail on a list row
-        // isn't worth surfacing as an error.
-      });
+        setStatus("present");
+      }
 
+      try {
+        const result = await fetchMedicationPhoto(userMedicationId);
+        if (cancelled) return;
+        if (!result) {
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+          setUrl(null);
+          setStatus("absent");
+          await cache.remove(userMedicationId);
+          return;
+        }
+        const fresh = URL.createObjectURL(result.blob);
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        objectUrl = fresh;
+        setUrl(fresh);
+        setStatus("present");
+        await cache.put({ userMedicationId, blob: result.blob, contentType: result.blob.type || "application/octet-stream" });
+      } catch {
+        if (cancelled) return;
+        // Offline/transient failure: keep showing a cached copy if there
+        // was one; otherwise fall back to the camera affordance rather
+        // than leaving the row stuck on a loading skeleton forever.
+        if (!cached) setStatus("absent");
+      }
+    }
+
+    void load();
     return () => {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [userMedicationId]);
 
-  return url;
+  return { status, url };
 }

@@ -114,9 +114,10 @@ export default function MedicationsPage() {
             const isFavorite = favoriteIds.has(med.id);
             return (
               <li key={med.id} className="flex min-h-16 items-center justify-between gap-3 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-4 py-3">
-                {/* Same "needs a real server row" gating as the "Φωτογραφία"
-                    link below — a not-yet-synced medication can't have a
-                    photo on the server yet either. */}
+                {/* A freshly-created medication may not exist on the server
+                    yet (local-first write) — the photo endpoints need a
+                    real server row, so this only appears once synced
+                    (mirrors `MedicationPhotoAttach`'s own gating). */}
                 {med.syncState === "synced" && <MedicationThumbnail userMedicationId={med.id} />}
                 <div className="min-w-0 flex-1">
                   <Link href={`/medications/${med.id}`} className="font-medium underline-offset-2 hover:underline">
@@ -134,14 +135,6 @@ export default function MedicationsPage() {
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
                       {formatQuantity(med.customStrengthValue)} {med.customStrengthUnit}
                     </p>
-                  )}
-                  {/* A freshly-created medication may not exist on the server yet (local-first write) — the photo endpoints need a real server row, so this link only appears once synced (mirrors `MedicationPhotoAttach`'s own gating). */}
-                  {med.syncState === "synced" ? (
-                    <Link href={`/medications/${med.id}/photo`} className="text-sm font-medium underline">
-                      Φωτογραφία
-                    </Link>
-                  ) : (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">Φωτογραφία μετά τον συγχρονισμό</p>
                   )}
                 </div>
                 {/* UX feedback (2026-09-24): moved from the leading edge to
