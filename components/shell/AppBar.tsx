@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { useGlobalSyncSummary } from "@/lib/sync/client/use-global-sync-summary";
 import { createSyncManager } from "@/lib/sync/client/sync-manager";
@@ -22,10 +23,19 @@ import { createSyncManager } from "@/lib/sync/client/sync-manager";
  * subscriptions/timers behind, and `useGlobalSyncSummary`'s own 5s poll
  * picks up the result without this component needing its own refresh
  * plumbing.
+ *
+ * Design pass (2026-09-26): hidden on /today specifically — that screen
+ * now carries its own branded header (TodayHero: wordmark + icon + sync
+ * status inside the gradient band), so this bar would otherwise show the
+ * exact same "MedTracking" title a second time, directly underneath
+ * itself. Every other screen keeps this bar unchanged.
  */
 export function AppBar() {
+  const pathname = usePathname();
   const summary = useGlobalSyncSummary();
   const [retrying, setRetrying] = useState(false);
+
+  if (pathname === "/today") return null;
 
   async function handleRetry() {
     if (retrying) return;

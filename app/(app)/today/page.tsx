@@ -1,7 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useProfileId, useAccountId } from "@/components/shell/CurrentProfileContext";
+import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
+import { useGlobalSyncSummary } from "@/lib/sync/client/use-global-sync-summary";
+import { createSyncManager } from "@/lib/sync/client/sync-manager";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useLowStockMedicationIds } from "@/lib/inventory/client/use-low-stock-medications";
@@ -81,15 +85,44 @@ function LowStockIcon() {
   );
 }
 
+/** The same pill-capsule mark `NavIcon`'s "medications" tab already draws — reused here rather than a one-off brand mark, so the wordmark's icon is the app's own established shape, not a new invention. */
+function BrandIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <g transform="rotate(-45 12 12)">
+        <rect x="4" y="8" width="16" height="8" rx="4" />
+        <path d="M12 8v8" />
+      </g>
+    </svg>
+  );
+}
+
 /**
  * Design pass (2026-09-26): full-bleed gradient band replacing the plain
  * "Σήμερα" heading — direction-comparison mockups (built to react to, not
- * guessed at) landed here specifically. The soft radial glow and the
- * progress bar are decorative/informational only, never the sole source
- * of any status a screen reader needs (the dose cards below still state
- * their own status in text).
+ * guessed at) landed here specifically. Carries the "MedTracking"
+ * wordmark + icon and the sync-status indicator itself (mirroring
+ * `AppBar`'s own retry logic exactly) — `AppBar` hides itself on this one
+ * route so the title doesn't render twice; every other screen still gets
+ * it from `AppBar` unchanged. The soft radial glow and the progress bar
+ * are decorative/informational only, never the sole source of any status
+ * a screen reader needs (the dose cards below still state their own
+ * status in text).
  */
 function TodayHero({ resolved, total }: { resolved: number; total: number }) {
+  const summary = useGlobalSyncSummary();
+  const [retrying, setRetrying] = useState(false);
+
+  async function handleRetry() {
+    if (retrying) return;
+    setRetrying(true);
+    try {
+      await createSyncManager().drainNow();
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   return (
     <div className="relative overflow-hidden rounded-b-[28px] bg-linear-to-br from-accent-600 to-accent-800 px-5 pt-5 pb-7.5 text-white">
       <div
@@ -98,7 +131,22 @@ function TodayHero({ resolved, total }: { resolved: number; total: number }) {
         style={{ background: "radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%)" }}
       />
       <div className="relative">
-        <h1 className="text-2xl font-bold">Σήμερα</h1>
+        <div className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1.5 text-[15px] font-semibold opacity-85">
+            <BrandIcon />
+            MedTracking
+          </span>
+          {summary === "failed" ? (
+            <SyncStatusChip state={summary} onRetry={retrying ? undefined : handleRetry} />
+          ) : (
+            summary && (
+              <Link href="/profile" aria-label="Κατάσταση συγχρονισμού">
+                <SyncStatusChip state={summary} />
+              </Link>
+            )
+          )}
+        </div>
+        <h1 className="mt-2.5 text-2xl font-bold">Σήμερα</h1>
         {total > 0 && (
           <div className="mt-3.5 flex items-center gap-2.5">
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/20">
