@@ -72,8 +72,8 @@ function stateColorClasses(state: SyncState): string {
     case "syncing":
       return "bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200";
     case "deleted":
-      return "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
+      return "bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300";
     default:
-      return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300";
+      return "bg-stone-100 text-stone-700 dark:bg-stone-800/60 dark:text-stone-300";
   }
 }

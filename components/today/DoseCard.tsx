@@ -127,7 +127,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
     <div
       role="group"
       aria-label={buildAriaLabel(medicationName, dose.quantityValue, unitLabel(dose.quantityUnit), timeLabel, label, availableActions)}
-      className="flex flex-col gap-2 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-4 py-3"
+      className="flex flex-col gap-2 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 px-4 py-3"
       data-dose-status={displayStatus}
     >
       <div className="flex items-start justify-between gap-2">
@@ -139,7 +139,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
               scannable anchor for a medication-timing app; the name reads
               second. */}
           {timeLabel && (
-            <span className="shrink-0 pt-0.5 text-base font-semibold tabular-nums leading-none text-zinc-900 dark:text-zinc-50">{timeLabel}</span>
+            <span className="shrink-0 pt-0.5 text-base font-semibold tabular-nums leading-none text-stone-900 dark:text-stone-50">{timeLabel}</span>
           )}
           {/* UX feedback (2026-09-26): same photo/camera slot as the
               Medications list, now here too — a visual anchor for "which
@@ -148,7 +148,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
           <div className="min-w-0">
             <p className="font-medium">{medicationName}</p>
             {dose.quantityValue && (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-stone-600 dark:text-stone-400">
                 {formatQuantity(dose.quantityValue)} {unitLabel(dose.quantityUnit)}
               </p>
             )}
@@ -158,7 +158,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
                 alongside it every time (accessibility audit, Phase 15
                 Hardening). */}
             {label && (
-              <p aria-live="polite" className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p aria-live="polite" className="text-sm text-stone-600 dark:text-stone-400">
                 {label}
               </p>
             )}
@@ -172,7 +172,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
           type="button"
           onClick={cancelUndo}
           aria-live="polite"
-          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium underline dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-4 py-2 text-sm font-medium underline dark:border-stone-700"
         >
           Αναίρεση — {label}
         </button>
@@ -183,14 +183,14 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
           <button
             type="button"
             onClick={() => startUndoWindow("taken")}
-            className="min-h-14 flex-1 rounded-full bg-accent-700 px-3 py-3 text-sm font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
+            className="min-h-14 flex-1 rounded-full bg-accent-700 px-3 py-3 text-sm font-medium text-white dark:bg-accent-500 dark:text-stone-950"
           >
             Έλαβα
           </button>
           <button
             type="button"
             onClick={() => startUndoWindow("skipped")}
-            className="min-h-14 flex-1 rounded-full border border-zinc-300 px-3 py-3 text-sm font-medium dark:border-zinc-700"
+            className="min-h-14 flex-1 rounded-full border border-stone-300 px-3 py-3 text-sm font-medium dark:border-stone-700"
           >
             Παράλειψη
           </button>
@@ -200,7 +200,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
               playSound("button");
               onSnoozed(dose.id);
             }}
-            className="min-h-14 flex-1 rounded-full border border-zinc-300 px-3 py-3 text-sm font-medium dark:border-zinc-700"
+            className="min-h-14 flex-1 rounded-full border border-stone-300 px-3 py-3 text-sm font-medium dark:border-stone-700"
           >
             Αναβολή
           </button>
@@ -211,7 +211,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
         <button
           type="button"
           onClick={() => startUndoWindow("taken_late")}
-          className="inline-flex items-center justify-center min-h-14 self-start rounded-full border border-zinc-300 px-4 py-3 text-sm font-medium dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-14 self-start rounded-full border border-stone-300 px-4 py-3 text-sm font-medium dark:border-stone-700"
         >
           Το πήρα, καταγραφή ως αργοπορημένη λήψη
         </button>

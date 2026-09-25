@@ -63,7 +63,7 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
           aria-label="Ημερομηνία έναρξης"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
         />
       </label>
 
@@ -79,7 +79,7 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             aria-label="Ημερομηνία λήξης"
-            className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
           />
         )}
       </fieldset>
@@ -94,7 +94,7 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
               value={quantityValue}
               onChange={(e) => setQuantityValue(e.target.value)}
               aria-label="Ποσότητα δόσης"
-              className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
             />
           </label>
           <label className="flex flex-1 flex-col gap-1">
@@ -103,7 +103,7 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
               value={quantityUnit}
               onChange={(e) => setQuantityUnit(e.target.value as MedicationForm)}
               aria-label="Μονάδα δόσης"
-              className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
             >
               {FORM_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -128,11 +128,11 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
             playSound("button");
             onBack();
           }}
-          className="min-h-12 flex-1 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+          className="min-h-12 flex-1 rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
         >
           Πίσω
         </button>
-        <button type="submit" className="min-h-12 flex-1 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950">
+        <button type="submit" className="min-h-12 flex-1 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950">
           Συνέχεια
         </button>
       </div>

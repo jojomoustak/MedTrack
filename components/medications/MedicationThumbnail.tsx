@@ -49,7 +49,7 @@ export function MedicationThumbnail({ userMedicationId }: { userMedicationId: st
   }
 
   if (status === "checking") {
-    return <div aria-hidden="true" className="h-16 w-16 shrink-0 animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-800" />;
+    return <div aria-hidden="true" className="h-16 w-16 shrink-0 animate-pulse rounded-xl bg-stone-100 dark:bg-stone-800" />;
   }
 
   async function handleFileSelected(file: File) {
@@ -82,13 +82,13 @@ export function MedicationThumbnail({ userMedicationId }: { userMedicationId: st
       }}
       aria-label={uploadFailed ? "Η λήψη φωτογραφίας απέτυχε — πατήστε για να δοκιμάσετε ξανά" : "Λήψη φωτογραφίας φαρμάκου"}
       className={`flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed ${
-        uploadFailed ? "border-red-300 text-red-400 dark:border-red-900 dark:text-red-500" : "border-zinc-300 text-zinc-400 dark:border-zinc-700 dark:text-zinc-600"
+        uploadFailed ? "border-red-300 text-red-400 dark:border-red-900 dark:text-red-500" : "border-stone-300 text-stone-400 dark:border-stone-700 dark:text-stone-600"
       }`}
     >
       {uploading ? (
         <span
           aria-hidden="true"
-          className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-accent-700 dark:border-zinc-700 dark:border-t-accent-500"
+          className="h-5 w-5 animate-spin rounded-full border-2 border-stone-300 border-t-accent-700 dark:border-stone-700 dark:border-t-accent-500"
         />
       ) : (
         <CameraIcon />

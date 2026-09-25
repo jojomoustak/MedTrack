@@ -178,7 +178,7 @@ export function PackageOcrCandidateFlow({
           playSound("button");
           void startOcr();
         }}
-        className="inline-flex items-center justify-center min-h-12 rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium dark:border-zinc-700"
+        className="inline-flex items-center justify-center min-h-12 rounded-full border border-stone-300 px-5 py-2 text-sm font-medium dark:border-stone-700"
       >
         Δοκιμή αναγνώρισης από την ετικέτα του πακέτου
       </button>
@@ -187,7 +187,7 @@ export function PackageOcrCandidateFlow({
 
   if (state.phase === "capturing" || state.phase === "processing") {
     return (
-      <p role="status" aria-live="polite" className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p role="status" aria-live="polite" className="text-sm text-stone-600 dark:text-stone-400">
         {state.phase === "capturing" ? "Άνοιγμα κάμερας…" : "Ανάλυση ετικέτας…"}
       </p>
     );
@@ -208,8 +208,8 @@ export function PackageOcrCandidateFlow({
 
   if (state.phase === "not-found") {
     return (
-      <div className="rounded-xl border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
-        <p className="mb-3 text-sm text-zinc-700 dark:text-zinc-300">
+      <div className="rounded-xl border border-dashed border-stone-300 p-4 dark:border-stone-700">
+        <p className="mb-3 text-sm text-stone-700 dark:text-stone-300">
           Δεν βρέθηκε αντιστοιχία από την ετικέτα. Δοκιμάστε ξανά με καλύτερο φωτισμό ή αναζητήστε χειροκίνητα.
         </p>
         <div className="flex gap-3">
@@ -226,7 +226,7 @@ export function PackageOcrCandidateFlow({
 
   if (state.phase === "picking") {
     return (
-      <div className="flex flex-col gap-3 rounded-xl border border-zinc-300 p-4 dark:border-zinc-700">
+      <div className="flex flex-col gap-3 rounded-xl border border-stone-300 p-4 dark:border-stone-700">
         <p className="text-sm font-medium">Βρήκαμε πολλές πιθανές συσκευασίες. Επιλέξτε αυτή που αναγράφεται στο κουτί σας:</p>
         <ul className="flex flex-col gap-2">
           {state.scores.map((score) => (
@@ -234,7 +234,7 @@ export function PackageOcrCandidateFlow({
               <button
                 type="button"
                 onClick={() => { playSound("button"); setState({ phase: "confirming", entry: score.entry, confidence: "OCR_AMBIGUOUS" }); }}
-                className="inline-flex items-center justify-center min-h-10 w-full rounded-lg shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-3 py-2 text-left text-sm"
+                className="inline-flex items-center justify-center min-h-10 w-full rounded-lg shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 px-3 py-2 text-left text-sm"
               >
                 {formatCandidateLabel(score.entry)}
               </button>
@@ -252,7 +252,7 @@ export function PackageOcrCandidateFlow({
   const product = offlineIndexEntryToCatalogProduct(state.entry);
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">Βρέθηκε από την ετικέτα του πακέτου — επιβεβαιώστε ότι είναι σωστό:</p>
+      <p className="text-sm text-stone-600 dark:text-stone-400">Βρέθηκε από την ετικέτα του πακέτου — επιβεβαιώστε ότι είναι σωστό:</p>
       <CandidateConfirmation
         product={product}
         parsedExpiry={parsed.expiry}

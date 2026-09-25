@@ -77,21 +77,21 @@ export default function DoseHistoryDetailPage() {
       </button>
 
       {dose === undefined && (
-        <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
           Φόρτωση…
         </p>
       )}
 
-      {dose === null && <p className="text-sm text-zinc-600 dark:text-zinc-400">Δεν βρέθηκε αυτή η δόση.</p>}
+      {dose === null && <p className="text-sm text-stone-600 dark:text-stone-400">Δεν βρέθηκε αυτή η δόση.</p>}
 
       {dose && (
         <>
           <div>
             <h1 className="text-xl font-semibold">Λήψη — {medicationName}</h1>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">{formatDateTime(dose.scheduledAt)}</p>
+            <p className="text-sm text-stone-600 dark:text-stone-400">{formatDateTime(dose.scheduledAt)}</p>
           </div>
 
-          <dl className="flex flex-col gap-3 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-4">
+          <dl className="flex flex-col gap-3 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
             <div className="flex items-center justify-between gap-2">
               <dt className="font-medium">Κατάσταση</dt>
               <dd className="flex items-center gap-1.5">

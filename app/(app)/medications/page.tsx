@@ -83,8 +83,8 @@ export default function MedicationsPage() {
             }}
             className={`min-h-12 rounded-full border px-4 py-2 text-sm font-medium ${
               segment === s.key
-                ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950"
-                : "border-zinc-300 dark:border-zinc-700"
+                ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950"
+                : "border-stone-300 dark:border-stone-700"
             }`}
           >
             {s.label}
@@ -93,7 +93,7 @@ export default function MedicationsPage() {
       </div>
 
       {(status === "loading" || segmentLoading) && (
-        <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
           Φόρτωση…
         </p>
       )}
@@ -104,7 +104,7 @@ export default function MedicationsPage() {
           entry point on this screen is enough. */}
       {status === "ready" && !segmentLoading && visible.length === 0 && (
         <div className="flex flex-col items-center gap-3 p-8 text-center">
-          <p className="text-zinc-600 dark:text-zinc-400">{EMPTY_SEGMENT_MESSAGE[segment]}</p>
+          <p className="text-stone-600 dark:text-stone-400">{EMPTY_SEGMENT_MESSAGE[segment]}</p>
         </div>
       )}
 
@@ -113,7 +113,7 @@ export default function MedicationsPage() {
           {visible.map((med) => {
             const isFavorite = favoriteIds.has(med.id);
             return (
-              <li key={med.id} className="flex min-h-16 items-center justify-between gap-3 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-4 py-3">
+              <li key={med.id} className="flex min-h-16 items-center justify-between gap-3 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 px-4 py-3">
                 {/* A freshly-created medication may not exist on the server
                     yet (local-first write) — the photo endpoints need a
                     real server row, so this only appears once synced
@@ -132,7 +132,7 @@ export default function MedicationsPage() {
                     </span>
                   )}
                   {med.customStrengthValue && (
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    <p className="text-sm text-stone-600 dark:text-stone-400">
                       {formatQuantity(med.customStrengthValue)} {med.customStrengthUnit}
                     </p>
                   )}
@@ -148,9 +148,9 @@ export default function MedicationsPage() {
                   }}
                   aria-pressed={isFavorite}
                   aria-label={isFavorite ? `Αφαίρεση ${names.get(med.id) ?? "φαρμάκου"} από τα αγαπημένα` : `Προσθήκη ${names.get(med.id) ?? "φαρμάκου"} στα αγαπημένα`}
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl ${isFavorite ? "text-amber-500" : "text-zinc-300 dark:text-zinc-600"}`}
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${isFavorite ? "text-amber-500" : "text-stone-300 dark:text-stone-600"}`}
                 >
-                  {isFavorite ? "★" : "☆"}
+                  <StarIcon filled={isFavorite} />
                 </button>
                 <SyncStatusChip state={med.syncState} />
               </li>
@@ -159,5 +159,22 @@ export default function MedicationsPage() {
         </ul>
       )}
     </div>
+  );
+}
+
+/** Real drawn icon, not the Unicode ★/☆ glyphs this replaced — those render with inconsistent glyph coverage/weight across platforms/fonts. */
+function StarIcon({ filled }: { filled: boolean }) {
+  const path = "M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7Z";
+  if (filled) {
+    return (
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="currentColor">
+        <path d={path} />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
+      <path d={path} />
+    </svg>
   );
 }

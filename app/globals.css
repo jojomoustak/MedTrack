@@ -1,8 +1,20 @@
 @import "tailwindcss";
 
+/*
+ * Warm neutrals, not pure white/black (design research pass, 2026-09-25).
+ * Pure #fff/#0a0a0a paired with a cool-toned gray (Tailwind's `zinc`, blue-
+ * leaning) is exactly the combination healthcare-UX research flags as
+ * reading "clinical" and "cold" rather than trustworthy — the fix isn't a
+ * different accent, it's swapping the NEUTRALS: an off-white background
+ * and a warm gray scale (`stone`, brown-leaning) throughout instead of
+ * zinc. `--background`/`--foreground` below are `stone-50`/`stone-900`
+ * (light) and `stone-950`/`stone-100` (dark) — every other `zinc-*` class
+ * in the app was mechanically swapped to `stone-*` alongside this so the
+ * whole neutral system moves together, not just the page background.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafaf9;
+  --foreground: #1c1917;
 }
 
 /*
@@ -39,8 +51,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0c0a09;
+    --foreground: #f5f5f4;
   }
 }
 

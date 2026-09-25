@@ -83,16 +83,16 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
               value={time}
               onChange={(e) => updateTime(index, e.target.value)}
               aria-label={`Ώρα δόσης ${index + 1}`}
-              className="min-h-12 flex-1 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              className="min-h-12 flex-1 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
             />
             {times.length > 1 && (
               <button
                 type="button"
                 onClick={() => removeTimeRow(index)}
                 aria-label={`Αφαίρεση ώρας ${index + 1}`}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 text-lg dark:border-zinc-700"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-stone-300 dark:border-stone-700"
               >
-                ×
+                <CloseIcon />
               </button>
             )}
           </div>
@@ -100,7 +100,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
         <button
           type="button"
           onClick={addTimeRow}
-          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-4 py-2 text-sm font-medium dark:border-stone-700"
         >
           + Προσθήκη ώρας
         </button>
@@ -114,7 +114,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
             onClick={() => { playSound("button"); setSpecificDays(false); }}
             aria-pressed={!specificDays}
             className={`min-h-12 flex-1 rounded-full border px-4 py-2 text-sm font-medium ${
-              !specificDays ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950" : "border-zinc-300 dark:border-zinc-700"
+              !specificDays ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950" : "border-stone-300 dark:border-stone-700"
             }`}
           >
             Κάθε μέρα
@@ -124,7 +124,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
             onClick={() => { playSound("button"); setSpecificDays(true); }}
             aria-pressed={specificDays}
             className={`min-h-12 flex-1 rounded-full border px-4 py-2 text-sm font-medium ${
-              specificDays ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950" : "border-zinc-300 dark:border-zinc-700"
+              specificDays ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950" : "border-stone-300 dark:border-stone-700"
             }`}
           >
             Συγκεκριμένες ημέρες
@@ -143,7 +143,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
                   aria-pressed={checked}
                   aria-label={full}
                   className={`flex h-12 w-12 items-center justify-center rounded-full border text-sm font-medium ${
-                    checked ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950" : "border-zinc-300 dark:border-zinc-700"
+                    checked ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950" : "border-stone-300 dark:border-stone-700"
                   }`}
                 >
                   {abbr}
@@ -161,13 +161,21 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
       )}
 
       <div className="flex gap-2">
-        <button type="button" onClick={() => { playSound("button"); onBack(); }} className="min-h-12 flex-1 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700">
+        <button type="button" onClick={() => { playSound("button"); onBack(); }} className="min-h-12 flex-1 rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700">
           Πίσω
         </button>
-        <button type="submit" className="min-h-12 flex-1 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950">
+        <button type="submit" className="min-h-12 flex-1 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950">
           Συνέχεια
         </button>
       </div>
     </form>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d="M5 5l10 10M15 5 5 15" />
+    </svg>
   );
 }

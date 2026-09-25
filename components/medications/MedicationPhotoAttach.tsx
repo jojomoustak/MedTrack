@@ -269,7 +269,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     return (
       <div className={className}>
         {pollExhausted ? (
-          <div className="flex flex-col gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+          <div className="flex flex-col gap-2 text-sm text-stone-600 dark:text-stone-400">
             <p>Το φάρμακο δεν έχει συγχρονιστεί ακόμα, οπότε δεν μπορείτε να προσθέσετε φωτογραφία αυτή τη στιγμή.</p>
             <button
               type="button"
@@ -278,13 +278,13 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
                 setPollExhausted(false);
                 setPollNonce((n) => n + 1);
               }}
-              className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+              className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-4 py-2 text-sm font-medium dark:border-stone-700"
             >
               Δοκιμή ξανά
             </button>
           </div>
         ) : (
-          <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
             Αναμονή συγχρονισμού πριν την προσθήκη φωτογραφίας…
           </p>
         )}
@@ -300,7 +300,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
           <img
             src={photoUrl}
             alt="Φωτογραφία φαρμάκου"
-            className="max-h-64 w-full rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 object-contain"
+            className="max-h-64 w-full rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 object-contain"
           />
         )}
 
@@ -315,7 +315,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
           </p>
         )}
         {offlineNote && !pendingOp && (
-          <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
             Δεν ήταν δυνατή η σύνδεση για έλεγχο φωτογραφίας.
           </p>
         )}
@@ -331,7 +331,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
             onClick={() => {
               if (!busy) playSound("button");
             }}
-            className={`min-h-12 flex-1 cursor-pointer rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium dark:border-zinc-700 ${busy ? "opacity-60" : ""}`}
+            className={`min-h-12 flex-1 cursor-pointer rounded-full border border-stone-300 px-4 py-2 text-center text-sm font-medium dark:border-stone-700 ${busy ? "opacity-60" : ""}`}
           >
             {busy ? "Μεταφόρτωση…" : photoStatus === "present" ? "Αλλαγή φωτογραφίας" : "Προσθήκη φωτογραφίας (προαιρετικό)"}
             <input

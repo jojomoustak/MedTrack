@@ -67,7 +67,7 @@ export default function InventoryCorrectionPage() {
 
   if (medication === undefined) {
     return (
-      <p role="status" className="p-6 text-sm text-zinc-600 dark:text-zinc-400">
+      <p role="status" className="p-6 text-sm text-stone-600 dark:text-stone-400">
         Φόρτωση…
       </p>
     );
@@ -76,7 +76,7 @@ export default function InventoryCorrectionPage() {
   if (medication === null) {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <p className="text-zinc-600 dark:text-zinc-400">Το φάρμακο δεν βρέθηκε.</p>
+        <p className="text-stone-600 dark:text-stone-400">Το φάρμακο δεν βρέθηκε.</p>
         <Link href="/medications" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
           Πίσω στα φάρμακα
         </Link>

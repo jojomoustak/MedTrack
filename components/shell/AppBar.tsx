@@ -38,7 +38,7 @@ export function AppBar() {
   }
 
   return (
-    <header className="flex min-h-12 items-center justify-between border-b border-zinc-200 bg-white px-4 py-2 dark:border-zinc-800 dark:bg-black">
+    <header className="flex min-h-12 items-center justify-between border-b border-stone-200 bg-stone-50 px-4 py-2 dark:border-stone-800 dark:bg-stone-950">
       <span className="font-semibold">MedTracking</span>
       {summary === "failed" ? (
         <SyncStatusChip state={summary} onRetry={retrying ? undefined : handleRetry} />

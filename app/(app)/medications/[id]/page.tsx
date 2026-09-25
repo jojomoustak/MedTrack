@@ -73,7 +73,7 @@ export default function MedicationDetailPage() {
 
   if (medication === undefined) {
     return (
-      <p role="status" className="p-6 text-sm text-zinc-600 dark:text-zinc-400">
+      <p role="status" className="p-6 text-sm text-stone-600 dark:text-stone-400">
         Φόρτωση…
       </p>
     );
@@ -82,7 +82,7 @@ export default function MedicationDetailPage() {
   if (medication === null) {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <p className="text-zinc-600 dark:text-zinc-400">Το φάρμακο δεν βρέθηκε.</p>
+        <p className="text-stone-600 dark:text-stone-400">Το φάρμακο δεν βρέθηκε.</p>
         <Link href="/medications" onClick={() => playSound("button")} className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
           Πίσω στα φάρμακα
         </Link>
@@ -101,7 +101,7 @@ export default function MedicationDetailPage() {
         <Link
           href={`/medications/${medication.id}/edit`}
           onClick={() => playSound("button")}
-          className="inline-flex items-center justify-center min-h-12 rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-12 rounded-full border border-stone-300 px-4 py-2 text-sm font-medium dark:border-stone-700"
         >
           Επεξεργασία
         </Link>
@@ -110,21 +110,21 @@ export default function MedicationDetailPage() {
       <div>
         <h1 className="text-xl font-semibold">{names.get(medication.id) ?? "…"}</h1>
         {medication.customStrengthValue && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-stone-600 dark:text-stone-400">
             {formatQuantity(medication.customStrengthValue)} {medication.customStrengthUnit}
           </p>
         )}
       </div>
 
-      <section className="rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-4">
-        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Πρόγραμμα δόσεων</h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <section className="rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
+        <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Πρόγραμμα δόσεων</h2>
+        <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
           {activeSchedule ? describeSchedule(activeSchedule) : "Χωρίς πρόγραμμα ακόμα."}
         </p>
       </section>
 
       {inventory.status === "loading" ? (
-        <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
           Φόρτωση αποθέματος…
         </p>
       ) : (
@@ -141,21 +141,21 @@ export default function MedicationDetailPage() {
             <Link
               href={`/medications/${medication.id}/packages/add`}
               onClick={() => playSound("button")}
-              className="min-h-12 flex-1 rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium dark:border-zinc-700"
+              className="min-h-12 flex-1 rounded-full border border-stone-300 px-4 py-2 text-center text-sm font-medium dark:border-stone-700"
             >
               Προσθήκη συσκευασίας
             </Link>
             <Link
               href={`/medications/${medication.id}/inventory/correct`}
               onClick={() => playSound("button")}
-              className="min-h-12 flex-1 rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium dark:border-zinc-700"
+              className="min-h-12 flex-1 rounded-full border border-stone-300 px-4 py-2 text-center text-sm font-medium dark:border-stone-700"
             >
               Διόρθωση αποθέματος
             </Link>
           </div>
 
           <section className="flex flex-col gap-2">
-            <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Συσκευασίες</h2>
+            <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Συσκευασίες</h2>
             <PackageList profileId={profileId} packages={inventory.packages} transactions={inventory.transactions} onChanged={inventory.refresh} />
           </section>
         </>
@@ -166,7 +166,7 @@ export default function MedicationDetailPage() {
           Φωτογραφία
         </Link>
       ) : (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Φωτογραφία μετά τον συγχρονισμό</p>
+        <p className="text-sm text-stone-500 dark:text-stone-400">Φωτογραφία μετά τον συγχρονισμό</p>
       )}
     </div>
   );

@@ -88,9 +88,9 @@ export function EditMedicationForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {isCatalogLinked ? (
         <div>
-          <span className="text-sm text-zinc-500">Φάρμακο από τον κατάλογο</span>
+          <span className="text-sm text-stone-500">Φάρμακο από τον κατάλογο</span>
           <p className="text-lg font-semibold">{displayName}</p>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Το όνομα, η μορφή και η περιεκτικότητα δεν επεξεργάζονται εδώ.</p>
+          <p className="text-sm text-stone-600 dark:text-stone-400">Το όνομα, η μορφή και η περιεκτικότητα δεν επεξεργάζονται εδώ.</p>
         </div>
       ) : (
         <>
@@ -101,7 +101,7 @@ export function EditMedicationForm({
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
               aria-label="Όνομα φαρμάκου"
-              className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
             />
           </label>
 
@@ -120,8 +120,8 @@ export function EditMedicationForm({
                   }}
                   className={`min-h-12 rounded-full border px-4 py-2 text-sm ${
                     customForm === option
-                      ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950"
-                      : "border-zinc-300 dark:border-zinc-700"
+                      ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950"
+                      : "border-stone-300 dark:border-stone-700"
                   }`}
                 >
                   {FORM_LABELS[option]}
@@ -139,7 +139,7 @@ export function EditMedicationForm({
                 value={customStrengthValue}
                 onChange={(e) => setCustomStrengthValue(e.target.value)}
                 aria-label="Τιμή περιεκτικότητας"
-                className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
               />
             </label>
             <label className="flex flex-1 flex-col gap-1">
@@ -149,7 +149,7 @@ export function EditMedicationForm({
                 value={customStrengthUnit}
                 onChange={(e) => setCustomStrengthUnit(e.target.value)}
                 aria-label="Μονάδα περιεκτικότητας"
-                className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
               />
             </label>
           </div>
@@ -162,7 +162,7 @@ export function EditMedicationForm({
           value={inventoryUnit}
           onChange={(e) => setInventoryUnit(e.target.value as MedicationForm)}
           aria-label="Μονάδα αποθέματος"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
         >
           {FORM_OPTIONS.map((option) => (
             <option key={option} value={option}>
@@ -178,7 +178,7 @@ export function EditMedicationForm({
           value={treatmentState}
           onChange={(e) => setTreatmentState(e.target.value as TreatmentState)}
           aria-label="Κατάσταση θεραπείας"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
         >
           {(Object.entries(TREATMENT_STATE_LABELS) as [TreatmentState, string][]).map(([value, label]) => (
             <option key={value} value={value}>
@@ -196,7 +196,7 @@ export function EditMedicationForm({
           value={lowStockThresholdValue}
           onChange={(e) => setLowStockThresholdValue(e.target.value)}
           aria-label="Όριο χαμηλού αποθέματος"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
         />
       </label>
 
@@ -208,7 +208,7 @@ export function EditMedicationForm({
           value={expiryWarningDays}
           onChange={(e) => setExpiryWarningDays(e.target.value)}
           aria-label="Μέρες προειδοποίησης λήξης"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
         />
       </label>
 
@@ -219,7 +219,7 @@ export function EditMedicationForm({
           onChange={(e) => setNotes(e.target.value)}
           aria-label="Σημειώσεις"
           rows={3}
-          className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
         />
       </label>
 
@@ -232,7 +232,7 @@ export function EditMedicationForm({
       <button
         type="submit"
         disabled={submitting}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-zinc-950"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-stone-950"
       >
         {submitting ? "Αποθήκευση…" : "Αποθήκευση"}
       </button>

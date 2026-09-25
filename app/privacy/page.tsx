@@ -19,13 +19,13 @@ import Link from "next/link";
  */
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-8 bg-zinc-50 px-6 py-12 dark:bg-black">
+    <main className="mx-auto flex max-w-2xl flex-col gap-8 bg-stone-50 px-6 py-12 dark:bg-stone-950">
       <div className="flex flex-col gap-2">
-        <Link href="/welcome" className="flex min-h-12 w-fit items-center text-sm text-zinc-600 underline dark:text-zinc-400">
+        <Link href="/welcome" className="flex min-h-12 w-fit items-center text-sm text-stone-600 underline dark:text-stone-400">
           ← Αρχική
         </Link>
         <h1 className="text-2xl font-semibold">Πολιτική Απορρήτου</h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Τελευταία ενημέρωση: 15 Σεπτεμβρίου 2026</p>
+        <p className="text-sm text-stone-500 dark:text-stone-400">Τελευταία ενημέρωση: 15 Σεπτεμβρίου 2026</p>
       </div>
 
       <div
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">Τι είναι το MedTracking</h2>
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+        <p className="text-sm text-stone-700 dark:text-stone-300">
           Το MedTracking είναι μια εφαρμογή διαχείρισης φαρμάκων: σας βοηθά να θυμάστε πότε να πάρετε τα φάρμακά σας,
           να παρακολουθείτε το απόθεμά σας και το ιστορικό λήψης. <strong>Δεν παρέχει ιατρικές συμβουλές, διάγνωση ή
           συστάσεις δοσολογίας</strong> — καταγράφει μόνο όσα εσείς δηλώνετε ότι σας έχουν συνταγογραφηθεί.
@@ -48,7 +48,7 @@ export default function PrivacyPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">Ποια δεδομένα συλλέγουμε</h2>
-        <ul className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+        <ul className="flex flex-col gap-2 text-sm text-stone-700 dark:text-stone-300">
           <li>
             <strong>Στοιχεία λογαριασμού:</strong> email, όνομα (προαιρετικό), κρυπτογραφημένος κωδικός πρόσβασης
             (ποτέ ο ίδιος ο κωδικός σε απλό κείμενο) ή σύνδεση μέσω λογαριασμού Google.
@@ -70,7 +70,7 @@ export default function PrivacyPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">Γιατί τα χρησιμοποιούμε</h2>
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+        <p className="text-sm text-stone-700 dark:text-stone-300">
           Αποκλειστικά για να λειτουργήσει η εφαρμογή: να σας υπενθυμίζουμε τις δόσεις σας, να συγχρονίζουμε τα
           δεδομένα σας ανάμεσα σε συσκευές και να προστατεύουμε τον λογαριασμό σας. Δεν πουλάμε, ενοικιάζουμε ή
           χρησιμοποιούμε τα δεδομένα υγείας σας για διαφημίσεις, μάρκετινγκ ή οποιονδήποτε σκοπό πέρα από τη λειτουργία
@@ -80,11 +80,11 @@ export default function PrivacyPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">Με ποιους μοιραζόμαστε δεδομένα</h2>
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+        <p className="text-sm text-stone-700 dark:text-stone-300">
           Χρησιμοποιούμε τους παρακάτω τρίτους αποκλειστικά ως πάροχοι υποδομής (όχι ως αποδέκτες για δικούς τους
           σκοπούς):
         </p>
-        <ul className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+        <ul className="flex flex-col gap-2 text-sm text-stone-700 dark:text-stone-300">
           <li>
             <strong>Vercel</strong> — φιλοξενία της εφαρμογής και (προαιρετικά) αποθήκευση φωτογραφιών φαρμάκων.
           </li>
@@ -102,7 +102,7 @@ export default function PrivacyPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">Πόσο καιρό κρατάμε τα δεδομένα σας</h2>
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+        <p className="text-sm text-stone-700 dark:text-stone-300">
           Όσο διατηρείτε ενεργό τον λογαριασμό σας. Αν διαγράψετε τον λογαριασμό σας, τα δεδομένα σας διαγράφονται
           πραγματικά από τον διακομιστή — δεν πρόκειται για απλό τοπικό καθαρισμό. Για τεχνικούς λόγους αντιγράφων
           ασφαλείας της βάσης δεδομένων, ένα αντίγραφο μπορεί να παραμείνει ανακτήσιμο για έως 7 ημέρες μετά τη
@@ -112,7 +112,7 @@ export default function PrivacyPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">Τα δικαιώματά σας</h2>
-        <ul className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+        <ul className="flex flex-col gap-2 text-sm text-stone-700 dark:text-stone-300">
           <li>
             <strong>Πρόσβαση/Φορητότητα:</strong> μπορείτε να κατεβάσετε όλα τα δεδομένα σας ανά πάσα στιγμή από το{" "}
             <Link href="/profile" className="underline">
@@ -136,7 +136,7 @@ export default function PrivacyPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">Πώς προστατεύουμε τα δεδομένα σας</h2>
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+        <p className="text-sm text-stone-700 dark:text-stone-300">
           Όλη η επικοινωνία γίνεται κρυπτογραφημένα (HTTPS). Οι κωδικοί πρόσβασης αποθηκεύονται πάντα κρυπτογραφημένοι,
           ποτέ σε απλό κείμενο. Η βάση δεδομένων επιβάλλει τεχνικά όρια ώστε ο λογαριασμός σας να βλέπει μόνο τα δικά
           του δεδομένα. Τα αρχεία καταγραφής του συστήματος (logs) δεν περιέχουν ποτέ τα πραγματικά δεδομένα υγείας
@@ -146,7 +146,7 @@ export default function PrivacyPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">Επικοινωνία</h2>
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+        <p className="text-sm text-stone-700 dark:text-stone-300">
           Για ερωτήσεις σχετικά με το απόρρητο ή για να ασκήσετε τα δικαιώματά σας:{" "}
           <span className="font-medium">[προσωρινό placeholder email επικοινωνίας]</span>.
         </p>

@@ -42,7 +42,7 @@ export function OfflineBanner({ state, onRetry, className }: OfflineBannerProps)
       role="status"
       aria-live="polite"
       data-network-state={effectiveState}
-      className={["flex items-center justify-between gap-3 px-4 py-2 text-sm", copy.tone === "backend" ? "bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300", className]
+      className={["flex items-center justify-between gap-3 px-4 py-2 text-sm", copy.tone === "backend" ? "bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" : "bg-stone-100 text-stone-700 dark:bg-stone-800/60 dark:text-stone-300", className]
         .filter(Boolean)
         .join(" ")}
     >

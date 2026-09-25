@@ -15,9 +15,9 @@ export default function RootPage() {
   }, [session.status, router]);
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-zinc-50 dark:bg-black">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-stone-50 dark:bg-stone-950">
       <h1 className="text-2xl font-semibold">MedTracking</h1>
-      <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
         Φόρτωση…
       </p>
     </main>

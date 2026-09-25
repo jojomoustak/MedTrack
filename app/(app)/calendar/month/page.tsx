@@ -78,7 +78,7 @@ export default function CalendarMonthPage() {
             shiftMonth(-1);
           }}
           aria-label="Προηγούμενος μήνας"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 dark:border-zinc-700"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-stone-300 dark:border-stone-700"
         >
           <ChevronIcon direction="left" />
         </button>
@@ -90,13 +90,13 @@ export default function CalendarMonthPage() {
             shiftMonth(1);
           }}
           aria-label="Επόμενος μήνας"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-zinc-300 dark:border-zinc-700"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-stone-300 dark:border-stone-700"
         >
           <ChevronIcon direction="right" />
         </button>
       </div>
 
-      <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+      <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-stone-600 dark:text-stone-400">
         {LEGEND_KINDS.map((kind) => (
           <span key={kind} className="inline-flex items-center gap-1">
             <DoseStatusGlyph kind={kind} className="h-3 w-3" />
@@ -106,12 +106,12 @@ export default function CalendarMonthPage() {
       </p>
 
       {status === "loading" && (
-        <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
           Φόρτωση…
         </p>
       )}
 
-      <div className="grid grid-cols-7 gap-1 text-center text-sm text-zinc-600 dark:text-zinc-400" aria-hidden="true">
+      <div className="grid grid-cols-7 gap-1 text-center text-sm text-stone-600 dark:text-stone-400" aria-hidden="true">
         {WEEKDAY_INITIALS.map((initial, i) => (
           <span key={i}>{initial}</span>
         ))}
@@ -133,8 +133,8 @@ export default function CalendarMonthPage() {
               onClick={() => goToDay(cellDate)}
               data-day-kind={summary?.kind ?? "empty"}
               className={`flex min-h-12 min-w-12 flex-col items-center justify-center gap-0.5 rounded-lg border p-1 text-sm ${
-                inMonth ? "border-zinc-200 dark:border-zinc-800" : "border-transparent opacity-40"
-              } ${isSelected ? "border-2 border-zinc-900 dark:border-zinc-50" : ""}`}
+                inMonth ? "border-stone-200 dark:border-stone-800" : "border-transparent opacity-40"
+              } ${isSelected ? "border-2 border-stone-900 dark:border-stone-50" : ""}`}
             >
               {/* A filled circle marks TODAY specifically, independent of
                   the cell's own border (which marks the currently-SELECTED
@@ -144,7 +144,7 @@ export default function CalendarMonthPage() {
                   only an invisible aria-current). */}
               <span
                 className={`flex h-6 w-6 items-center justify-center rounded-full tabular-nums ${
-                  isToday ? "bg-accent-700 font-semibold text-white dark:bg-accent-500 dark:text-zinc-950" : ""
+                  isToday ? "bg-accent-700 font-semibold text-white dark:bg-accent-500 dark:text-stone-950" : ""
                 }`}
               >
                 {cellDate.getDate()}

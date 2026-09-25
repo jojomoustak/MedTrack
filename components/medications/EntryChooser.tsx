@@ -41,8 +41,8 @@ export function EntryChooser({ onChoose, scanAvailable }: EntryChooserProps) {
         onClick={scanAvailable ? () => handleChoose("scan") : undefined}
         className={
           scanAvailable
-            ? "flex min-h-12 items-center rounded-xl border border-zinc-300 px-4 py-3 text-left hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-            : "flex min-h-12 items-center justify-between rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-4 py-3 text-left text-zinc-400 dark:text-zinc-600"
+            ? "flex min-h-12 items-center rounded-xl border border-stone-300 px-4 py-3 text-left hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-900"
+            : "flex min-h-12 items-center justify-between rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 px-4 py-3 text-left text-stone-400 dark:text-stone-600"
         }
       >
         <span>
@@ -56,22 +56,22 @@ export function EntryChooser({ onChoose, scanAvailable }: EntryChooserProps) {
       <button
         type="button"
         onClick={() => handleChoose("search")}
-        className="flex min-h-12 items-center rounded-xl border border-zinc-300 px-4 py-3 text-left hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+        className="flex min-h-12 items-center rounded-xl border border-stone-300 px-4 py-3 text-left hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-900"
       >
         <span>
           <span className="block font-medium">Αναζήτηση</span>
-          <span className="block text-sm text-zinc-600 dark:text-zinc-400">Βρείτε το φάρμακο στον κατάλογο</span>
+          <span className="block text-sm text-stone-600 dark:text-stone-400">Βρείτε το φάρμακο στον κατάλογο</span>
         </span>
       </button>
 
       <button
         type="button"
         onClick={() => handleChoose("manual")}
-        className="flex min-h-12 items-center rounded-xl border border-zinc-300 px-4 py-3 text-left hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+        className="flex min-h-12 items-center rounded-xl border border-stone-300 px-4 py-3 text-left hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-900"
       >
         <span>
           <span className="block font-medium">Χειροκίνητη καταχώριση</span>
-          <span className="block text-sm text-zinc-600 dark:text-zinc-400">Εισαγάγετε τα στοιχεία με το χέρι</span>
+          <span className="block text-sm text-stone-600 dark:text-stone-400">Εισαγάγετε τα στοιχεία με το χέρι</span>
         </span>
       </button>
     </div>

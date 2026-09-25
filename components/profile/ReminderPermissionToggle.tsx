@@ -80,8 +80,8 @@ export function ReminderPermissionToggle({ profileId, platform = new MedianMobil
   if (!platform.isAvailable()) {
     return (
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Ειδοποιήσεις υπενθύμισης</h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Διαθέσιμες μόνο μέσω της εφαρμογής MedTracking για κινητά.</p>
+        <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Ειδοποιήσεις υπενθύμισης</h2>
+        <p className="text-sm text-stone-500 dark:text-stone-400">Διαθέσιμες μόνο μέσω της εφαρμογής MedTracking για κινητά.</p>
       </section>
     );
   }
@@ -129,8 +129,8 @@ export function ReminderPermissionToggle({ profileId, platform = new MedianMobil
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Ειδοποιήσεις υπενθύμισης</h2>
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+      <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Ειδοποιήσεις υπενθύμισης</h2>
+      <p className="text-sm text-stone-500 dark:text-stone-400">
         Οι υπενθυμίσεις δόσεων λειτουργούν στη συσκευή σας ακόμα και χωρίς σύνδεση στο διαδίκτυο. Χρειάζονται άδεια ειδοποιήσεων.
       </p>
 
@@ -155,7 +155,7 @@ export function ReminderPermissionToggle({ profileId, platform = new MedianMobil
           type="button"
           onClick={handleRequest}
           disabled={status === "requesting"}
-          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-stone-700"
         >
           {status === "requesting" ? "Αίτημα σε εξέλιξη…" : "Ενεργοποίηση ειδοποιήσεων"}
         </button>

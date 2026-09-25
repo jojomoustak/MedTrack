@@ -48,13 +48,13 @@ export default function CalendarPage() {
       <DateNavigator date={date} onPrevDay={() => shiftDay(-1)} onNextDay={() => shiftDay(1)} onToday={() => navigateToDate(new Date())} />
 
       {(medsStatus === "loading" || dosesStatus === "loading") && (
-        <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
           Φόρτωση…
         </p>
       )}
 
       {medsStatus === "ready" && dosesStatus === "ready" && doses.length === 0 && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Δεν υπάρχουν δόσεις για αυτή την ημέρα.</p>
+        <p className="text-sm text-stone-600 dark:text-stone-400">Δεν υπάρχουν δόσεις για αυτή την ημέρα.</p>
       )}
 
       {dosesStatus === "ready" && doses.length > 0 && (

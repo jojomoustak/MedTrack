@@ -37,7 +37,7 @@ export default function ListsPage() {
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Νέα λίστα (π.χ. Φαρμακείο)"
-          className="min-h-12 min-w-0 flex-1 rounded-xl border border-zinc-300 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 min-w-0 flex-1 rounded-xl border border-stone-300 px-4 py-2 dark:border-stone-700 dark:bg-stone-900"
         />
         {/* UX feedback (2026-09-22): at real narrow Android widths (360px)
             this button was being pushed past the right edge by the input's
@@ -46,20 +46,20 @@ export default function ListsPage() {
         <button
           type="submit"
           disabled={!newName.trim() || creating}
-          className="inline-flex shrink-0 items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white disabled:opacity-50 dark:bg-accent-500 dark:text-zinc-950"
+          className="inline-flex shrink-0 items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white disabled:opacity-50 dark:bg-accent-500 dark:text-stone-950"
         >
           Προσθήκη
         </button>
       </form>
 
       {status === "loading" && (
-        <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
           Φόρτωση…
         </p>
       )}
 
       {status === "ready" && lists.length === 0 && (
-        <p className="p-8 text-center text-zinc-600 dark:text-zinc-400">Δεν έχετε δημιουργήσει ακόμα καμία λίστα.</p>
+        <p className="p-8 text-center text-stone-600 dark:text-stone-400">Δεν έχετε δημιουργήσει ακόμα καμία λίστα.</p>
       )}
 
       {status === "ready" && lists.length > 0 && (
@@ -69,7 +69,7 @@ export default function ListsPage() {
               <Link
                 href={`/lists/${list.id}`}
                 onClick={() => playSound("button")}
-                className="flex min-h-12 items-center justify-between rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 px-4 py-3 font-medium"
+                className="flex min-h-12 items-center justify-between rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 px-4 py-3 font-medium"
               >
                 {list.name}
               </Link>

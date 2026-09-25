@@ -3,31 +3,31 @@ import Link from "next/link";
 /** Phase 3 §2.1 "Welcome / intro" — value proposition, states Greek-only UI at launch. */
 export default function WelcomePage() {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-zinc-50 px-6 py-12 text-center dark:bg-black">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-stone-50 px-6 py-12 text-center dark:bg-stone-950">
       <div className="flex flex-col gap-3">
         <h1 className="text-3xl font-semibold">MedTracking</h1>
-        <p className="max-w-sm text-zinc-600 dark:text-zinc-400">
+        <p className="max-w-sm text-stone-600 dark:text-stone-400">
           Παρακολουθήστε τα φάρμακά σας, το πρόγραμμα λήψης και το απόθεμά σας — ακόμα και χωρίς σύνδεση στο διαδίκτυο.
         </p>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Διαθέσιμο προς το παρόν μόνο στα Ελληνικά.</p>
+        <p className="text-sm text-stone-500 dark:text-stone-400">Διαθέσιμο προς το παρόν μόνο στα Ελληνικά.</p>
       </div>
 
       <div className="flex w-full max-w-xs flex-col gap-3">
         <Link
           href="/register"
-          className="flex min-h-12 items-center justify-center rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
+          className="flex min-h-12 items-center justify-center rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
         >
           Δημιουργία λογαριασμού
         </Link>
         <Link
           href="/login"
-          className="flex min-h-12 items-center justify-center rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+          className="flex min-h-12 items-center justify-center rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
         >
           Σύνδεση
         </Link>
       </div>
 
-      <Link href="/privacy" className="flex min-h-12 items-center text-sm text-zinc-500 underline dark:text-zinc-500">
+      <Link href="/privacy" className="flex min-h-12 items-center text-sm text-stone-500 underline dark:text-stone-500">
         Πολιτική Απορρήτου
       </Link>
     </main>

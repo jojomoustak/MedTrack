@@ -37,19 +37,19 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
         ← Πίσω στα αποτελέσματα
       </button>
 
-      <div className="rounded-xl border border-zinc-300 p-4 dark:border-zinc-700">
+      <div className="rounded-xl border border-stone-300 p-4 dark:border-stone-700">
         <h2 className="text-lg font-semibold">{product.name}</h2>
-        {product.manufacturer && <p className="text-sm text-zinc-600 dark:text-zinc-400">{product.manufacturer}</p>}
+        {product.manufacturer && <p className="text-sm text-stone-600 dark:text-stone-400">{product.manufacturer}</p>}
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           {product.activeIngredient && (
             <>
-              <dt className="text-zinc-500">Δραστική ουσία</dt>
+              <dt className="text-stone-500">Δραστική ουσία</dt>
               <dd>{product.activeIngredient}</dd>
             </>
           )}
           {product.strengthValue && (
             <>
-              <dt className="text-zinc-500">Περιεκτικότητα</dt>
+              <dt className="text-stone-500">Περιεκτικότητα</dt>
               <dd>
                 {formatQuantity(product.strengthValue)} {product.strengthUnit}
               </dd>
@@ -57,37 +57,37 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
           )}
           {product.form && (
             <>
-              <dt className="text-zinc-500">Μορφή</dt>
+              <dt className="text-stone-500">Μορφή</dt>
               <dd>{FORM_LABELS[product.form as MedicationForm] ?? product.form}</dd>
             </>
           )}
         </dl>
         {product.regulatorySource === SEED_PLACEHOLDER_SOURCE && (
-          <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="mt-3 text-xs text-stone-500 dark:text-stone-400">
             Δοκιμαστικά δεδομένα καταλόγου — όχι επίσημη πηγή.
           </p>
         )}
       </div>
 
       {(parsedExpiry || parsedBatch || parsedSerial) && (
-        <div className="rounded-xl border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
+        <div className="rounded-xl border border-dashed border-stone-300 p-4 dark:border-stone-700">
           <p className="mb-2 text-sm font-medium">Από τη σάρωση</p>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
             {parsedExpiry && (
               <>
-                <dt className="text-zinc-500">Ημερομηνία λήξης</dt>
+                <dt className="text-stone-500">Ημερομηνία λήξης</dt>
                 <dd>{parsedExpiry}</dd>
               </>
             )}
             {parsedBatch && (
               <>
-                <dt className="text-zinc-500">Παρτίδα</dt>
+                <dt className="text-stone-500">Παρτίδα</dt>
                 <dd>{parsedBatch}</dd>
               </>
             )}
             {parsedSerial && (
               <>
-                <dt className="text-zinc-500">Σειριακός αριθμός</dt>
+                <dt className="text-stone-500">Σειριακός αριθμός</dt>
                 <dd>{parsedSerial}</dd>
               </>
             )}
@@ -101,7 +101,7 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
           playSound("button");
           onConfirm();
         }}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
       >
         Επιβεβαίωση — είναι αυτό το φάρμακο
       </button>

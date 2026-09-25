@@ -100,7 +100,7 @@ export default function ProfilePage() {
     <div className="flex flex-col gap-6 p-6">
       <div>
         <h1 className="text-xl font-semibold">Προφίλ</h1>
-        {data?.user?.email && <p className="text-sm text-zinc-600 dark:text-zinc-400">{data.user.email}</p>}
+        {data?.user?.email && <p className="text-sm text-stone-600 dark:text-stone-400">{data.user.email}</p>}
       </div>
 
       <EmailVerificationBanner email={data?.user?.email ?? null} />
@@ -111,25 +111,25 @@ export default function ProfilePage() {
           border-in-dark treatment every other list/detail surface in the
           app already uses, so this screen finally looks like it belongs
           to the same app. */}
-      <div className="rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-4">
+      <div className="rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
         <ReminderPermissionToggle profileId={profileId} />
       </div>
 
-      <section className="flex flex-col gap-3 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-4">
-        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Λογαριασμός</h2>
+      <section className="flex flex-col gap-3 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
+        <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Λογαριασμός</h2>
         <GoogleAuthButton mode="link" callbackURL="/profile" label="Σύνδεση λογαριασμού Google" />
         <button
           type="button"
           onClick={handleSignOut}
-          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
         >
           Αποσύνδεση
         </button>
       </section>
 
-      <section className="flex flex-col gap-2 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-4">
-        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Τα δεδομένα μου</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <section className="flex flex-col gap-2 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
+        <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Τα δεδομένα μου</h2>
+        <p className="text-sm text-stone-600 dark:text-stone-400">
           Κατεβάστε ένα αντίγραφο όλων των δεδομένων του λογαριασμού σας — φάρμακα, προγράμματα, δόσεις, απόθεμα και λίστες.
         </p>
         {exportError && (
@@ -142,7 +142,7 @@ export default function ProfilePage() {
           onClick={handleExport}
           disabled={exporting}
           aria-busy={exporting}
-          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-stone-700"
         >
           {exporting ? "Λήψη…" : "Λήψη των δεδομένων μου"}
         </button>

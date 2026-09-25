@@ -44,7 +44,7 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
   if (session.status === "loading") {
     return (
       <main className="flex min-h-dvh items-center justify-center">
-        <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
           Φόρτωση…
         </p>
       </main>

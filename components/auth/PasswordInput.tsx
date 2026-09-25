@@ -39,7 +39,7 @@ export function PasswordInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           aria-label={ariaLabel}
-          className="min-h-12 w-full rounded-lg border border-zinc-300 px-3 py-2 pr-12 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 w-full rounded-lg border border-stone-300 px-3 py-2 pr-12 dark:border-stone-700 dark:bg-stone-900"
         />
         <button
           type="button"
@@ -49,7 +49,7 @@ export function PasswordInput({
           }}
           aria-label={visible ? "Απόκρυψη κωδικού πρόσβασης" : "Εμφάνιση κωδικού πρόσβασης"}
           aria-pressed={visible}
-          className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-zinc-500 dark:text-zinc-400"
+          className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-stone-500 dark:text-stone-400"
         >
           <EyeIcon open={visible} />
         </button>

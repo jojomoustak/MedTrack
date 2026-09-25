@@ -50,7 +50,7 @@ export function DeleteMedicationSection({
         </button>
       ) : (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-stone-600 dark:text-stone-400">
             Το φάρμακο θα σταματήσει να εμφανίζεται και οι υπενθυμίσεις του θα ακυρωθούν. Το ιστορικό δόσεων και αποθέματος διατηρείται.
           </p>
           {error && (
@@ -67,7 +67,7 @@ export function DeleteMedicationSection({
                 setConfirming(false);
               }}
               disabled={deleting}
-              className="min-h-12 flex-1 rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+              className="min-h-12 flex-1 rounded-full border border-stone-300 px-4 py-2 text-sm font-medium dark:border-stone-700"
             >
               Άκυρο
             </button>

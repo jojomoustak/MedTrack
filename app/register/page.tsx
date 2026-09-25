@@ -20,7 +20,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
   const googleError = mapGoogleAuthError(error ?? null);
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-zinc-50 px-4 py-12 dark:bg-black">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-stone-50 px-4 py-12 dark:bg-stone-950">
       <h1 className="text-2xl font-semibold">Δημιουργία λογαριασμού</h1>
       {googleError && (
         <p role="alert" className="w-full max-w-sm text-sm text-red-700 dark:text-red-400">
@@ -29,13 +29,13 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
       )}
       <RegisterForm />
       <GoogleAuthButton mode="sign-in" callbackURL="/today" errorCallbackURL="/register" />
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-stone-600 dark:text-stone-400">
         Έχετε ήδη λογαριασμό;{" "}
         <Link href="/login" className="font-medium underline">
           Σύνδεση
         </Link>
       </p>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="text-xs text-stone-500 dark:text-stone-400">
         Δημιουργώντας λογαριασμό, συμφωνείτε με την{" "}
         <Link href="/privacy" className="underline">
           Πολιτική Απορρήτου

@@ -157,7 +157,7 @@ export default function TodayPage() {
 
   if (medsStatus === "loading" || dosesStatus === "loading") {
     return (
-      <p role="status" className="p-6 text-sm text-zinc-600 dark:text-zinc-400">
+      <p role="status" className="p-6 text-sm text-stone-600 dark:text-stone-400">
         Φόρτωση…
       </p>
     );
@@ -170,7 +170,7 @@ export default function TodayPage() {
     return (
       <div className="flex flex-col items-center gap-4 p-8 text-center">
         <h1 className="text-xl font-semibold">Καλωσήρθατε στο MedTracking</h1>
-        <p className="max-w-sm text-zinc-600 dark:text-zinc-400">Δεν έχετε προσθέσει ακόμα κανένα φάρμακο.</p>
+        <p className="max-w-sm text-stone-600 dark:text-stone-400">Δεν έχετε προσθέσει ακόμα κανένα φάρμακο.</p>
       </div>
     );
   }
@@ -184,8 +184,8 @@ export default function TodayPage() {
             <LowStockBanner names={lowStockNames} />
           </div>
         )}
-        <p className="max-w-sm text-zinc-600 dark:text-zinc-400">Δεν έχετε προγραμματισμένες δόσεις για σήμερα.</p>
-        <p className="max-w-sm text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="max-w-sm text-stone-600 dark:text-stone-400">Δεν έχετε προγραμματισμένες δόσεις για σήμερα.</p>
+        <p className="max-w-sm text-sm text-stone-500 dark:text-stone-400">
           Μπορείτε να προσθέσετε πρόγραμμα δόσεων όταν προσθέτετε ένα φάρμακο.
         </p>
         <Link href="/medications" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
@@ -224,7 +224,7 @@ export default function TodayPage() {
       )}
 
       {allResolved && (
-        <p role="status" className="rounded-lg bg-zinc-100 px-4 py-3 text-sm dark:bg-zinc-900">
+        <p role="status" className="rounded-lg bg-stone-100 px-4 py-3 text-sm dark:bg-stone-900">
           Όλες οι σημερινές δόσεις έχουν καταγραφεί.
         </p>
       )}

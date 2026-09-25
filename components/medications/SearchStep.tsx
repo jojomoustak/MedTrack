@@ -47,12 +47,12 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
           onChange={(e) => setQuery(e.target.value)}
           placeholder="π.χ. παρακεταμόλη"
           aria-label="Αναζήτηση φαρμάκου"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
         />
       </label>
 
       {status === "loading" && (
-        <p role="status" aria-live="polite" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p role="status" aria-live="polite" className="text-sm text-stone-600 dark:text-stone-400">
           Αναζήτηση…
         </p>
       )}
@@ -70,10 +70,10 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
               <button
                 type="button"
                 onClick={() => { playSound("button"); setCandidate(product); }}
-                className="flex min-h-12 w-full flex-col items-start rounded-xl border border-zinc-300 px-4 py-3 text-left hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+                className="flex min-h-12 w-full flex-col items-start rounded-xl border border-stone-300 px-4 py-3 text-left hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-900"
               >
                 <span className="font-medium">{product.name}</span>
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">{formatSubtitle(product)}</span>
+                <span className="text-sm text-stone-600 dark:text-stone-400">{formatSubtitle(product)}</span>
               </button>
             </li>
           ))}
@@ -81,15 +81,15 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
       )}
 
       {(showNoResults || showOfflineEmpty) && (
-        <div className="rounded-xl border border-dashed border-zinc-300 p-4 text-center dark:border-zinc-700">
-          <p className="mb-3 text-sm text-zinc-700 dark:text-zinc-300">
+        <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center dark:border-stone-700">
+          <p className="mb-3 text-sm text-stone-700 dark:text-stone-300">
             Δεν βρέθηκε το φάρμακο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος.
           </p>
           {/* Equally weighted with search results, never a dead end (Phase 3 §2.4/§8). */}
           <button
             type="button"
             onClick={() => { playSound("button"); onFallbackToManual(); }}
-            className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
+            className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
           >
             Συνέχεια με χειροκίνητη καταχώριση
           </button>
@@ -100,7 +100,7 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
         <button
           type="button"
           onClick={() => { playSound("button"); onFallbackToManual(); }}
-          className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium text-zinc-700 underline dark:text-zinc-300"
+          className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium text-stone-700 underline dark:text-stone-300"
         >
           Προτιμώ χειροκίνητη καταχώριση
         </button>

@@ -22,7 +22,7 @@ export default function AddMedicationPage() {
   }, [session.status, router]);
 
   return (
-    <main className="min-h-dvh bg-zinc-50 dark:bg-black">
+    <main className="min-h-dvh bg-stone-50 dark:bg-stone-950">
       <OfflineBanner />
       <div className="mx-auto flex max-w-md items-center gap-3 px-4 py-4">
         <Link href="/medications" aria-label="Πίσω στα φάρμακα" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
@@ -31,7 +31,7 @@ export default function AddMedicationPage() {
         <h1 className="text-xl font-semibold">Προσθήκη φαρμάκου</h1>
       </div>
       {session.status === "loading" && (
-        <p role="status" className="px-4 text-sm text-zinc-600 dark:text-zinc-400">
+        <p role="status" className="px-4 text-sm text-stone-600 dark:text-stone-400">
           Φόρτωση…
         </p>
       )}

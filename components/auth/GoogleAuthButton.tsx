@@ -111,7 +111,7 @@ export function GoogleAuthButton({ mode, callbackURL, errorCallbackURL, label, p
         onClick={handleClick}
         disabled={pending}
         aria-busy={pending}
-        className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-zinc-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-zinc-700"
+        className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-stone-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-stone-700"
       >
         <GoogleGlyph />
         {label ?? (mode === "sign-in" ? "Σύνδεση με Google" : "Σύνδεση λογαριασμού Google")}

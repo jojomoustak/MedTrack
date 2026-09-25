@@ -49,7 +49,7 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
           aria-label="Όνομα φαρμάκου"
           aria-invalid={error ? "true" : undefined}
           aria-describedby={error ? "manual-name-error" : undefined}
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
         />
         {error && (
           <span id="manual-name-error" role="alert" className="text-sm text-red-700 dark:text-red-400">
@@ -59,8 +59,8 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
       </label>
 
       {(initialExpiry !== null || initialBatch !== null) && (
-        <div className="flex flex-col gap-3 rounded-xl border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Αυτά διαβάστηκαν από τη σάρωση — ελέγξτε ή διορθώστε τα.</p>
+        <div className="flex flex-col gap-3 rounded-xl border border-dashed border-stone-300 p-4 dark:border-stone-700">
+          <p className="text-sm text-stone-600 dark:text-stone-400">Αυτά διαβάστηκαν από τη σάρωση — ελέγξτε ή διορθώστε τα.</p>
           <label className="flex flex-col gap-1">
             <span className="font-medium">Ημερομηνία λήξης</span>
             <input
@@ -69,7 +69,7 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
               onChange={(e) => setExpiry(e.target.value)}
               placeholder="ΕΕΕΕ-ΜΜ-ΗΗ"
               aria-label="Ημερομηνία λήξης"
-              className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -79,7 +79,7 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
               value={batch}
               onChange={(e) => setBatch(e.target.value)}
               aria-label="Παρτίδα"
-              className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
             />
           </label>
         </div>
@@ -87,7 +87,7 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
 
       <button
         type="submit"
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
       >
         Συνέχεια
       </button>

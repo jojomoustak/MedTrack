@@ -36,8 +36,8 @@ export function InventorySummary({
   projection: RefillProjection;
 }) {
   return (
-    <section className="flex flex-col gap-2 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-4">
-      <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Απόθεμα</h2>
+    <section className="flex flex-col gap-2 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
+      <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Απόθεμα</h2>
       <p className="text-2xl font-semibold">
         {currentStock} {unitLabel(quantityUnit)}
       </p>
@@ -50,12 +50,12 @@ export function InventorySummary({
       )}
 
       {projection.basis !== "none" && projection.daysRemaining !== null && projection.projectedOutOfStockDate && (
-        <div className="text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="text-sm text-stone-600 dark:text-stone-400">
           <p>
             Εκτίμηση εξάντλησης: {formatProjectedDate(projection.projectedOutOfStockDate)} ({projection.daysRemaining}{" "}
             {projection.daysRemaining === 1 ? "ημέρα" : "ημέρες"})
           </p>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm text-stone-500 dark:text-stone-400">
             {projection.basis === "observed" ? "Βάσει της πρόσφατης χρήσης σας" : "Βάσει του προγράμματός σας"} — εκτίμηση αποθέματος, δεν αποτελεί
             ιατρική σύσταση.
           </p>

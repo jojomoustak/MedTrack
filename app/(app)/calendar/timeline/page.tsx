@@ -76,12 +76,12 @@ export default function CalendarTimelinePage() {
       <DateNavigator date={date} onPrevDay={() => shiftDay(-1)} onNextDay={() => shiftDay(1)} onToday={() => navigateToDate(new Date())} />
 
       {isLoading && (
-        <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
           Φόρτωση…
         </p>
       )}
 
-      {isEmpty && <p className="text-sm text-zinc-600 dark:text-zinc-400">Δεν υπάρχουν δόσεις για αυτή την ημέρα.</p>}
+      {isEmpty && <p className="text-sm text-stone-600 dark:text-stone-400">Δεν υπάρχουν δόσεις για αυτή την ημέρα.</p>}
 
       {dosesStatus === "ready" && timeline.length > 0 && (
         <div className="flex flex-col gap-2" aria-label="Χρονολόγιο δόσεων">

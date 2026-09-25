@@ -250,7 +250,7 @@ export function ScanStep({
   if (view.phase === "scanning" || view.phase === "looking-up") {
     return (
       <div className="flex flex-col items-center gap-3 py-8">
-        <p role="status" aria-live="polite" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p role="status" aria-live="polite" className="text-sm text-stone-600 dark:text-stone-400">
           {view.phase === "scanning" ? "Άνοιγμα κάμερας…" : "Αναζήτηση φαρμάκου…"}
         </p>
         <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
@@ -263,15 +263,15 @@ export function ScanStep({
   if (view.phase === "unavailable") {
     return (
       <div className="flex flex-col gap-4">
-        <div className="rounded-xl border border-dashed border-zinc-300 p-4 text-center dark:border-zinc-700">
-          <p className="text-sm text-zinc-700 dark:text-zinc-300">
+        <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center dark:border-stone-700">
+          <p className="text-sm text-stone-700 dark:text-stone-300">
             Η σάρωση barcode διατίθεται μόνο μέσα από την εφαρμογή MedTracking για κινητά.
           </p>
         </div>
         <button
           type="button"
           onClick={() => { playSound("button"); onFallbackToManual(null); }}
-          className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
+          className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
         >
           Συνέχεια με χειροκίνητη καταχώριση
         </button>
@@ -295,7 +295,7 @@ export function ScanStep({
             startedRef.current = false;
             void runScan();
           }}
-          className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
+          className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
         >
           Δοκιμάστε ξανά
         </button>
@@ -354,8 +354,8 @@ export function ScanStep({
             : "Δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος.";
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl border border-dashed border-zinc-300 p-4 text-center dark:border-zinc-700">
-        <p className="mb-1 text-sm text-zinc-700 dark:text-zinc-300">{notFoundMessage}</p>
+      <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center dark:border-stone-700">
+        <p className="mb-1 text-sm text-stone-700 dark:text-stone-300">{notFoundMessage}</p>
       </div>
       {
         // OCR fallback (OCR-fallback task spec §1) — only for a genuinely
@@ -385,7 +385,7 @@ export function ScanStep({
       <button
         type="button"
         onClick={() => { playSound("button"); onFallbackToManual(view.parsed); }}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
       >
         Συνέχεια με χειροκίνητη καταχώριση
       </button>
@@ -432,21 +432,21 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
   }
 
   return (
-    <div className="rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-4">
-      <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+    <div className="rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
+      <p className="mb-2 text-sm font-medium text-stone-700 dark:text-stone-300">
         Αναζήτηση σε επίσημες πηγές
       </p>
-      <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="mb-3 text-xs text-stone-500 dark:text-stone-400">
         Αντιγράψτε τον κωδικό και αναζητήστε τον στον ιστότοπο του Εθνικού Οργανισμού Φαρμάκων (ΕΟΦ) ή
         του Ευρωπαϊκού Οργανισμού Φαρμάκων (EMA). Τα αποτελέσματα εμφανίζονται στον ιστότοπό τους — το
         MedTracking δεν τα διαβάζει ούτε τα συμπληρώνει αυτόματα.
       </p>
-      <div className="mb-3 flex items-center gap-2 rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+      <div className="mb-3 flex items-center gap-2 rounded-lg bg-stone-50 px-3 py-2 dark:bg-stone-900">
         <code className="flex-1 truncate text-sm">{searchTerm}</code>
         <button
           type="button"
           onClick={handleCopy}
-          className="inline-flex items-center justify-center min-h-12 shrink-0 rounded-full border border-zinc-300 px-3 text-xs font-medium dark:border-zinc-700"
+          className="inline-flex items-center justify-center min-h-12 shrink-0 rounded-full border border-stone-300 px-3 text-xs font-medium dark:border-stone-700"
         >
           {copied ? "Αντιγράφηκε ✓" : "Αντιγραφή"}
         </button>
@@ -456,7 +456,7 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
           href="https://services.eof.gr/human-search/home.xhtml"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex min-h-12 items-center justify-center rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium underline dark:border-zinc-700"
+          className="flex min-h-12 items-center justify-center rounded-full border border-stone-300 px-4 py-2 text-center text-sm font-medium underline dark:border-stone-700"
         >
           Αναζήτηση στον ΕΟΦ (eof.gr)
         </a>
@@ -464,7 +464,7 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
           href="https://www.ema.europa.eu/en/medicines"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex min-h-12 items-center justify-center rounded-full border border-zinc-300 px-4 py-2 text-center text-sm font-medium underline dark:border-zinc-700"
+          className="flex min-h-12 items-center justify-center rounded-full border border-stone-300 px-4 py-2 text-center text-sm font-medium underline dark:border-stone-700"
         >
           Αναζήτηση στον EMA (ema.europa.eu)
         </a>

@@ -70,7 +70,7 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <span className="text-sm text-zinc-500">Φάρμακο</span>
+        <span className="text-sm text-stone-500">Φάρμακο</span>
         <p className="text-lg font-semibold">{displayName}</p>
       </div>
 
@@ -89,8 +89,8 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
               }}
               className={`min-h-12 rounded-full border px-4 py-2 text-sm ${
                 form === option
-                  ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950"
-                  : "border-zinc-300 dark:border-zinc-700"
+                  ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950"
+                  : "border-stone-300 dark:border-stone-700"
               }`}
             >
               {FORM_LABELS[option]}
@@ -108,7 +108,7 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
             value={strengthValue}
             onChange={(e) => setStrengthValue(e.target.value)}
             aria-label="Τιμή περιεκτικότητας"
-            className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
           />
         </label>
         <label className="flex flex-1 flex-col gap-1">
@@ -118,7 +118,7 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
             value={strengthUnit}
             onChange={(e) => setStrengthUnit(e.target.value)}
             aria-label="Μονάδα περιεκτικότητας"
-            className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
           />
         </label>
       </div>
@@ -129,7 +129,7 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
           value={inventoryUnit}
           onChange={(e) => setInventoryUnit(e.target.value as MedicationForm)}
           aria-label="Μονάδα αποθέματος"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
         >
           {FORM_OPTIONS.map((option) => (
             <option key={option} value={option}>
@@ -141,7 +141,7 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
 
       <button
         type="submit"
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
       >
         Συνέχεια
       </button>

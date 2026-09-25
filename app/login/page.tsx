@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const message = googleError ?? sessionExpiredMessage;
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-zinc-50 px-4 py-12 dark:bg-black">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-stone-50 px-4 py-12 dark:bg-stone-950">
       <h1 className="text-2xl font-semibold">Σύνδεση</h1>
       {message && (
         <p role="alert" className="w-full max-w-sm text-sm text-red-700 dark:text-red-400">
@@ -32,7 +32,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       )}
       <LoginForm />
       <GoogleAuthButton mode="sign-in" callbackURL="/today" errorCallbackURL="/login" />
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-stone-600 dark:text-stone-400">
         Δεν έχετε λογαριασμό;{" "}
         <Link href="/register" className="font-medium underline">
           Δημιουργία λογαριασμού

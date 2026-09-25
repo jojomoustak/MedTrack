@@ -58,7 +58,7 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
           value={intervalHours}
           onChange={(e) => setIntervalHours(e.target.value)}
           aria-label="Διάστημα σε ώρες"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
         />
       </label>
 
@@ -70,17 +70,17 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
             value={anchorDate}
             onChange={(e) => setAnchorDate(e.target.value)}
             aria-label="Ημερομηνία πρώτης δόσης"
-            className="min-h-12 flex-1 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            className="min-h-12 flex-1 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
           />
           <input
             type="time"
             value={anchorTime}
             onChange={(e) => setAnchorTime(e.target.value)}
             aria-label="Ώρα πρώτης δόσης"
-            className="min-h-12 flex-1 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            className="min-h-12 flex-1 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
           />
         </div>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-stone-600 dark:text-stone-400">
           Το διάστημα υπολογίζεται από την πρώτη δόση και δεν αλλάζει με την αλλαγή ώρας (π.χ. καλοκαιρινή/χειμερινή ώρα).
         </p>
       </fieldset>
@@ -98,11 +98,11 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
             playSound("button");
             onBack();
           }}
-          className="min-h-12 flex-1 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+          className="min-h-12 flex-1 rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
         >
           Πίσω
         </button>
-        <button type="submit" className="min-h-12 flex-1 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-zinc-950">
+        <button type="submit" className="min-h-12 flex-1 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950">
           Συνέχεια
         </button>
       </div>

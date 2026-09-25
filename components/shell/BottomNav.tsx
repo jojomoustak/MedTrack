@@ -18,7 +18,7 @@ const TABS: { href: string; label: string; icon: NavIconKind }[] = [
  * visible. Real drawn icons (UX polish pass, 2026-09-22 — this bar
  * previously had none, a real outlier against the icon+label convention
  * virtually every mobile bottom nav follows) plus the accent color for
- * the active tab, replacing the plain zinc-900/zinc-50 inversion —
+ * the active tab, replacing the plain stone-900/stone-50 inversion —
  * "which tab am I on" is exactly the kind of active/selected state the
  * one brand accent exists for.
  */
@@ -28,7 +28,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Κύρια πλοήγηση"
-      className="grid grid-cols-5 border-t border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black"
+      className="grid grid-cols-5 border-t border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950"
     >
       {TABS.map((tab) => {
         const active = pathname === tab.href || pathname?.startsWith(`${tab.href}/`);
@@ -39,7 +39,7 @@ export function BottomNav() {
             onClick={() => playSound("button")}
             aria-current={active ? "page" : undefined}
             className={`flex min-h-12 flex-col items-center justify-center gap-0.5 border-t-2 py-2 text-xs ${
-              active ? "border-accent-700 font-semibold text-accent-700 dark:border-accent-400 dark:text-accent-400" : "border-transparent font-medium text-zinc-500 dark:text-zinc-400"
+              active ? "border-accent-700 font-semibold text-accent-700 dark:border-accent-400 dark:text-accent-400" : "border-transparent font-medium text-stone-500 dark:text-stone-400"
             }`}
           >
             <NavIcon kind={tab.icon} active={active} />

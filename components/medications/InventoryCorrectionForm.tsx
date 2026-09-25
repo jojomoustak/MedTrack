@@ -58,7 +58,7 @@ export function InventoryCorrectionForm({
           aria-checked={direction === "remove"}
           onClick={() => setDirection("remove")}
           className={`min-h-12 flex-1 rounded-full border px-4 py-2 text-sm font-medium ${
-            direction === "remove" ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950" : "border-zinc-300 dark:border-zinc-700"
+            direction === "remove" ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950" : "border-stone-300 dark:border-stone-700"
           }`}
         >
           Αφαίρεση
@@ -69,7 +69,7 @@ export function InventoryCorrectionForm({
           aria-checked={direction === "add"}
           onClick={() => setDirection("add")}
           className={`min-h-12 flex-1 rounded-full border px-4 py-2 text-sm font-medium ${
-            direction === "add" ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-zinc-950" : "border-zinc-300 dark:border-zinc-700"
+            direction === "add" ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950" : "border-stone-300 dark:border-stone-700"
           }`}
         >
           Προσθήκη
@@ -85,7 +85,7 @@ export function InventoryCorrectionForm({
           step="any"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 dark:border-stone-700 dark:bg-stone-900"
         />
       </label>
 
@@ -96,7 +96,7 @@ export function InventoryCorrectionForm({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="π.χ. Καταμέτρηση, χαμένο δισκίο, λάθος καταχώρηση"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 dark:border-stone-700 dark:bg-stone-900"
         />
       </label>
 
@@ -109,7 +109,7 @@ export function InventoryCorrectionForm({
       <button
         type="submit"
         disabled={submitting}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-zinc-950"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-stone-950"
       >
         {submitting ? "Αποθήκευση…" : "Διόρθωση αποθέματος"}
       </button>

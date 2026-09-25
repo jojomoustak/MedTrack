@@ -57,7 +57,7 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
 
   if (done) {
     return (
-      <p role="status" className="text-sm text-zinc-700 dark:text-zinc-300">
+      <p role="status" className="text-sm text-stone-700 dark:text-stone-300">
         Ο κωδικός σας άλλαξε. Μεταφορά στη σύνδεση…
       </p>
     );
@@ -85,7 +85,7 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
         type="submit"
         disabled={submitting}
         aria-busy={submitting}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-zinc-950"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-stone-950"
       >
         {submitting ? "Αποθήκευση…" : "Ορισμός νέου κωδικού"}
       </button>

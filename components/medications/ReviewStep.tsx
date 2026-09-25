@@ -58,53 +58,53 @@ export function ReviewStep({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl border border-zinc-300 p-4 dark:border-zinc-700">
+      <div className="rounded-xl border border-stone-300 p-4 dark:border-stone-700">
         <h2 className="text-lg font-semibold">{name}</h2>
         <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           {form && (
             <>
-              <dt className="text-zinc-500">Μορφή</dt>
+              <dt className="text-stone-500">Μορφή</dt>
               <dd>{FORM_LABELS[form as MedicationForm] ?? form}</dd>
             </>
           )}
           {strengthValue && (
             <>
-              <dt className="text-zinc-500">Περιεκτικότητα</dt>
+              <dt className="text-stone-500">Περιεκτικότητα</dt>
               <dd>
                 {formatQuantity(strengthValue)} {strengthUnit}
               </dd>
             </>
           )}
-          <dt className="text-zinc-500">Μονάδα αποθέματος</dt>
+          <dt className="text-stone-500">Μονάδα αποθέματος</dt>
           <dd>{FORM_LABELS[inventoryUnit as MedicationForm] ?? inventoryUnit}</dd>
         </dl>
       </div>
 
-      <div className="rounded-xl border border-zinc-300 p-4 dark:border-zinc-700">
+      <div className="rounded-xl border border-stone-300 p-4 dark:border-stone-700">
         <div className="flex items-center justify-between">
           <h3 className="font-medium">Πρόγραμμα δόσεων</h3>
           <button type="button" onClick={onEditSchedule} className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
             {schedule ? "Επεξεργασία" : "Προσθήκη"}
           </button>
         </div>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
           {schedule ? describeSchedule(schedule) : "Χωρίς πρόγραμμα ακόμα — μπορείτε να προσθέσετε αργότερα."}
         </p>
       </div>
 
       {hasPackageData && (
-        <div className="rounded-xl border border-zinc-300 p-4 dark:border-zinc-700">
+        <div className="rounded-xl border border-stone-300 p-4 dark:border-stone-700">
           <h3 className="font-medium">Αρχικό απόθεμα</h3>
           <dl className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
             {packageBatch && (
               <>
-                <dt className="text-zinc-500">Παρτίδα</dt>
+                <dt className="text-stone-500">Παρτίδα</dt>
                 <dd>{packageBatch}</dd>
               </>
             )}
             {packageExpiry && (
               <>
-                <dt className="text-zinc-500">Λήξη</dt>
+                <dt className="text-stone-500">Λήξη</dt>
                 <dd>{packageExpiry}</dd>
               </>
             )}
@@ -118,10 +118,10 @@ export function ReviewStep({
               onChange={(e) => onInitialQuantityValueChange(e.target.value)}
               placeholder={`π.χ. 30 ${inventoryUnit}`}
               aria-label="Αρχική ποσότητα"
-              className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
             />
           </label>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
             Αν το συμπληρώσετε, θα δημιουργηθεί μια πραγματική συσκευασία στο απόθεμά σας.
           </p>
         </div>
@@ -141,7 +141,7 @@ export function ReviewStep({
         }}
         disabled={submitting}
         aria-busy={submitting}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-zinc-950"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-stone-950"
       >
         {submitting ? "Αποθήκευση…" : "Ολοκλήρωση"}
       </button>

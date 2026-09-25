@@ -105,20 +105,20 @@ export function PackageList({
   }
 
   if (sorted.length === 0) {
-    return <p className="text-sm text-zinc-600 dark:text-zinc-400">Δεν έχετε προσθέσει ακόμα κάποια συσκευασία.</p>;
+    return <p className="text-sm text-stone-600 dark:text-stone-400">Δεν έχετε προσθέσει ακόμα κάποια συσκευασία.</p>;
   }
 
   return (
     <ul className="flex flex-col gap-2" aria-label="Συσκευασίες">
       {sorted.map((pkg) => (
-        <li key={pkg.id} className="flex flex-col gap-1 rounded-xl shadow-sm shadow-zinc-300/40 dark:border dark:border-zinc-800 p-3">
+        <li key={pkg.id} className="flex flex-col gap-1 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-3">
           <div className="flex items-center justify-between">
             <p className="font-medium">
               {computePackageRemainingStock(transactions, pkg.id)} / {formatQuantity(pkg.initialQuantityValue)} {unitLabel(pkg.quantityUnit)}
             </p>
-            <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{STATUS_LABELS[pkg.status]}</span>
+            <span className="text-sm font-medium text-stone-500 dark:text-stone-400">{STATUS_LABELS[pkg.status]}</span>
           </div>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-stone-600 dark:text-stone-400">
             {pkg.batchNumber ? `Παρτίδα ${pkg.batchNumber}` : "Χωρίς αριθμό παρτίδας"}
             {pkg.expiryDate ? ` · Λήξη ${formatDate(pkg.expiryDate)}` : " · Χωρίς ημερομηνία λήξης"}
           </p>
@@ -127,7 +127,7 @@ export function PackageList({
               type="button"
               onClick={() => void handleOpen(pkg)}
               disabled={pendingId === pkg.id}
-              className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-zinc-700"
+              className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-stone-700"
             >
               Άνοιγμα
             </button>
@@ -137,7 +137,7 @@ export function PackageList({
               type="button"
               onClick={() => void handleDiscard(pkg)}
               disabled={pendingId === pkg.id}
-              className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-zinc-700"
+              className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-stone-700"
             >
               Απόρριψη
             </button>

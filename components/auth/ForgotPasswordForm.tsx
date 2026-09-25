@@ -54,7 +54,7 @@ export function ForgotPasswordForm() {
   if (status === "sent") {
     return (
       <div role="status" className="flex w-full max-w-sm flex-col gap-4 text-center">
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+        <p className="text-sm text-stone-700 dark:text-stone-300">
           Αν υπάρχει λογαριασμός με αυτό το email, θα λάβετε σύνδεσμο επαναφοράς κωδικού σε λίγα λεπτά.
         </p>
         <Link
@@ -70,7 +70,7 @@ export function ForgotPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4" noValidate>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-stone-600 dark:text-stone-400">
         Πληκτρολογήστε το email του λογαριασμού σας και θα σας στείλουμε σύνδεσμο για επαναφορά κωδικού.
       </p>
 
@@ -83,7 +83,7 @@ export function ForgotPasswordForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           aria-label="Email"
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
         />
       </label>
 
@@ -97,7 +97,7 @@ export function ForgotPasswordForm() {
         type="submit"
         disabled={submitting}
         aria-busy={submitting}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-zinc-950"
+        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-stone-950"
       >
         {submitting ? "Αποστολή…" : "Αποστολή συνδέσμου επαναφοράς"}
       </button>

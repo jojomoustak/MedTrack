@@ -131,7 +131,7 @@ export function DeleteAccountFlow() {
     return (
       <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 p-6">
         <h1 className="text-xl font-semibold text-red-800 dark:text-red-400">Διαγραφή λογαριασμού</h1>
-        <div className="flex flex-col gap-3 text-sm text-zinc-700 dark:text-zinc-300">
+        <div className="flex flex-col gap-3 text-sm text-stone-700 dark:text-stone-300">
           <p>
             Αυτό είναι διαφορετικό από τον καθαρισμό της προσωρινής μνήμης της εφαρμογής. Η διαγραφή είναι{" "}
             <strong>μόνιμη</strong> και πραγματοποιείται στον διακομιστή — δεν αφορά μόνο αυτή τη συσκευή.
@@ -143,7 +143,7 @@ export function DeleteAccountFlow() {
           <button
             type="button"
             onClick={handleCancel}
-            className="inline-flex items-center justify-center min-h-12 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+            className="inline-flex items-center justify-center min-h-12 rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
           >
             Άκυρο
           </button>
@@ -168,7 +168,7 @@ export function DeleteAccountFlow() {
     return (
       <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 p-6">
         <h1 className="text-xl font-semibold text-red-800 dark:text-red-400">Αυτά θα χάσετε</h1>
-        <ul className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+        <ul className="flex flex-col gap-2 text-sm text-stone-700 dark:text-stone-300">
           <li>{summary.medications} φάρμακα</li>
           <li>{summary.doseEvents} καταγεγραμμένες δόσεις</li>
           <li>{summary.lists} λίστες</li>
@@ -177,7 +177,7 @@ export function DeleteAccountFlow() {
           <button
             type="button"
             onClick={handleCancel}
-            className="inline-flex items-center justify-center min-h-12 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+            className="inline-flex items-center justify-center min-h-12 rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
           >
             Άκυρο
           </button>
@@ -204,7 +204,7 @@ export function DeleteAccountFlow() {
           </p>
         )}
 
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+        <p className="text-sm text-stone-700 dark:text-stone-300">
           Για να επιβεβαιώσετε, πληκτρολογήστε <strong>{CONFIRM_PHRASE}</strong> παρακάτω.
         </p>
         <input
@@ -212,7 +212,7 @@ export function DeleteAccountFlow() {
           value={confirmText}
           onChange={(e) => setConfirmText(e.target.value)}
           aria-label={`Πληκτρολογήστε ${CONFIRM_PHRASE} για επιβεβαίωση`}
-          className="min-h-12 rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
         />
 
         {submitError && (
@@ -225,7 +225,7 @@ export function DeleteAccountFlow() {
           <button
             type="button"
             onClick={handleCancel}
-            className="inline-flex items-center justify-center min-h-12 rounded-full border border-zinc-300 px-5 py-3 font-medium dark:border-zinc-700"
+            className="inline-flex items-center justify-center min-h-12 rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
           >
             Άκυρο
           </button>
@@ -246,7 +246,7 @@ export function DeleteAccountFlow() {
     return (
       <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col items-center justify-center gap-4 p-6 text-center" role="status" aria-live="polite">
         <p className="text-lg font-medium">Διαγραφή σε εξέλιξη…</p>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Μην κλείσετε ή ανανεώσετε αυτή τη σελίδα.</p>
+        <p className="text-sm text-stone-600 dark:text-stone-400">Μην κλείσετε ή ανανεώσετε αυτή τη σελίδα.</p>
       </div>
     );
   }
