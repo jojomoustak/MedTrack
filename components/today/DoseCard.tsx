@@ -122,12 +122,18 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
   const showActions = actionable && !pendingAction && (dose.status === "scheduled" || dose.status === "reminded" || dose.status === "snoozed");
   const showMissedRecovery = !pendingAction && dose.status === "missed" && onTakenLate !== undefined;
   const availableActions = showActions ? "Έλαβα, Παράλειψη, Αναβολή" : showMissedRecovery ? "Καταγραφή ως ελήφθη αργότερα" : null;
+  // Design pass (2026-09-26): a resolved dose (taken/taken_late) reads as
+  // "done" at a glance — muted + the name struck through — rather than
+  // looking identical to an active card except for one line of status text.
+  const isCompleted = displayStatus === "taken" || displayStatus === "taken_late";
 
   return (
     <div
       role="group"
       aria-label={buildAriaLabel(medicationName, dose.quantityValue, unitLabel(dose.quantityUnit), timeLabel, label, availableActions)}
-      className="flex flex-col gap-2 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 px-4 py-3"
+      className={`flex flex-col gap-2 rounded-[22px] px-4 py-3 dark:border dark:border-stone-800 ${
+        isCompleted ? "shadow-sm shadow-stone-300/30 opacity-75" : "shadow-lg shadow-stone-300/40"
+      }`}
       data-dose-status={displayStatus}
     >
       <div className="flex items-start justify-between gap-2">
@@ -146,7 +152,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
               medication is this," not just its printed name. */}
           <MedicationThumbnail userMedicationId={dose.userMedicationId} />
           <div className="min-w-0">
-            <p className="font-medium">{medicationName}</p>
+            <p className={`font-medium ${isCompleted ? "line-through decoration-stone-400 dark:decoration-stone-600" : ""}`}>{medicationName}</p>
             {dose.quantityValue && (
               <p className="text-sm text-stone-600 dark:text-stone-400">
                 {formatQuantity(dose.quantityValue)} {unitLabel(dose.quantityUnit)}

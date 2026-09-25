@@ -1,21 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Geist_Mono } from "next/font/google";
+import { Manrope, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SyncManagerBootstrap } from "@/components/shell/SyncManagerBootstrap";
 import { SerwistProvider } from "@serwist/turbopack/react";
 
-// UX polish pass (2026-09-22): was Geist Sans, which Google Fonts ships
-// with NO Greek subset at all (confirmed against next/font's own
-// font-data.json) — since this app's UI copy is almost entirely Greek
-// (lang="el" below), that font was invisible to nearly everything a user
-// actually reads; every Greek glyph silently fell back to the browser's
-// generic system sans regardless of this setup. Inter has full Greek
-// coverage, is an established, considered "workhorse" UI face (not a
-// display font), and is the closest widely-available open equivalent in
-// spirit to the system faces Apple's own apps use as this app's chosen
-// visual reference.
-const sans = Inter({
-  variable: "--font-inter",
+// Design pass (2026-09-26): was Inter — itself a fix for an earlier font
+// (Geist Sans) that turned out to ship no Greek glyphs at all. Inter
+// worked technically (real Greek coverage) but tested poorly on "feel" —
+// direction-comparison mockups built to react to (not guessed at) pointed
+// at Manrope specifically. Verified the same way Inter was: next/font's
+// own bundled font-data.json lists `greek` in Manrope's subsets before
+// ever wiring it in, not assumed from the name.
+const sans = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin", "greek"],
 });
 

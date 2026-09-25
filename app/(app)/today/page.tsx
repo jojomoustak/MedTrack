@@ -6,6 +6,7 @@ import { useMedicationsList } from "@/components/medications/use-medications-lis
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useLowStockMedicationIds } from "@/lib/inventory/client/use-low-stock-medications";
 import { useTodayDoseEvents, allTodayDosesResolved } from "@/components/today/use-today-dose-events";
+import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
 import { DoseCard } from "@/components/today/DoseCard";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import { DexiePreferencesRepository } from "@/lib/db-client/user-preferences-repository";
@@ -64,7 +65,7 @@ function LowStockBanner({ names }: { names: string[] }) {
       href="/medications"
       onClick={() => playSound("button")}
       role="status"
-      className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+      className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 transition-transform duration-150 active:scale-[0.98] dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
     >
       <LowStockIcon />
       {label}
@@ -77,6 +78,39 @@ function LowStockIcon() {
     <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false" fill="currentColor" className="shrink-0">
       <path d="M10 2 1 18h18L10 2Zm0 5a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm0 8a1.25 1.25 0 1 1 0-2.5A1.25 1.25 0 0 1 10 15Z" />
     </svg>
+  );
+}
+
+/**
+ * Design pass (2026-09-26): full-bleed gradient band replacing the plain
+ * "Σήμερα" heading — direction-comparison mockups (built to react to, not
+ * guessed at) landed here specifically. The soft radial glow and the
+ * progress bar are decorative/informational only, never the sole source
+ * of any status a screen reader needs (the dose cards below still state
+ * their own status in text).
+ */
+function TodayHero({ resolved, total }: { resolved: number; total: number }) {
+  return (
+    <div className="relative overflow-hidden rounded-b-[28px] bg-linear-to-br from-accent-600 to-accent-800 px-5 pt-5 pb-7.5 text-white">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%)" }}
+      />
+      <div className="relative">
+        <h1 className="text-2xl font-bold">Σήμερα</h1>
+        {total > 0 && (
+          <div className="mt-3.5 flex items-center gap-2.5">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/20">
+              <div className="h-full rounded-full bg-white transition-[width] duration-300" style={{ width: `${Math.round((resolved / total) * 100)}%` }} />
+            </div>
+            <span className="text-sm font-semibold whitespace-nowrap opacity-90">
+              {resolved} από {total}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -177,70 +211,74 @@ export default function TodayPage() {
 
   if (todayDoses.length === 0 && needsAttention.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <h1 className="text-xl font-semibold">Σήμερα</h1>
-        {lowStockNames.length > 0 && (
-          <div className="w-full max-w-sm">
-            <LowStockBanner names={lowStockNames} />
-          </div>
-        )}
-        <p className="max-w-sm text-stone-600 dark:text-stone-400">Δεν έχετε προγραμματισμένες δόσεις για σήμερα.</p>
-        <p className="max-w-sm text-sm text-stone-500 dark:text-stone-400">
-          Μπορείτε να προσθέσετε πρόγραμμα δόσεων όταν προσθέτετε ένα φάρμακο.
-        </p>
-        <Link href="/medications" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
-          Δείτε τα φάρμακά σας
-        </Link>
+      <div className="flex flex-col gap-4">
+        <TodayHero resolved={0} total={0} />
+        <div className="flex flex-col items-center gap-3 px-4 pb-4 text-center">
+          {lowStockNames.length > 0 && (
+            <div className="w-full max-w-sm">
+              <LowStockBanner names={lowStockNames} />
+            </div>
+          )}
+          <p className="max-w-sm text-stone-600 dark:text-stone-400">Δεν έχετε προγραμματισμένες δόσεις για σήμερα.</p>
+          <p className="max-w-sm text-sm text-stone-500 dark:text-stone-400">
+            Μπορείτε να προσθέσετε πρόγραμμα δόσεων όταν προσθέτετε ένα φάρμακο.
+          </p>
+          <Link href="/medications" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
+            Δείτε τα φάρμακά σας
+          </Link>
+        </div>
       </div>
     );
   }
 
   const allResolved = allTodayDosesResolved(todayDoses);
+  const resolvedCount = todayDoses.filter((d) => isTerminalDoseEventStatus(d.status)).length;
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <h1 className="text-xl font-semibold">Σήμερα</h1>
+    <div className="flex flex-col gap-4">
+      <TodayHero resolved={resolvedCount} total={todayDoses.length} />
+      <div className="flex flex-col gap-4 px-4 pb-4">
+        {lowStockNames.length > 0 && <LowStockBanner names={lowStockNames} />}
 
-      {lowStockNames.length > 0 && <LowStockBanner names={lowStockNames} />}
+        {needsAttention.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <h2 className="text-sm font-medium text-amber-800 dark:text-amber-300">Χρειάζεται προσοχή</h2>
+            <div className="flex flex-col gap-2">
+              {needsAttention.map((dose) => (
+                <DoseCard
+                  key={dose.id}
+                  dose={dose}
+                  medicationName={names.get(dose.userMedicationId) ?? "…"}
+                  actionable={false}
+                  onTaken={handleTaken}
+                  onSkipped={handleSkipped}
+                  onSnoozed={handleSnoozed}
+                  onTakenLate={handleTakenLate}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
-      {needsAttention.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-amber-800 dark:text-amber-300">Χρειάζεται προσοχή</h2>
-          <div className="flex flex-col gap-2">
-            {needsAttention.map((dose) => (
-              <DoseCard
-                key={dose.id}
-                dose={dose}
-                medicationName={names.get(dose.userMedicationId) ?? "…"}
-                actionable={false}
-                onTaken={handleTaken}
-                onSkipped={handleSkipped}
-                onSnoozed={handleSnoozed}
-                onTakenLate={handleTakenLate}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+        {allResolved && (
+          <p role="status" className="rounded-lg bg-stone-100 px-4 py-3 text-sm dark:bg-stone-900">
+            Όλες οι σημερινές δόσεις έχουν καταγραφεί.
+          </p>
+        )}
 
-      {allResolved && (
-        <p role="status" className="rounded-lg bg-stone-100 px-4 py-3 text-sm dark:bg-stone-900">
-          Όλες οι σημερινές δόσεις έχουν καταγραφεί.
-        </p>
-      )}
-
-      <div className="flex flex-col gap-2" aria-label="Σημερινές δόσεις">
-        {todayDoses.map((dose) => (
-          <DoseCard
-            key={dose.id}
-            dose={dose}
-            medicationName={names.get(dose.userMedicationId) ?? "…"}
-            actionable
-            onTaken={handleTaken}
-            onSkipped={handleSkipped}
-            onSnoozed={handleSnoozed}
-          />
-        ))}
+        <div className="flex flex-col gap-2" aria-label="Σημερινές δόσεις">
+          {todayDoses.map((dose) => (
+            <DoseCard
+              key={dose.id}
+              dose={dose}
+              medicationName={names.get(dose.userMedicationId) ?? "…"}
+              actionable
+              onTaken={handleTaken}
+              onSkipped={handleSkipped}
+              onSnoozed={handleSnoozed}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
