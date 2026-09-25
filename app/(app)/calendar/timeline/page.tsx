@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
+import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
 import { useDoseEventsForRange } from "@/components/calendar/use-dose-events-for-range";
 import { CalendarSegmentedNav } from "@/components/calendar/CalendarSegmentedNav";
 import { DateNavigator } from "@/components/calendar/DateNavigator";
@@ -40,6 +41,7 @@ export default function CalendarTimelinePage() {
   const dateParam = dateToParam(date);
   const { status: medsStatus, medications } = useMedicationsList(profileId);
   const names = useDisplayNames(medications);
+  const strengths = useMedicationStrengths(medications);
   const { status: dosesStatus, doses, projected } = useDoseEventsForRange(profileId, startOfLocalDay(date), endOfLocalDay(date));
 
   // Real and projected doses can share a single day right at the
@@ -91,6 +93,7 @@ export default function CalendarTimelinePage() {
                 <DoseCard
                   dose={item.dose}
                   medicationName={names.get(item.dose.userMedicationId) ?? "…"}
+                  medicationStrength={strengths.get(item.dose.userMedicationId)}
                   actionable={false}
                   onTaken={() => {}}
                   onSkipped={() => {}}

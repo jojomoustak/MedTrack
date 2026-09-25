@@ -5,7 +5,6 @@ import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { MedicationThumbnail } from "@/components/medications/MedicationThumbnail";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { playSound } from "@/lib/sound/client/play-sound";
-import { formatQuantity } from "@/lib/domain/quantity";
 import type { DoseEventRecord, DoseEventStatus } from "@/lib/domain/dose-event";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
@@ -14,6 +13,8 @@ const UNDO_WINDOW_MS = 5000;
 export interface DoseCardProps {
   dose: DoseEventRecord;
   medicationName: string;
+  /** e.g. "500 mg" — the medication's own strength, not this dose's quantity (`dose.quantityValue`, e.g. "1 tablet"); shown on the card in place of the dose-quantity line (UX feedback, 2026-09-26). `null`/undefined when unresolved yet or unknown, in which case the card shows nothing for this line rather than a placeholder. */
+  medicationStrength?: string | null;
   /** Read-only everywhere except today's own cards (ux-accessibility-designer design, 2026-08-30): a past/future-day card, or a `missed`/other-terminal one, never renders the Taken/Skip/Snooze trio. */
   actionable: boolean;
   onTaken: (doseId: string) => void;
@@ -61,10 +62,23 @@ function statusLabel(status: DoseEventStatus, dose: DoseEventRecord): string | n
   }
 }
 
-function buildAriaLabel(name: string, qtyValue: string | null, qtyUnit: string, timeLabel: string, status: string | null, availableActions: string | null): string {
+function buildAriaLabel(
+  name: string,
+  strength: string | null | undefined,
+  qtyValue: string | null,
+  qtyUnit: string,
+  timeLabel: string,
+  status: string | null,
+  availableActions: string | null,
+): string {
+  // Accessibility must not lose information the visual card no longer
+  // shows (UX feedback, 2026-09-26, hid the dose-quantity line) — the
+  // spoken label still carries strength AND dose quantity, even though
+  // only strength is shown on screen now.
+  const strengthPart = strength ? `${strength}, ` : "";
   const quantityPart = qtyValue ? `${qtyValue} ${qtyUnit}, ` : "";
   const statusPart = status ?? "προγραμματισμένο";
-  const base = `${name}, ${quantityPart}${timeLabel}, ${statusPart}`;
+  const base = `${name}, ${strengthPart}${quantityPart}${timeLabel}, ${statusPart}`;
   return availableActions ? `${base} — διαθέσιμες ενέργειες: ${availableActions}` : base;
 }
 
@@ -81,7 +95,7 @@ function buildAriaLabel(name: string, qtyValue: string | null, qtyUnit: string, 
  * since `transition()` can't un-terminal a row once committed. Snooze is
  * non-terminal (freely repeatable) and fires immediately.
  */
-export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped, onSnoozed, onRetrySync, onTakenLate }: DoseCardProps) {
+export function DoseCard({ dose, medicationName, medicationStrength, actionable, onTaken, onSkipped, onSnoozed, onRetrySync, onTakenLate }: DoseCardProps) {
   const [pendingAction, setPendingAction] = useState<"taken" | "skipped" | "taken_late" | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -130,7 +144,7 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
   return (
     <div
       role="group"
-      aria-label={buildAriaLabel(medicationName, dose.quantityValue, unitLabel(dose.quantityUnit), timeLabel, label, availableActions)}
+      aria-label={buildAriaLabel(medicationName, medicationStrength, dose.quantityValue, unitLabel(dose.quantityUnit), timeLabel, label, availableActions)}
       className={`flex flex-col gap-2 rounded-[22px] px-4 py-3 dark:border dark:border-stone-800 ${
         isCompleted ? "shadow-sm shadow-stone-300/30 opacity-75" : "shadow-lg shadow-stone-300/40"
       }`}
@@ -155,11 +169,11 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
                 <span className="shrink-0 text-[15px] font-extrabold tabular-nums text-accent-700 dark:text-accent-400">{timeLabel}</span>
               )}
             </div>
-            {dose.quantityValue && (
-              <p className="text-sm text-stone-600 dark:text-stone-400">
-                {formatQuantity(dose.quantityValue)} {unitLabel(dose.quantityUnit)}
-              </p>
-            )}
+            {/* UX feedback (2026-09-26): shows the medication's strength
+                (e.g. "500 mg") instead of the per-dose quantity/form text
+                (e.g. "1 Δισκίο") this used to show — kept out of the
+                screen reader label change below, not dropped entirely. */}
+            {medicationStrength && <p className="text-sm text-stone-600 dark:text-stone-400">{medicationStrength}</p>}
             {/* `aria-live` scoped to just this line, not the whole card, so a
                 status change (e.g. tapping Έλαβα) is announced to a screen
                 reader without re-announcing the medication name/quantity

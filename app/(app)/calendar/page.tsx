@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
+import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
 import { useDoseEventsForDate } from "@/components/calendar/use-dose-events-for-date";
 import { CalendarSegmentedNav } from "@/components/calendar/CalendarSegmentedNav";
 import { DateNavigator } from "@/components/calendar/DateNavigator";
@@ -27,6 +28,7 @@ export default function CalendarPage() {
   const dateParam = dateToParam(date);
   const { status: medsStatus, medications } = useMedicationsList(profileId);
   const names = useDisplayNames(medications);
+  const strengths = useMedicationStrengths(medications);
   const { status: dosesStatus, doses } = useDoseEventsForDate(profileId, date);
 
   function navigateToDate(next: Date) {
@@ -64,6 +66,7 @@ export default function CalendarPage() {
               <DoseCard
                 dose={dose}
                 medicationName={names.get(dose.userMedicationId) ?? "…"}
+                medicationStrength={strengths.get(dose.userMedicationId)}
                 actionable={false}
                 onTaken={() => {}}
                 onSkipped={() => {}}

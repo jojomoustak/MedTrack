@@ -8,6 +8,7 @@ import { useGlobalSyncSummary } from "@/lib/sync/client/use-global-sync-summary"
 import { createSyncManager } from "@/lib/sync/client/sync-manager";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
+import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
 import { useLowStockMedicationIds } from "@/lib/inventory/client/use-low-stock-medications";
 import { useTodayDoseEvents, allTodayDosesResolved } from "@/components/today/use-today-dose-events";
 import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
@@ -175,6 +176,7 @@ export default function TodayPage() {
   const accountId = useAccountId();
   const { status: medsStatus, medications } = useMedicationsList(profileId);
   const names = useDisplayNames(medications);
+  const strengths = useMedicationStrengths(medications);
   // Journey 5 (Phase 3 §3 / Phase 0 Maria persona): "same non-color
   // low-stock cue... Today (banner)... Medications list (badge)...
   // medication detail (inline banner)." The latter two already existed
@@ -300,6 +302,7 @@ export default function TodayPage() {
                   key={dose.id}
                   dose={dose}
                   medicationName={names.get(dose.userMedicationId) ?? "…"}
+                  medicationStrength={strengths.get(dose.userMedicationId)}
                   actionable={false}
                   onTaken={handleTaken}
                   onSkipped={handleSkipped}
@@ -323,6 +326,7 @@ export default function TodayPage() {
               key={dose.id}
               dose={dose}
               medicationName={names.get(dose.userMedicationId) ?? "…"}
+              medicationStrength={strengths.get(dose.userMedicationId)}
               actionable
               onTaken={handleTaken}
               onSkipped={handleSkipped}
