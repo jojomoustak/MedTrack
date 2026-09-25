@@ -41,7 +41,7 @@ export function MedicationThumbnail({ userMedicationId }: { userMedicationId: st
         href={`/medications/${userMedicationId}/photo`}
         onClick={() => playSound("button")}
         aria-label="Προβολή φωτογραφίας φαρμάκου"
-        className="shrink-0"
+        className="shrink-0 transition-transform duration-150 active:scale-95"
       >
         <img src={displayUrl} alt="" className="h-16 w-16 rounded-xl object-cover" />
       </Link>
@@ -81,7 +81,7 @@ export function MedicationThumbnail({ userMedicationId }: { userMedicationId: st
         if (!uploading) playSound("button");
       }}
       aria-label={uploadFailed ? "Η λήψη φωτογραφίας απέτυχε — πατήστε για να δοκιμάσετε ξανά" : "Λήψη φωτογραφίας φαρμάκου"}
-      className={`flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed ${
+      className={`flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed transition-transform duration-150 active:scale-95 ${
         uploadFailed ? "border-red-300 text-red-400 dark:border-red-900 dark:text-red-500" : "border-stone-300 text-stone-400 dark:border-stone-700 dark:text-stone-600"
       }`}
     >

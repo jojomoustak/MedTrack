@@ -46,7 +46,7 @@ export default function ListsPage() {
         <button
           type="submit"
           disabled={!newName.trim() || creating}
-          className="inline-flex shrink-0 items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white disabled:opacity-50 dark:bg-accent-500 dark:text-stone-950"
+          className="inline-flex shrink-0 items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white transition-transform duration-150 active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:bg-accent-500 dark:text-stone-950"
         >
           Προσθήκη
         </button>
@@ -69,7 +69,7 @@ export default function ListsPage() {
               <Link
                 href={`/lists/${list.id}`}
                 onClick={() => playSound("button")}
-                className="flex min-h-12 items-center justify-between rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 px-4 py-3 font-medium"
+                className="flex min-h-12 items-center justify-between rounded-xl shadow-sm shadow-stone-300/40 transition-transform duration-150 active:scale-[0.98] dark:border dark:border-stone-800 px-4 py-3 font-medium"
               >
                 {list.name}
               </Link>

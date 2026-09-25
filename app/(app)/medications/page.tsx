@@ -81,7 +81,7 @@ export default function MedicationsPage() {
               playSound("button");
               setSegment(s.key);
             }}
-            className={`min-h-12 rounded-full border px-4 py-2 text-sm font-medium ${
+            className={`min-h-12 rounded-full border px-4 py-2 text-sm font-medium transition duration-200 active:scale-95 ${
               segment === s.key
                 ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950"
                 : "border-stone-300 dark:border-stone-700"
@@ -148,7 +148,7 @@ export default function MedicationsPage() {
                   }}
                   aria-pressed={isFavorite}
                   aria-label={isFavorite ? `Αφαίρεση ${names.get(med.id) ?? "φαρμάκου"} από τα αγαπημένα` : `Προσθήκη ${names.get(med.id) ?? "φαρμάκου"} στα αγαπημένα`}
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${isFavorite ? "text-amber-500" : "text-stone-300 dark:text-stone-600"}`}
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition duration-200 active:scale-90 ${isFavorite ? "text-amber-500" : "text-stone-300 dark:text-stone-600"}`}
                 >
                   <StarIcon filled={isFavorite} />
                 </button>

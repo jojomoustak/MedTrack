@@ -38,7 +38,7 @@ export function BottomNav() {
             href={tab.href}
             onClick={() => playSound("button")}
             aria-current={active ? "page" : undefined}
-            className={`flex min-h-12 flex-col items-center justify-center gap-0.5 border-t-2 py-2 text-xs ${
+            className={`flex min-h-12 flex-col items-center justify-center gap-0.5 border-t-2 py-2 text-xs transition duration-200 active:scale-95 ${
               active ? "border-accent-700 font-semibold text-accent-700 dark:border-accent-400 dark:text-accent-400" : "border-transparent font-medium text-stone-500 dark:text-stone-400"
             }`}
           >
