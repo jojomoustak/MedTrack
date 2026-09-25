@@ -85,14 +85,17 @@ function LowStockIcon() {
   );
 }
 
-/** The same pill-capsule mark `NavIcon`'s "medications" tab already draws — reused here rather than a one-off brand mark, so the wordmark's icon is the app's own established shape, not a new invention. */
+/**
+ * The app's real icon (design pass, 2026-09-26 — corrects the pill mark
+ * this used before): a solid cross, matching the native Android app's
+ * actual launcher/splash icon exactly (`ic_launcher_foreground.png`/
+ * `splash.png` in the separate Android repo — a white cross, not a
+ * stroked outline), not invented fresh for this header.
+ */
 function BrandIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <g transform="rotate(-45 12 12)">
-        <rect x="4" y="8" width="16" height="8" rx="4" />
-        <path d="M12 8v8" />
-      </g>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M8.5 3h7v5.5H21v7h-5.5V21h-7v-5.5H3v-7h5.5Z" />
     </svg>
   );
 }

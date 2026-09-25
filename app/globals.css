@@ -18,26 +18,28 @@
 }
 
 /*
- * Accent color (design pass, 2026-09-26 — replaces the earlier flat teal).
- * Direction-comparison mockups (built to react to, not guessed at) landed
- * on a deeper, more confident green over the original restrained teal —
- * still deliberately apart from the app's red/amber/green status colors
- * at a glance (this scale sits noticeably darker/more forest-toned than
- * the status "success" green), still used only for primary actions and
- * active/selected state, not a wholesale maximalist repaint. accent-700
- * (#1F6F5C) and accent-800 (#164A3D) are the exact colors from the
- * approved mockup's primary buttons and header gradient, not re-picked
- * from scratch.
+ * Accent color (design pass, 2026-09-26 — corrects the last two rounds'
+ * invented greens). The native Android wrapper this web app runs inside
+ * (Median, the separate repo at C:\AndroidProjects\MedTracking-android)
+ * already has its own established brand color — `colorAccent: #009688`
+ * in its colors.xml, Material Design's own "Teal 500", used throughout
+ * its native chrome (status bar, pull-to-refresh, the app icon/splash's
+ * white cross on this exact color) — and every accent color this app's
+ * CSS has used this whole session was invented independently of it,
+ * producing a real, visible mismatch between the native shell and the
+ * web content the moment the app actually launches. Fixed by anchoring
+ * this scale on Material's own official Teal palette, landing accent-500
+ * on #009688 exactly rather than re-deriving nearby shades by eye.
  */
 @theme {
-  --color-accent-50: #f0faf5;
-  --color-accent-100: #e4f2ec;
-  --color-accent-400: #4ca98a;
-  --color-accent-500: #2b8a6e;
-  --color-accent-600: #22795f;
-  --color-accent-700: #1f6f5c;
-  --color-accent-800: #164a3d;
-  --color-accent-950: #0b241d;
+  --color-accent-50: #e0f2f1;
+  --color-accent-100: #b2dfdb;
+  --color-accent-400: #26a69a;
+  --color-accent-500: #009688;
+  --color-accent-600: #00897b;
+  --color-accent-700: #00796b;
+  --color-accent-800: #00695c;
+  --color-accent-950: #00251f;
 }
 
 @theme inline {
