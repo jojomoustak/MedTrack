@@ -136,23 +136,25 @@ export function DoseCard({ dose, medicationName, actionable, onTaken, onSkipped,
       }`}
       data-dose-status={displayStatus}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-start gap-3">
-          {/* A distinct time "block" rather than inline text next to the
-              name — tabular-nums keeps digit widths steady down a whole
-              list of cards (impeccable craft: numerals in tabular data are
-              a browser default until themed on purpose). This is the
-              scannable anchor for a medication-timing app; the name reads
-              second. */}
-          {timeLabel && (
-            <span className="shrink-0 pt-0.5 text-base font-semibold tabular-nums leading-none text-stone-900 dark:text-stone-50">{timeLabel}</span>
-          )}
-          {/* UX feedback (2026-09-26): same photo/camera slot as the
-              Medications list, now here too — a visual anchor for "which
-              medication is this," not just its printed name. */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-3.5">
+          {/* UX feedback (2026-09-26): the photo/camera slot leads the
+              card — a visual anchor for "which medication is this" — with
+              the name and time sharing one line next to it, matching the
+              approved design mockup exactly (previously the time sat in
+              its own leading column ahead of the photo, which is not what
+              was approved). */}
           <MedicationThumbnail userMedicationId={dose.userMedicationId} />
-          <div className="min-w-0">
-            <p className={`font-medium ${isCompleted ? "line-through decoration-stone-400 dark:decoration-stone-600" : ""}`}>{medicationName}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className={`truncate text-[17px] font-bold ${isCompleted ? "line-through decoration-stone-400 dark:decoration-stone-600" : ""}`}>{medicationName}</p>
+              {/* tabular-nums keeps digit widths steady down a whole list
+                  of cards (impeccable craft: numerals in tabular data are
+                  a browser default until themed on purpose). */}
+              {timeLabel && (
+                <span className="shrink-0 text-[15px] font-extrabold tabular-nums text-accent-700 dark:text-accent-400">{timeLabel}</span>
+              )}
+            </div>
             {dose.quantityValue && (
               <p className="text-sm text-stone-600 dark:text-stone-400">
                 {formatQuantity(dose.quantityValue)} {unitLabel(dose.quantityUnit)}
