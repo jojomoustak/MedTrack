@@ -6,6 +6,7 @@ import { useMedicationPhotoThumbnail } from "@/lib/medications/client/use-medica
 import { uploadMedicationPhoto, MedicationPhotoApiError } from "@/lib/medications/client/photo-api";
 import { DexiePhotoCacheRepository } from "@/lib/medications/client/photo-cache-repository";
 import { ALLOWED_MEDICATION_PHOTO_CONTENT_TYPES, MAX_MEDICATION_PHOTO_BYTES } from "@/lib/validation/medication-photo";
+import { medicationColorClasses } from "@/lib/medications/client/medication-color";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 function isAllowedClientSide(file: File): boolean {
@@ -34,6 +35,7 @@ export function MedicationThumbnail({ userMedicationId }: { userMedicationId: st
   }, [uploadedUrl]);
 
   const displayUrl = uploadedUrl ?? url;
+  const color = medicationColorClasses(userMedicationId);
 
   if (displayUrl) {
     return (
@@ -43,13 +45,13 @@ export function MedicationThumbnail({ userMedicationId }: { userMedicationId: st
         aria-label="Προβολή φωτογραφίας φαρμάκου"
         className="shrink-0 transition-transform duration-150 active:scale-95"
       >
-        <img src={displayUrl} alt="" className="h-16 w-16 rounded-xl object-cover" />
+        <img src={displayUrl} alt="" className="h-14 w-14 rounded-full object-cover" />
       </Link>
     );
   }
 
   if (status === "checking") {
-    return <div aria-hidden="true" className="h-16 w-16 shrink-0 animate-pulse rounded-xl bg-stone-100 dark:bg-stone-800" />;
+    return <div aria-hidden="true" className={`h-14 w-14 shrink-0 animate-pulse rounded-full ${color.bg}`} />;
   }
 
   async function handleFileSelected(file: File) {
@@ -81,14 +83,14 @@ export function MedicationThumbnail({ userMedicationId }: { userMedicationId: st
         if (!uploading) playSound("button");
       }}
       aria-label={uploadFailed ? "Η λήψη φωτογραφίας απέτυχε — πατήστε για να δοκιμάσετε ξανά" : "Λήψη φωτογραφίας φαρμάκου"}
-      className={`flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed transition-transform duration-150 active:scale-95 ${
-        uploadFailed ? "border-red-300 text-red-400 dark:border-red-900 dark:text-red-500" : "border-stone-300 text-stone-400 dark:border-stone-700 dark:text-stone-600"
+      className={`flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform duration-150 active:scale-95 ${
+        uploadFailed ? "bg-red-100 text-red-500 dark:bg-red-900/40 dark:text-red-400" : `${color.bg} ${color.text}`
       }`}
     >
       {uploading ? (
         <span
           aria-hidden="true"
-          className="h-5 w-5 animate-spin rounded-full border-2 border-stone-300 border-t-accent-700 dark:border-stone-700 dark:border-t-accent-500"
+          className="h-5 w-5 animate-spin rounded-full border-2 border-current/30 border-t-current"
         />
       ) : (
         <CameraIcon />
