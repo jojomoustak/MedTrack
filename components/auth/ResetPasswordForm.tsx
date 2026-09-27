@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { Button, ButtonLink } from "@/components/ui/Button";
 
 /**
  * Reads `token` from the URL query string. Better Auth's reset-link shape
@@ -81,22 +81,13 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        aria-busy={submitting}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white transition-transform duration-150 active:scale-95 disabled:opacity-60 disabled:active:scale-100 dark:bg-accent-500 dark:text-stone-950"
-      >
+      <Button type="submit" disabled={submitting} aria-busy={submitting}>
         {submitting ? "Αποθήκευση…" : "Ορισμός νέου κωδικού"}
-      </button>
+      </Button>
 
-      <Link
-        href="/forgot-password"
-        onClick={() => playSound("button")}
-        className="flex min-h-12 items-center justify-center text-sm font-medium underline"
-      >
+      <ButtonLink href="/forgot-password" onClick={() => playSound("button")} variant="tertiary" className="underline">
         Ζητήστε νέο σύνδεσμο
-      </Link>
+      </ButtonLink>
     </form>
   );
 }

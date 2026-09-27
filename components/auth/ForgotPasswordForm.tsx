@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { Button, ButtonLink } from "@/components/ui/Button";
 
 type Status = "idle" | "sent" | "offline";
 
@@ -57,13 +57,9 @@ export function ForgotPasswordForm() {
         <p className="text-sm text-stone-700 dark:text-stone-300">
           Αν υπάρχει λογαριασμός με αυτό το email, θα λάβετε σύνδεσμο επαναφοράς κωδικού σε λίγα λεπτά.
         </p>
-        <Link
-          href="/login"
-          onClick={() => playSound("button")}
-          className="flex min-h-12 items-center justify-center font-medium underline"
-        >
+        <ButtonLink href="/login" onClick={() => playSound("button")} variant="tertiary" className="underline">
           Επιστροφή στη σύνδεση
-        </Link>
+        </ButtonLink>
       </div>
     );
   }
@@ -93,22 +89,13 @@ export function ForgotPasswordForm() {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        aria-busy={submitting}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-stone-950"
-      >
+      <Button type="submit" disabled={submitting} aria-busy={submitting}>
         {submitting ? "Αποστολή…" : "Αποστολή συνδέσμου επαναφοράς"}
-      </button>
+      </Button>
 
-      <Link
-        href="/login"
-        onClick={() => playSound("button")}
-        className="flex min-h-12 items-center justify-center text-sm font-medium underline"
-      >
+      <ButtonLink href="/login" onClick={() => playSound("button")} variant="tertiary" className="underline">
         Επιστροφή στη σύνδεση
-      </Link>
+      </ButtonLink>
     </form>
   );
 }

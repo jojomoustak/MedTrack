@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { Button } from "@/components/ui/Button";
 
 /**
  * Phase 3 §2.1 "Login" / §8: wrong-credentials and no-connection are two
@@ -78,14 +79,9 @@ export function LoginForm() {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        aria-busy={submitting}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white transition-transform duration-150 active:scale-95 disabled:opacity-60 disabled:active:scale-100 dark:bg-accent-500 dark:text-stone-950"
-      >
+      <Button type="submit" disabled={submitting} aria-busy={submitting}>
         {submitting ? "Σύνδεση…" : "Σύνδεση"}
-      </button>
+      </Button>
     </form>
   );
 }

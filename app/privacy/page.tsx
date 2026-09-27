@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ButtonLink } from "@/components/ui/Button";
 
 /**
  * Public route (outside the `(app)` auth-gated group, same tier as
@@ -21,9 +22,9 @@ export default function PrivacyPage() {
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 bg-stone-50 px-6 py-12 dark:bg-stone-950">
       <div className="flex flex-col gap-2">
-        <Link href="/welcome" className="flex min-h-12 w-fit items-center text-sm text-stone-600 underline dark:text-stone-400">
+        <ButtonLink href="/welcome" variant="tertiary" className="w-fit px-0 text-stone-600 underline dark:text-stone-400">
           ← Αρχική
-        </Link>
+        </ButtonLink>
         <h1 className="text-2xl font-semibold">Πολιτική Απορρήτου</h1>
         <p className="text-sm text-stone-500 dark:text-stone-400">Τελευταία ενημέρωση: 15 Σεπτεμβρίου 2026</p>
       </div>

@@ -7,6 +7,7 @@ import { playSound } from "@/lib/sound/client/play-sound";
 import { MedianMobilePlatform } from "@/lib/platform/median-mobile-platform";
 import { MobilePlatformUnavailableError, type MobilePlatform } from "@/lib/platform/mobile-platform";
 import { mapGoogleAuthErrorFromNativeSignIn } from "@/lib/auth/client/google-auth-errors";
+import { Button } from "@/components/ui/Button";
 
 interface GoogleAuthButtonProps {
   /**
@@ -106,16 +107,10 @@ export function GoogleAuthButton({ mode, callbackURL, errorCallbackURL, label, p
 
   return (
     <div className="flex flex-col gap-2">
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={pending}
-        aria-busy={pending}
-        className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-stone-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-stone-700"
-      >
+      <Button variant="secondary" onClick={handleClick} disabled={pending} aria-busy={pending}>
         <GoogleGlyph />
         {label ?? (mode === "sign-in" ? "Σύνδεση με Google" : "Σύνδεση λογαριασμού Google")}
-      </button>
+      </Button>
       {nativeError && (
         <p role="alert" className="text-sm text-red-700 dark:text-red-400">
           {nativeError}
