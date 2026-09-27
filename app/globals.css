@@ -18,28 +18,31 @@
 }
 
 /*
- * Accent color (design pass, 2026-09-26 — corrects the last two rounds'
- * invented greens). The native Android wrapper this web app runs inside
- * (Median, the separate repo at C:\AndroidProjects\MedTracking-android)
- * already has its own established brand color — `colorAccent: #009688`
- * in its colors.xml, Material Design's own "Teal 500", used throughout
- * its native chrome (status bar, pull-to-refresh, the app icon/splash's
- * white cross on this exact color) — and every accent color this app's
- * CSS has used this whole session was invented independently of it,
- * producing a real, visible mismatch between the native shell and the
- * web content the moment the app actually launches. Fixed by anchoring
- * this scale on Material's own official Teal palette, landing accent-500
- * on #009688 exactly rather than re-deriving nearby shades by eye.
+ * Rebrand (2026-09-27): "MedTracking" (teal #009688 / cross mark) →
+ * "MedTrack" (forest-to-emerald green / leaf mark), per an explicit,
+ * confirmed user decision to replace the identity with a user-supplied
+ * reference (PRODUCT.md's Brand Commitments, `.impeccable/surfaces/
+ * global-rebrand.md`'s direction contract) — not a rediscovery of the
+ * old teal anchor. The previous version of this comment anchored accent
+ * on the native Android wrapper's shipped teal icon/splash; the user has
+ * since also confirmed (2026-09-27) that native icon/splash gets
+ * regenerated to match this new scale, so the two stay in sync again,
+ * just on green instead of teal. Values are Tailwind's own `emerald`
+ * scale (not re-derived by eye) — accent-700/800 carry the deep forest
+ * green hero/header surfaces and primary buttons, accent-500/600 the
+ * brighter interactive/FAB accent, matching the reference mockup's own
+ * two-tone green use.
  */
 @theme {
-  --color-accent-50: #e0f2f1;
-  --color-accent-100: #b2dfdb;
-  --color-accent-400: #26a69a;
-  --color-accent-500: #009688;
-  --color-accent-600: #00897b;
-  --color-accent-700: #00796b;
-  --color-accent-800: #00695c;
-  --color-accent-950: #00251f;
+  --color-accent-50: #ecfdf5;
+  --color-accent-100: #d1fae5;
+  --color-accent-400: #34d399;
+  --color-accent-500: #10b981;
+  --color-accent-600: #059669;
+  --color-accent-700: #047857;
+  --color-accent-800: #065f46;
+  --color-accent-900: #064e3b;
+  --color-accent-950: #022c22;
 }
 
 @theme inline {

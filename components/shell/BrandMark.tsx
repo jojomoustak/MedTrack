@@ -1,18 +1,30 @@
 /**
- * The one MedTracking mark, everywhere. Previously defined twice — once
- * inline in `today/page.tsx` as `BrandIcon`, and not at all in `AppBar`
- * (which showed the wordmark with no icon), a real "same brand, two
- * treatments" inconsistency the redesign audit flagged (CLAUDE.md rule:
- * one identity, never redrawn per-component). This is a solid cross,
- * matching the native Android app's actual shipped launcher/splash icon
- * exactly (`ic_launcher_foreground.png`/`splash.png` in the separate
- * Android repo) — not a fresh invention, and not a leaf/heart/shield/pill
- * glyph a generic template might suggest.
+ * The one MedTrack mark, everywhere. Rebrand (2026-09-27, confirmed user
+ * decision — PRODUCT.md Brand Commitments): replaces the previous solid
+ * cross (which matched the native Android app's teal icon/splash at the
+ * time) with a two-blade leaf, per a user-supplied reference identity.
+ * The user has separately confirmed the native Android icon/splash (the
+ * separate repo) gets regenerated to match this mark too, so the two
+ * stay in sync on the new mark instead of the old one.
  */
 export function BrandMark({ size = 14, className }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
-      <path d="M8.5 3h7v5.5H21v7h-5.5V21h-7v-5.5H3v-7h5.5Z" />
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      {/* Tilted (not symmetric) so the silhouette alone reads as a leaf
+          rather than a drop — a `currentColor` vein at partial opacity
+          drawn over a `currentColor` fill of the same shade was tried
+          first and was invisible (same hue, no real contrast); the stem
+          below does the "this is a leaf, not a drop" work instead, since
+          it sits outside the filled silhouette and is always visible
+          regardless of which single color this mark renders in (dark
+          green on the light Welcome page, white on the dark green
+          header/hero). */}
+      <path
+        d="M12 3q7 5 7 10.5Q19 20 12 21.5Q5 20 5 13.5 5 8 12 3Z"
+        fill="currentColor"
+        transform="rotate(22 12 12)"
+      />
+      <path d="M12 21.7v1.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" transform="rotate(22 12 12)" />
     </svg>
   );
 }
@@ -22,7 +34,7 @@ export function BrandWordmark({ className = "" }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-1.5 font-semibold ${className}`}>
       <BrandMark />
-      MedTracking
+      MedTrack
     </span>
   );
 }
