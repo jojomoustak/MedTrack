@@ -10,6 +10,8 @@ import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { DoseStatusGlyph, DOSE_MARKER_LABEL } from "@/components/calendar/DoseStatusGlyph";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { formatQuantity } from "@/lib/domain/quantity";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import type { MedicationForm } from "@/lib/domain/user-medication";
@@ -61,20 +63,19 @@ export default function DoseHistoryDetailPage() {
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-4 p-4">
-      {/* UX audit (2026-09-18): was hardcoded to /calendar/timeline
-          regardless of whether the user actually came from Day view or
-          Timeline — router.back() returns to whichever one actually
-          linked here (both do, via /calendar/dose/[id]). */}
-      <button
-        type="button"
+      {/* UX audit (2026-09-18): was hardcoded to a fixed calendar route —
+          router.back() returns to Calendar's day view, the one screen that
+          actually links to /calendar/dose/[id], instead. */}
+      <Button
+        variant="tertiary"
         onClick={() => {
           playSound("button");
           router.back();
         }}
-        className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium underline"
+        className="self-start px-0 underline"
       >
         ← Πίσω
-      </button>
+      </Button>
 
       {dose === undefined && (
         <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
@@ -91,7 +92,7 @@ export default function DoseHistoryDetailPage() {
             <p className="text-sm text-stone-600 dark:text-stone-400">{formatDateTime(dose.scheduledAt)}</p>
           </div>
 
-          <dl className="flex flex-col gap-3 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
+          <Card as="dl" className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
               <dt className="font-medium">Κατάσταση</dt>
               <dd className="flex items-center gap-1.5">
@@ -120,7 +121,7 @@ export default function DoseHistoryDetailPage() {
               <dt className="font-medium">Σημειώσεις</dt>
               <dd className="text-right">{dose.notes ?? "Καμία σημείωση"}</dd>
             </div>
-          </dl>
+          </Card>
 
           {dose.syncState !== "synced" && (
             <div>

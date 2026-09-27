@@ -2,6 +2,7 @@
 
 import { playSound } from "@/lib/sound/client/play-sound";
 import { ChevronIcon } from "@/components/calendar/ChevronIcon";
+import { Button } from "@/components/ui/Button";
 
 export interface DateNavigatorProps {
   date: Date;
@@ -38,16 +39,16 @@ export function DateNavigator({ date, onPrevDay, onNextDay, onToday }: DateNavig
           {isToday && <span className="ml-1.5 align-middle text-xs font-medium text-stone-500 dark:text-stone-400">· σήμερα</span>}
         </p>
         {!isToday && (
-          <button
-            type="button"
+          <Button
+            variant="tertiary"
             onClick={() => {
               playSound("button");
               onToday();
             }}
-            className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline"
+            className="px-0 underline"
           >
             Σήμερα
-          </button>
+          </Button>
         )}
       </div>
       <button
