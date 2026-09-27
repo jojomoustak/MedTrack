@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexiePhotoCacheRepository } from "@/lib/medications/client/photo-cache-repository";
 import { DexiePhotoOutboxRepository } from "@/lib/medications/client/photo-outbox-repository";
@@ -271,17 +272,17 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
         {pollExhausted ? (
           <div className="flex flex-col gap-2 text-sm text-stone-600 dark:text-stone-400">
             <p>Το φάρμακο δεν έχει συγχρονιστεί ακόμα, οπότε δεν μπορείτε να προσθέσετε φωτογραφία αυτή τη στιγμή.</p>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => {
                 playSound("button");
                 setPollExhausted(false);
                 setPollNonce((n) => n + 1);
               }}
-              className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-4 py-2 text-sm font-medium dark:border-stone-700"
+              className="self-start"
             >
               Δοκιμή ξανά
-            </button>
+            </Button>
           </div>
         ) : (
           <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
@@ -331,7 +332,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
             onClick={() => {
               if (!busy) playSound("button");
             }}
-            className={`min-h-12 flex-1 cursor-pointer rounded-full border border-stone-300 px-4 py-2 text-center text-sm font-medium dark:border-stone-700 ${busy ? "opacity-60" : ""}`}
+            className={buttonClasses("secondary", "md", `flex-1 cursor-pointer ${busy ? "opacity-60" : ""}`)}
           >
             {busy ? "Μεταφόρτωση…" : photoStatus === "present" ? "Αλλαγή φωτογραφίας" : "Προσθήκη φωτογραφίας (προαιρετικό)"}
             <input
@@ -351,18 +352,17 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
           </label>
 
           {photoStatus === "present" && (
-            <button
-              type="button"
+            <Button
+              variant="danger-outline"
               onClick={() => {
                 playSound("button");
                 void handleRemove();
               }}
               disabled={busy}
               aria-busy={busy}
-              className="inline-flex items-center justify-center min-h-12 rounded-full border border-red-300 px-4 py-2 text-sm font-medium text-red-700 disabled:opacity-60 dark:border-red-900 dark:text-red-400"
             >
               Αφαίρεση
-            </button>
+            </Button>
           )}
         </div>
       </div>

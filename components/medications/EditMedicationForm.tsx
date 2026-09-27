@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { FORM_LABELS, FORM_OPTIONS } from "@/components/medications/DetailsStep";
 import { playSound } from "@/lib/sound/client/play-sound";
 import type { MedicationForm, TreatmentState, UserMedicationRecord } from "@/lib/domain/user-medication";
@@ -229,13 +230,9 @@ export function EditMedicationForm({
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-stone-950"
-      >
+      <Button type="submit" disabled={submitting} aria-busy={submitting}>
         {submitting ? "Αποθήκευση…" : "Αποθήκευση"}
-      </button>
+      </Button>
     </form>
   );
 }

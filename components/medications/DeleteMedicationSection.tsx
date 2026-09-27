@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 /**
@@ -37,17 +38,17 @@ export function DeleteMedicationSection({
       <h2 className="text-sm font-medium text-red-800 dark:text-red-400">Μη αναστρέψιμη ενέργεια</h2>
 
       {!confirming ? (
-        <button
-          type="button"
+        <Button
+          variant="danger-outline"
           onClick={() => {
             playSound("button");
             setConfirming(true);
           }}
           aria-expanded={confirming}
-          className="inline-flex items-center justify-center min-h-12 rounded-full border border-red-300 px-4 py-2 text-sm font-medium text-red-700 dark:border-red-900 dark:text-red-400"
+          className="self-start"
         >
           Διαγραφή φαρμάκου
-        </button>
+        </Button>
       ) : (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-stone-600 dark:text-stone-400">
@@ -59,27 +60,21 @@ export function DeleteMedicationSection({
             </p>
           )}
           <div className="flex gap-2">
-            <button
+            <Button
               ref={cancelButtonRef}
-              type="button"
+              variant="secondary"
               onClick={() => {
                 playSound("button");
                 setConfirming(false);
               }}
               disabled={deleting}
-              className="min-h-12 flex-1 rounded-full border border-stone-300 px-4 py-2 text-sm font-medium dark:border-stone-700"
+              className="flex-1"
             >
               Άκυρο
-            </button>
-            <button
-              type="button"
-              onClick={onConfirmDelete}
-              disabled={deleting}
-              aria-busy={deleting}
-              className="min-h-12 flex-1 rounded-full bg-red-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-            >
+            </Button>
+            <Button variant="danger" onClick={onConfirmDelete} disabled={deleting} aria-busy={deleting} className="flex-1">
               {deleting ? "Διαγραφή…" : "Ναι, διαγραφή"}
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
+import { ButtonLink } from "@/components/ui/Button";
 import { EditMedicationForm, type EditMedicationValues } from "@/components/medications/EditMedicationForm";
 import { DeleteMedicationSection } from "@/components/medications/DeleteMedicationSection";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
@@ -77,9 +77,9 @@ export default function EditMedicationPage() {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
         <p className="text-stone-600 dark:text-stone-400">Το φάρμακο δεν βρέθηκε.</p>
-        <Link href="/medications" onClick={() => playSound("button")} className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
+        <ButtonLink href="/medications" onClick={() => playSound("button")} variant="tertiary" className="px-0 underline">
           Πίσω στα φάρμακα
-        </Link>
+        </ButtonLink>
       </div>
     );
   }
@@ -87,9 +87,9 @@ export default function EditMedicationPage() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 p-4">
       <div className="flex items-center gap-3">
-        <Link href={`/medications/${params.id}`} onClick={() => playSound("button")} aria-label="Πίσω" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
+        <ButtonLink href={`/medications/${params.id}`} onClick={() => playSound("button")} aria-label="Πίσω" variant="tertiary" className="px-0 underline">
           ← Πίσω
-        </Link>
+        </ButtonLink>
         <h1 className="text-xl font-semibold">Επεξεργασία φαρμάκου</h1>
       </div>
 
