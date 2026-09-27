@@ -99,9 +99,14 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-xl font-semibold">Προφίλ</h1>
-        {data?.user?.email && <p className="text-sm text-stone-600 dark:text-stone-400">{data.user.email}</p>}
+      <div className="flex items-center gap-3.5">
+        <div aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-accent-100 text-2xl font-bold text-accent-800 dark:bg-accent-900/40 dark:text-accent-300">
+          {(data?.user?.name?.trim().charAt(0) || data?.user?.email?.charAt(0) || "?").toUpperCase()}
+        </div>
+        <div>
+          <h1 className="text-xl font-semibold">{data?.user?.name?.trim() || "Προφίλ"}</h1>
+          {data?.user?.email && <p className="text-sm text-stone-600 dark:text-stone-400">{data.user.email}</p>}
+        </div>
       </div>
 
       <EmailVerificationBanner email={data?.user?.email ?? null} />
