@@ -267,7 +267,7 @@ export function ScanStep({
       <div className="flex flex-col gap-4">
         <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center dark:border-stone-700">
           <p className="text-sm text-stone-700 dark:text-stone-300">
-            Η σάρωση barcode διατίθεται μόνο μέσα από την εφαρμογή MedTracking για κινητά.
+            Η σάρωση barcode διατίθεται μόνο μέσα από την εφαρμογή MedTrack για κινητά.
           </p>
         </div>
         <Button onClick={() => { playSound("button"); onFallbackToManual(null); }}>
@@ -334,7 +334,7 @@ export function ScanStep({
   // framing that implies this might resolve later. It never will.
   const notFoundMessage =
     view.parsed?.format === "QR_CODE"
-      ? "Αυτό είναι κωδικός QR, όχι barcode προϊόντος — το MedTracking δεν μπορεί να αναγνωρίσει φάρμακα από περιεχόμενο QR."
+      ? "Αυτό είναι κωδικός QR, όχι barcode προϊόντος — το MedTrack δεν μπορεί να αναγνωρίσει φάρμακα από περιεχόμενο QR."
       : view.reason === "conflict"
         ? "Αυτός ο κωδικός αντιστοιχεί σε περισσότερα από ένα προϊόντα στα επίσημα δεδομένα μας — δεν μπορούμε να τον επιλύσουμε αυτόματα με ασφάλεια. Αναζητήστε το φάρμακο χειροκίνητα."
         : view.offline
@@ -427,7 +427,7 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
       <p className="mb-3 text-xs text-stone-500 dark:text-stone-400">
         Αντιγράψτε τον κωδικό και αναζητήστε τον στον ιστότοπο του Εθνικού Οργανισμού Φαρμάκων (ΕΟΦ) ή
         του Ευρωπαϊκού Οργανισμού Φαρμάκων (EMA). Τα αποτελέσματα εμφανίζονται στον ιστότοπό τους — το
-        MedTracking δεν τα διαβάζει ούτε τα συμπληρώνει αυτόματα.
+        MedTrack δεν τα διαβάζει ούτε τα συμπληρώνει αυτόματα.
       </p>
       <div className="mb-3 flex items-center gap-2 rounded-lg bg-stone-50 px-3 py-2 dark:bg-stone-900">
         <code className="flex-1 truncate text-sm">{searchTerm}</code>

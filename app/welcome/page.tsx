@@ -7,7 +7,7 @@ export default function WelcomePage() {
     <main className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-stone-50 px-6 py-12 text-center dark:bg-stone-950">
       <div className="flex flex-col items-center gap-3">
         <BrandMark size={40} className="text-accent-700 dark:text-accent-500" />
-        <h1 className="text-3xl font-semibold">MedTracking</h1>
+        <h1 className="text-3xl font-semibold">MedTrack</h1>
         <p className="max-w-sm text-stone-600 dark:text-stone-400">
           Παρακολουθήστε τα φάρμακά σας, το πρόγραμμα λήψης και το απόθεμά σας — ακόμα και χωρίς σύνδεση στο διαδίκτυο.
         </p>

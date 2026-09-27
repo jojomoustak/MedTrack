@@ -83,7 +83,7 @@ export function PackageOcrCandidateFlow({
   async function startOcr() {
     const activePlatform = platform ?? getDefaultMobilePlatform();
     if (!activePlatform.isAvailable()) {
-      setState({ phase: "error", message: "Η αναγνώριση από ετικέτα διατίθεται μόνο μέσα από την εφαρμογή MedTracking για κινητά." });
+      setState({ phase: "error", message: "Η αναγνώριση από ετικέτα διατίθεται μόνο μέσα από την εφαρμογή MedTrack για κινητά." });
       return;
     }
 

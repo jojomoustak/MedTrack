@@ -18,7 +18,7 @@ export interface EmailContent {
   text: string;
 }
 
-const BRAND = "MedTracking";
+const BRAND = "MedTrack";
 
 function wrapHtml(bodyHtml: string): string {
   return `<!DOCTYPE html>

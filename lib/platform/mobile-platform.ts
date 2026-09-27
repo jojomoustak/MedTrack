@@ -153,7 +153,7 @@ export type GoogleNativeSignInResult = GoogleNativeSignInOk | GoogleNativeSignIn
  * apart from "there's no camera to ask" and show different copy.
  */
 export class MobilePlatformUnavailableError extends Error {
-  constructor(message = "Scanning requires the MedTracking mobile app.") {
+  constructor(message = "Scanning requires the MedTrack mobile app.") {
     super(message);
     this.name = "MobilePlatformUnavailableError";
   }

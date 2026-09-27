@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentProfile } from "@/lib/auth/client/use-current-profile";
+import { BrandWordmark } from "@/components/shell/BrandMark";
 
 /** Splash (Phase 3 §2.1): session check, routes to Welcome or Today. */
 export default function RootPage() {
@@ -16,7 +17,7 @@ export default function RootPage() {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-stone-50 dark:bg-stone-950">
-      <h1 className="text-2xl font-semibold">MedTracking</h1>
+      <BrandWordmark className="text-2xl" />
       <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
         Φόρτωση…
       </p>

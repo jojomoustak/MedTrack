@@ -17,7 +17,7 @@ const COPY: Partial<Record<NetworkState, { message: string; tone: "offline" | "b
     tone: "offline",
   },
   "backend-unreachable": {
-    message: "Δυσκολευόμαστε να συνδεθούμε με τους διακομιστές του MedTracking. Τα δεδομένα σας είναι ασφαλή σε αυτή τη συσκευή και θα συγχρονιστούν αυτόματα.",
+    message: "Δυσκολευόμαστε να συνδεθούμε με τους διακομιστές του MedTrack. Τα δεδομένα σας είναι ασφαλή σε αυτή τη συσκευή και θα συγχρονιστούν αυτόματα.",
     tone: "backend",
   },
 };

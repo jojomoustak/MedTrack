@@ -39,9 +39,9 @@ export default function PrivacyPage() {
       </div>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Τι είναι το MedTracking</h2>
+        <h2 className="text-lg font-medium">Τι είναι το MedTrack</h2>
         <p className="text-sm text-stone-700 dark:text-stone-300">
-          Το MedTracking είναι μια εφαρμογή διαχείρισης φαρμάκων: σας βοηθά να θυμάστε πότε να πάρετε τα φάρμακά σας,
+          Το MedTrack είναι μια εφαρμογή διαχείρισης φαρμάκων: σας βοηθά να θυμάστε πότε να πάρετε τα φάρμακά σας,
           να παρακολουθείτε το απόθεμά σας και το ιστορικό λήψης. <strong>Δεν παρέχει ιατρικές συμβουλές, διάγνωση ή
           συστάσεις δοσολογίας</strong> — καταγράφει μόνο όσα εσείς δηλώνετε ότι σας έχουν συνταγογραφηθεί.
         </p>
