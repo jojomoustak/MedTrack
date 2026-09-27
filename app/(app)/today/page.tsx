@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useProfileId, useAccountId } from "@/components/shell/CurrentProfileContext";
 import { BrandMark } from "@/components/shell/BrandMark";
+import { authClient } from "@/lib/auth/client/auth-client";
+import { DayStrip } from "@/components/today/DayStrip";
+import { ProgressRing } from "@/components/ui/ProgressRing";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { useGlobalSyncSummary } from "@/lib/sync/client/use-global-sync-summary";
 import { createSyncManager } from "@/lib/sync/client/sync-manager";
@@ -96,7 +99,7 @@ function LowStockBanner({ names, onDismiss }: { names: string[]; onDismiss: () =
 /**
  * Design pass (2026-09-26): full-bleed gradient band replacing the plain
  * "Σήμερα" heading — direction-comparison mockups (built to react to, not
- * guessed at) landed here specifically. Carries the "MedTracking"
+ * guessed at) landed here specifically. Carries the "MedTrack"
  * wordmark + icon and the sync-status indicator itself (mirroring
  * `AppBar`'s own retry logic exactly) — `AppBar` hides itself on this one
  * route so the title doesn't render twice; every other screen still gets
@@ -105,9 +108,17 @@ function LowStockBanner({ names, onDismiss }: { names: string[]; onDismiss: () =
  * a screen reader needs (the dose cards below still state their own
  * status in text).
  */
+/** Greek has no distinct "good afternoon" — Καλημέρα until noon, Καλησπέρα after (common convention). */
+function greeting(now: Date): string {
+  return now.getHours() < 12 ? "Καλημέρα" : "Καλησπέρα";
+}
+
 function TodayHero({ resolved, total }: { resolved: number; total: number }) {
   const summary = useGlobalSyncSummary();
   const [retrying, setRetrying] = useState(false);
+  const { data: session } = authClient.useSession();
+  const firstName = session?.user?.name?.trim().split(/\s+/)[0];
+  const today = useMemo(() => new Date(), []);
 
   async function handleRetry() {
     if (retrying) return;
@@ -120,17 +131,17 @@ function TodayHero({ resolved, total }: { resolved: number; total: number }) {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-b-[28px] bg-linear-to-br from-accent-600 to-accent-800 px-5 pt-5 pb-7.5 text-white">
+    <div className="relative overflow-hidden rounded-b-[28px] bg-linear-to-br from-accent-600 to-accent-800 px-5 pt-5 pb-5 text-white">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full"
         style={{ background: "radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%)" }}
       />
-      <div className="relative">
+      <div className="relative flex flex-col gap-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5 text-[15px] font-semibold opacity-85">
+          <span className="flex items-center gap-1.5 text-[13px] font-semibold opacity-75">
             <BrandMark />
-            MedTracking
+            MedTrack
           </span>
           {summary === "failed" ? (
             <SyncStatusChip state={summary} onRetry={retrying ? undefined : handleRetry} />
@@ -142,17 +153,19 @@ function TodayHero({ resolved, total }: { resolved: number; total: number }) {
             )
           )}
         </div>
-        <h1 className="mt-2.5 text-2xl font-bold">Σήμερα</h1>
-        {total > 0 && (
-          <div className="mt-3.5 flex items-center gap-2.5">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/20">
-              <div className="h-full rounded-full bg-white transition-[width] duration-300" style={{ width: `${Math.round((resolved / total) * 100)}%` }} />
-            </div>
-            <span className="text-sm font-semibold whitespace-nowrap opacity-90">
-              {resolved} από {total}
-            </span>
+
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">
+              {greeting(today)}
+              {firstName ? `, ${firstName}` : ""}
+            </h1>
+            <p className="mt-0.5 text-sm text-white/80">Μείνετε συνεπείς. Τα πάτε καλά!</p>
           </div>
-        )}
+          {total > 0 && <ProgressRing value={resolved} total={total} label={`${resolved}/${total}`} />}
+        </div>
+
+        <DayStrip today={today} />
       </div>
     </div>
   );
@@ -249,7 +262,7 @@ export default function TodayPage() {
     // regardless of this empty state).
     return (
       <div className="flex flex-col items-center gap-4 p-8 text-center">
-        <h1 className="text-xl font-semibold">Καλωσήρθατε στο MedTracking</h1>
+        <h1 className="text-xl font-semibold">Καλωσήρθατε στο MedTrack</h1>
         <p className="max-w-sm text-stone-600 dark:text-stone-400">Δεν έχετε προσθέσει ακόμα κανένα φάρμακο.</p>
       </div>
     );
