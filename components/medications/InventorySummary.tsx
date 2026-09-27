@@ -1,5 +1,6 @@
 import type { RefillProjection } from "@/lib/domain/inventory-consumption";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
+import { Card } from "@/components/ui/Card";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
 function unitLabel(unit: string): string {
@@ -36,7 +37,7 @@ export function InventorySummary({
   projection: RefillProjection;
 }) {
   return (
-    <section className="flex flex-col gap-2 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
+    <Card as="section" className="flex flex-col gap-2">
       <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Απόθεμα</h2>
       <p className="text-2xl font-semibold">
         {currentStock} {unitLabel(quantityUnit)}
@@ -61,7 +62,7 @@ export function InventorySummary({
           </p>
         </div>
       )}
-    </section>
+    </Card>
   );
 }
 

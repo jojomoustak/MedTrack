@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useMedicationInventory } from "@/lib/inventory/client/use-medication-inventory";
 import { InventorySummary } from "@/components/medications/InventorySummary";
 import { PackageList } from "@/components/medications/PackageList";
+import { Card } from "@/components/ui/Card";
+import { ButtonLink } from "@/components/ui/Button";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
 import { recordMedicationInteraction } from "@/lib/medications/client/record-interaction";
@@ -83,9 +84,9 @@ export default function MedicationDetailPage() {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
         <p className="text-stone-600 dark:text-stone-400">Το φάρμακο δεν βρέθηκε.</p>
-        <Link href="/medications" onClick={() => playSound("button")} className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
+        <ButtonLink href="/medications" onClick={() => playSound("button")} variant="tertiary" className="underline">
           Πίσω στα φάρμακα
-        </Link>
+        </ButtonLink>
       </div>
     );
   }
@@ -95,16 +96,12 @@ export default function MedicationDetailPage() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 p-4">
       <div className="flex items-center justify-between gap-3">
-        <Link href="/medications" onClick={() => playSound("button")} aria-label="Πίσω στα φάρμακα" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
+        <ButtonLink href="/medications" onClick={() => playSound("button")} aria-label="Πίσω στα φάρμακα" variant="tertiary" className="px-0 underline">
           ← Πίσω
-        </Link>
-        <Link
-          href={`/medications/${medication.id}/edit`}
-          onClick={() => playSound("button")}
-          className="inline-flex items-center justify-center min-h-12 rounded-full border border-stone-300 px-4 py-2 text-sm font-medium dark:border-stone-700"
-        >
+        </ButtonLink>
+        <ButtonLink href={`/medications/${medication.id}/edit`} onClick={() => playSound("button")} variant="secondary" size="sm">
           Επεξεργασία
-        </Link>
+        </ButtonLink>
       </div>
 
       <div>
@@ -116,12 +113,12 @@ export default function MedicationDetailPage() {
         )}
       </div>
 
-      <section className="rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
+      <Card as="section">
         <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Πρόγραμμα δόσεων</h2>
         <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
           {activeSchedule ? describeSchedule(activeSchedule) : "Χωρίς πρόγραμμα ακόμα."}
         </p>
-      </section>
+      </Card>
 
       {inventory.status === "loading" ? (
         <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
@@ -137,21 +134,17 @@ export default function MedicationDetailPage() {
             projection={inventory.projection}
           />
 
-          <div className="flex gap-2">
-            <Link
-              href={`/medications/${medication.id}/packages/add`}
-              onClick={() => playSound("button")}
-              className="min-h-12 flex-1 rounded-full border border-stone-300 px-4 py-2 text-center text-sm font-medium dark:border-stone-700"
-            >
+          {/* Design pass (2026-09-27): "Correct inventory" demoted to a text
+              link — a rarer, maintenance-only action next to "Add package"
+              (the common one), rather than two equal-weight bordered
+              buttons competing for attention (button-hierarchy audit). */}
+          <div className="flex items-center gap-4">
+            <ButtonLink href={`/medications/${medication.id}/packages/add`} onClick={() => playSound("button")} variant="secondary" fullWidth>
               Προσθήκη συσκευασίας
-            </Link>
-            <Link
-              href={`/medications/${medication.id}/inventory/correct`}
-              onClick={() => playSound("button")}
-              className="min-h-12 flex-1 rounded-full border border-stone-300 px-4 py-2 text-center text-sm font-medium dark:border-stone-700"
-            >
+            </ButtonLink>
+            <ButtonLink href={`/medications/${medication.id}/inventory/correct`} onClick={() => playSound("button")} variant="tertiary" className="whitespace-nowrap px-0">
               Διόρθωση αποθέματος
-            </Link>
+            </ButtonLink>
           </div>
 
           <section className="flex flex-col gap-2">
@@ -162,9 +155,9 @@ export default function MedicationDetailPage() {
       )}
 
       {medication.syncState === "synced" ? (
-        <Link href={`/medications/${medication.id}/photo`} onClick={() => playSound("button")} className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
+        <ButtonLink href={`/medications/${medication.id}/photo`} onClick={() => playSound("button")} variant="tertiary" className="self-start px-0 underline">
           Φωτογραφία
-        </Link>
+        </ButtonLink>
       ) : (
         <p className="text-sm text-stone-500 dark:text-stone-400">Φωτογραφία μετά τον συγχρονισμό</p>
       )}

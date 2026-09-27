@@ -10,6 +10,7 @@ import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repos
 import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { logger } from "@/lib/logging/logger";
+import { Button } from "@/components/ui/Button";
 
 type Status = "idle" | "checking" | "requesting" | "granted" | "denied" | "error";
 
@@ -135,7 +136,7 @@ export function ReminderPermissionToggle({ profileId, platform = new MedianMobil
       </p>
 
       {status === "granted" && (
-        <p role="status" className="text-sm font-medium text-green-700 dark:text-green-400">
+        <p role="status" className="text-sm font-medium text-accent-700 dark:text-accent-400">
           Οι ειδοποιήσεις είναι ενεργές.
         </p>
       )}
@@ -151,14 +152,9 @@ export function ReminderPermissionToggle({ profileId, platform = new MedianMobil
       )}
 
       {status !== "granted" && status !== "checking" && (
-        <button
-          type="button"
-          onClick={handleRequest}
-          disabled={status === "requesting"}
-          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-stone-700"
-        >
+        <Button variant="secondary" onClick={handleRequest} disabled={status === "requesting"} aria-busy={status === "requesting"} className="self-start">
           {status === "requesting" ? "Αίτημα σε εξέλιξη…" : "Ενεργοποίηση ειδοποιήσεων"}
-        </button>
+        </Button>
       )}
     </section>
   );

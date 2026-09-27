@@ -10,17 +10,21 @@ import { useFavoriteMedications } from "@/lib/medications/client/use-favorite-me
 import { useRecentMedications } from "@/lib/medications/client/use-recent-medications";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { MedicationThumbnail } from "@/components/medications/MedicationThumbnail";
+import { SegmentedControl, type Segment as SegmentDef } from "@/components/ui/SegmentedControl";
+import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { formatQuantity } from "@/lib/domain/quantity";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
 type Segment = "all" | "active" | "favorites" | "recent";
 
-const SEGMENTS: { key: Segment; label: string }[] = [
-  { key: "all", label: "Όλα" },
-  { key: "active", label: "Ενεργά" },
-  { key: "favorites", label: "Αγαπημένα" },
-  { key: "recent", label: "Πρόσφατα" },
+const SEGMENTS: SegmentDef<Segment>[] = [
+  { value: "all", label: "Όλα" },
+  { value: "active", label: "Ενεργά" },
+  { value: "favorites", label: "Αγαπημένα" },
+  { value: "recent", label: "Πρόσφατα" },
 ];
 
 const EMPTY_SEGMENT_MESSAGE: Record<Segment, string> = {
@@ -70,27 +74,16 @@ export default function MedicationsPage() {
           the 4th tab alone on its own row, lower than the rest and visibly
           lopsided. A fixed 2x2 grid is the one layout where every label
           stays full-size and every tab sits at the same visual level. */}
-      <div role="tablist" aria-label="Φίλτρο φαρμάκων" className="grid grid-cols-2 gap-2">
-        {SEGMENTS.map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            role="tab"
-            aria-selected={segment === s.key}
-            onClick={() => {
-              playSound("button");
-              setSegment(s.key);
-            }}
-            className={`min-h-12 rounded-full border px-4 py-2 text-sm font-medium transition duration-200 active:scale-95 ${
-              segment === s.key
-                ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950"
-                : "border-stone-300 dark:border-stone-700"
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        segments={SEGMENTS}
+        value={segment}
+        onChange={(next) => {
+          playSound("button");
+          setSegment(next);
+        }}
+        label="Φίλτρο φαρμάκων"
+        columns={2}
+      />
 
       {(status === "loading" || segmentLoading) && (
         <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
@@ -103,9 +96,7 @@ export default function MedicationsPage() {
           bottom-right) regardless of segment/empty state — one add
           entry point on this screen is enough. */}
       {status === "ready" && !segmentLoading && visible.length === 0 && (
-        <div className="flex flex-col items-center gap-3 p-8 text-center">
-          <p className="text-stone-600 dark:text-stone-400">{EMPTY_SEGMENT_MESSAGE[segment]}</p>
-        </div>
+        <EmptyState icon={<EmptyMedIcon />} title={EMPTY_SEGMENT_MESSAGE[segment]} />
       )}
 
       {status === "ready" && !segmentLoading && visible.length > 0 && (
@@ -113,7 +104,7 @@ export default function MedicationsPage() {
           {visible.map((med) => {
             const isFavorite = favoriteIds.has(med.id);
             return (
-              <li key={med.id} className="flex min-h-16 items-center justify-between gap-3 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 px-4 py-3">
+              <Card as="li" key={med.id} className="flex min-h-16 items-center justify-between gap-3 p-3">
                 {/* A freshly-created medication may not exist on the server
                     yet (local-first write) — the photo endpoints need a
                     real server row, so this only appears once synced
@@ -124,11 +115,10 @@ export default function MedicationsPage() {
                     {names.get(med.id) ?? "…"}
                   </Link>
                   {lowStockIds.has(med.id) && (
-                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                      <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true" focusable="false" fill="currentColor" className="shrink-0">
-                        <path d="M10 2 1 18h18L10 2Zm0 5a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm0 8a1.25 1.25 0 1 1 0-2.5A1.25 1.25 0 0 1 10 15Z" />
-                      </svg>
-                      Χαμηλό απόθεμα
+                    <span className="ml-2 inline-flex">
+                      <Badge tone="warn" icon={<LowStockGlyph />}>
+                        Χαμηλό απόθεμα
+                      </Badge>
                     </span>
                   )}
                   {med.customStrengthValue && (
@@ -153,12 +143,31 @@ export default function MedicationsPage() {
                   <StarIcon filled={isFavorite} />
                 </button>
                 <SyncStatusChip state={med.syncState} />
-              </li>
+              </Card>
             );
           })}
         </ul>
       )}
     </div>
+  );
+}
+
+function LowStockGlyph() {
+  return (
+    <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true" focusable="false" fill="currentColor" className="shrink-0">
+      <path d="M10 2 1 18h18L10 2Zm0 5a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm0 8a1.25 1.25 0 1 1 0-2.5A1.25 1.25 0 0 1 10 15Z" />
+    </svg>
+  );
+}
+
+function EmptyMedIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+      <g transform="rotate(-45 12 12)">
+        <rect x="4" y="8" width="16" height="8" rx="4" />
+        <path d="M12 8v8" />
+      </g>
+    </svg>
   );
 }
 

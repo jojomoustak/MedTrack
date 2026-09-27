@@ -8,6 +8,8 @@ import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-pac
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import { newId } from "@/lib/domain/ids";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { formatQuantity } from "@/lib/domain/quantity";
 import type { MedicationForm } from "@/lib/domain/user-medication";
@@ -111,7 +113,7 @@ export function PackageList({
   return (
     <ul className="flex flex-col gap-2" aria-label="Συσκευασίες">
       {sorted.map((pkg) => (
-        <li key={pkg.id} className="flex flex-col gap-1 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-3">
+        <Card as="li" key={pkg.id} className="flex flex-col gap-1 p-3">
           <div className="flex items-center justify-between">
             <p className="font-medium">
               {computePackageRemainingStock(transactions, pkg.id)} / {formatQuantity(pkg.initialQuantityValue)} {unitLabel(pkg.quantityUnit)}
@@ -123,26 +125,16 @@ export function PackageList({
             {pkg.expiryDate ? ` · Λήξη ${formatDate(pkg.expiryDate)}` : " · Χωρίς ημερομηνία λήξης"}
           </p>
           {pkg.status === "unopened" && (
-            <button
-              type="button"
-              onClick={() => void handleOpen(pkg)}
-              disabled={pendingId === pkg.id}
-              className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-stone-700"
-            >
+            <Button variant="secondary" size="sm" onClick={() => void handleOpen(pkg)} disabled={pendingId === pkg.id} className="self-start">
               Άνοιγμα
-            </button>
+            </Button>
           )}
           {pkg.status === "opened" && (
-            <button
-              type="button"
-              onClick={() => void handleDiscard(pkg)}
-              disabled={pendingId === pkg.id}
-              className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-stone-700"
-            >
+            <Button variant="secondary" size="sm" onClick={() => void handleDiscard(pkg)} disabled={pendingId === pkg.id} className="self-start">
               Απόρριψη
-            </button>
+            </Button>
           )}
-        </li>
+        </Card>
       ))}
     </ul>
   );

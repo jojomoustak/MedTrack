@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
@@ -10,6 +9,8 @@ import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { EmailVerificationBanner } from "@/components/profile/EmailVerificationBanner";
 import { ReminderPermissionToggle } from "@/components/profile/ReminderPermissionToggle";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
+import { Card } from "@/components/ui/Card";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 /**
@@ -107,27 +108,26 @@ export default function ProfilePage() {
 
       {/* UX feedback (2026-09-22): flat, ungrouped rows read as an
           unfinished checklist rather than a real settings screen — each
-          topic now sits in its own card, the same shadow-in-light/
-          border-in-dark treatment every other list/detail surface in the
-          app already uses, so this screen finally looks like it belongs
-          to the same app. */}
-      <div className="rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
+          topic now sits in its own card, the same shared `Card` surface
+          every list/detail screen uses, so this screen finally looks like
+          it belongs to the same app. */}
+      <Card>
         <ReminderPermissionToggle profileId={profileId} />
-      </div>
+      </Card>
 
-      <section className="flex flex-col gap-3 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
+      <Card as="section" className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Λογαριασμός</h2>
         <GoogleAuthButton mode="link" callbackURL="/profile" label="Σύνδεση λογαριασμού Google" />
-        <button
-          type="button"
-          onClick={handleSignOut}
-          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
-        >
+        {/* Design pass (2026-09-27): demoted from a bordered button to
+            text-only — sign-out is a routine, low-stakes action that
+            shouldn't visually compete with "Σύνδεση λογαριασμού Google"
+            for attention in the same card (button-hierarchy audit). */}
+        <Button variant="tertiary" onClick={handleSignOut} className="self-start px-0">
           Αποσύνδεση
-        </button>
-      </section>
+        </Button>
+      </Card>
 
-      <section className="flex flex-col gap-2 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
+      <Card as="section" className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Τα δεδομένα μου</h2>
         <p className="text-sm text-stone-600 dark:text-stone-400">
           Κατεβάστε ένα αντίγραφο όλων των δεδομένων του λογαριασμού σας — φάρμακα, προγράμματα, δόσεις, απόθεμα και λίστες.
@@ -137,25 +137,19 @@ export default function ProfilePage() {
             {exportError}
           </p>
         )}
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={exporting}
-          aria-busy={exporting}
-          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-5 py-3 font-medium disabled:opacity-60 dark:border-stone-700"
-        >
+        <Button variant="tertiary" onClick={handleExport} disabled={exporting} aria-busy={exporting} className="self-start px-0 text-accent-700 dark:text-accent-400">
           {exporting ? "Λήψη…" : "Λήψη των δεδομένων μου"}
-        </button>
-      </section>
+        </Button>
+      </Card>
 
-      <section className="flex flex-col gap-2 rounded-xl border-2 border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
+      <section className="flex flex-col gap-2 rounded-2xl border-2 border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
         <div className="flex items-center gap-2 text-red-800 dark:text-red-300">
           <WarningIcon />
           <span className="font-medium">Μη αναστρέψιμη ενέργεια</span>
         </div>
-        <Link href="/profile/delete" className="inline-flex items-center justify-center min-h-12 rounded-full bg-red-700 px-5 py-3 text-center font-medium text-white">
+        <ButtonLink href="/profile/delete" variant="danger" fullWidth className="text-center">
           Διαγραφή λογαριασμού / Διαγραφή δεδομένων υγείας
-        </Link>
+        </ButtonLink>
       </section>
     </div>
   );

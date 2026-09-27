@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { Button } from "@/components/ui/Button";
 
 /** ADR-003 §5 bullet 2: "resend available, rate-limited, e.g. 1 per 2 minutes per account". */
 const RESEND_COOLDOWN_MS = 2 * 60 * 1000;
@@ -85,25 +86,25 @@ export function EmailVerificationBanner({ email }: { email: string | null }) {
     >
       <p>Το email σας δεν έχει επιβεβαιωθεί ακόμα. Η επαναφορά κωδικού πρόσβασης δεν θα λειτουργήσει μέχρι να το επιβεβαιώσετε.</p>
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={handleResend}
           disabled={!email || resend === "sending" || onCooldown}
           aria-busy={resend === "sending"}
-          className="inline-flex items-center justify-center min-h-12 rounded-full border border-amber-400 px-4 py-2 font-medium text-amber-900 disabled:opacity-60 dark:border-amber-600 dark:text-amber-100"
+          className="border-amber-400 text-amber-900 dark:border-amber-600 dark:text-amber-100"
         >
           {resend === "sending" ? "Αποστολή…" : onCooldown ? "Στάλθηκε — δοκιμάστε ξανά σε λίγο" : "Επαναποστολή email επιβεβαίωσης"}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="tertiary"
           onClick={() => {
             playSound("button");
             setDismissed(true);
           }}
-          className="inline-flex items-center justify-center min-h-12 px-2 font-medium underline"
+          className="px-0 text-amber-900 underline dark:text-amber-100"
         >
           Παράβλεψη
-        </button>
+        </Button>
       </div>
       {resend === "error" && (
         <p role="alert" className="text-red-700 dark:text-red-400">

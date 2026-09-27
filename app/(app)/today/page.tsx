@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useProfileId, useAccountId } from "@/components/shell/CurrentProfileContext";
+import { BrandMark } from "@/components/shell/BrandMark";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { useGlobalSyncSummary } from "@/lib/sync/client/use-global-sync-summary";
 import { createSyncManager } from "@/lib/sync/client/sync-manager";
@@ -22,6 +23,7 @@ import { MedianMobilePlatform } from "@/lib/platform/median-mobile-platform";
 import { syncNativeRemindersNow } from "@/lib/reminders/client/native-reminder-sync";
 import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-package-repository";
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
+import { AlertBanner } from "@/components/ui/AlertBanner";
 import { consumeInventoryForDoseTaken } from "@/lib/inventory/client/consume-dose";
 import { recordMedicationInteraction } from "@/lib/medications/client/record-interaction";
 import { playSound } from "@/lib/sound/client/play-sound";
@@ -58,26 +60,6 @@ function pushNativeRemindersAfterTransition(profileId: string | null): void {
   }
 }
 
-/**
- * Journey 5's Today banner — same icon+text cue as `InventorySummary`
- * (medication detail) and the Medications list badge, never color alone.
- * Non-blocking: rendered above the dose list, never gates it.
- */
-function LowStockBanner({ names }: { names: string[] }) {
-  const label = names.length === 1 ? `${names[0]} — χαμηλό απόθεμα.` : `${names.length} φάρμακα με χαμηλό απόθεμα: ${names.join(", ")}.`;
-  return (
-    <Link
-      href="/medications"
-      onClick={() => playSound("button")}
-      role="status"
-      className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 transition-transform duration-150 active:scale-[0.98] dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
-    >
-      <LowStockIcon />
-      {label}
-    </Link>
-  );
-}
-
 function LowStockIcon() {
   return (
     <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false" fill="currentColor" className="shrink-0">
@@ -87,17 +69,27 @@ function LowStockIcon() {
 }
 
 /**
- * The app's real icon (design pass, 2026-09-26 — corrects the pill mark
- * this used before): a solid cross, matching the native Android app's
- * actual launcher/splash icon exactly (`ic_launcher_foreground.png`/
- * `splash.png` in the separate Android repo — a white cross, not a
- * stroked outline), not invented fresh for this header.
+ * Journey 5's Today banner — same icon+text cue as `InventorySummary`
+ * (medication detail) and the Medications list badge, never color alone.
+ * Non-blocking: rendered above the dose list, never gates it.
+ *
+ * UX audit (2026-09-27): this used to be a permanent fixture with no way
+ * to acknowledge it — the exact "feels like nagging, not assistance"
+ * pattern the medication-adherence research warns against (a banner that
+ * looks identical every single day until you happen to restock).
+ * `onDismiss` hides it for this session only (plain component state, no
+ * outbox entry) — it reappears on next launch/reload, since the
+ * underlying low-stock FACT hasn't changed and shouldn't be silently
+ * suppressed forever, only de-prioritized for the rest of today's visits.
  */
-function BrandIcon() {
+function LowStockBanner({ names, onDismiss }: { names: string[]; onDismiss: () => void }) {
+  const label = names.length === 1 ? `${names[0]} — χαμηλό απόθεμα.` : `${names.length} φάρμακα με χαμηλό απόθεμα: ${names.join(", ")}.`;
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M8.5 3h7v5.5H21v7h-5.5V21h-7v-5.5H3v-7h5.5Z" />
-    </svg>
+    <AlertBanner tone="warn" icon={<LowStockIcon />} onDismiss={onDismiss} dismissLabel="Απόκρυψη ειδοποίησης χαμηλού αποθέματος για τώρα">
+      <Link href="/medications" onClick={() => playSound("button")} className="block min-h-11 py-1.5">
+        {label}
+      </Link>
+    </AlertBanner>
   );
 }
 
@@ -137,7 +129,7 @@ function TodayHero({ resolved, total }: { resolved: number; total: number }) {
       <div className="relative">
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-[15px] font-semibold opacity-85">
-            <BrandIcon />
+            <BrandMark />
             MedTracking
           </span>
           {summary === "failed" ? (
@@ -184,6 +176,7 @@ export default function TodayPage() {
   // banner was the missing one (UX audit, 2026-09-18).
   const lowStockIds = useLowStockMedicationIds(profileId, medications);
   const lowStockNames = [...lowStockIds].map((id) => names.get(id)).filter((n): n is string => Boolean(n));
+  const [lowStockDismissed, setLowStockDismissed] = useState(false);
   // A dose crossed from "not yet due" to "due now" while this page stayed
   // open (`useTodayDoseEvents`'s own doc comment) — the in-app chime,
   // separate from the native reminder notification (Phase 11), which
@@ -267,9 +260,9 @@ export default function TodayPage() {
       <div className="flex flex-col gap-4">
         <TodayHero resolved={0} total={0} />
         <div className="flex flex-col items-center gap-3 px-4 pb-4 text-center">
-          {lowStockNames.length > 0 && (
+          {lowStockNames.length > 0 && !lowStockDismissed && (
             <div className="w-full max-w-sm">
-              <LowStockBanner names={lowStockNames} />
+              <LowStockBanner names={lowStockNames} onDismiss={() => setLowStockDismissed(true)} />
             </div>
           )}
           <p className="max-w-sm text-stone-600 dark:text-stone-400">Δεν έχετε προγραμματισμένες δόσεις για σήμερα.</p>
@@ -291,7 +284,7 @@ export default function TodayPage() {
     <div className="flex flex-col gap-4">
       <TodayHero resolved={resolvedCount} total={todayDoses.length} />
       <div className="flex flex-col gap-4 px-4 pb-4">
-        {lowStockNames.length > 0 && <LowStockBanner names={lowStockNames} />}
+        {lowStockNames.length > 0 && !lowStockDismissed && <LowStockBanner names={lowStockNames} onDismiss={() => setLowStockDismissed(true)} />}
 
         {needsAttention.length > 0 && (
           <section className="flex flex-col gap-2">

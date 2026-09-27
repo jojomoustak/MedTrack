@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { MedicationThumbnail } from "@/components/medications/MedicationThumbnail";
+import { Button } from "@/components/ui/Button";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { playSound } from "@/lib/sound/client/play-sound";
 import type { DoseEventRecord, DoseEventStatus } from "@/lib/domain/dose-event";
@@ -145,8 +146,8 @@ export function DoseCard({ dose, medicationName, medicationStrength, actionable,
     <div
       role="group"
       aria-label={buildAriaLabel(medicationName, medicationStrength, dose.quantityValue, unitLabel(dose.quantityUnit), timeLabel, label, availableActions)}
-      className={`flex flex-col gap-2 rounded-[22px] px-4 py-3 dark:border dark:border-stone-800 ${
-        isCompleted ? "shadow-sm shadow-stone-300/30 opacity-75" : "shadow-lg shadow-stone-300/40"
+      className={`flex flex-col gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-3 dark:border-stone-800 dark:bg-stone-900 ${
+        isCompleted ? "opacity-75" : "shadow-[0_1px_2px_rgba(28,25,23,.05),0_1px_3px_rgba(28,25,23,.07)] dark:shadow-none"
       }`}
       data-dose-status={displayStatus}
     >
@@ -190,53 +191,41 @@ export function DoseCard({ dose, medicationName, medicationStrength, actionable,
       </div>
 
       {pendingAction && (
-        <button
-          type="button"
-          onClick={cancelUndo}
-          aria-live="polite"
-          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-4 py-2 text-sm font-medium underline transition-transform duration-150 active:scale-95 dark:border-stone-700"
-        >
+        <Button variant="tertiary" onClick={cancelUndo} aria-live="polite" className="self-start px-0 underline">
           Αναίρεση — {label}
-        </button>
+        </Button>
       )}
 
+      {/* Design pass (2026-09-27): only "Έλαβα" stays a solid button —
+          "Παράλειψη"/"Αναβολή" demoted to text-only so this row doesn't
+          read as three equal-weight, equally-tempting actions when the
+          actual intent (per the redesign brief) is one clear primary
+          action with quieter secondary escape hatches. Same tap targets,
+          same labels, same 5s undo window underneath. */}
       {showActions && (
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => startUndoWindow("taken")}
-            className="min-h-14 flex-1 rounded-full bg-accent-700 px-3 py-3 text-sm font-medium text-white transition-transform duration-150 active:scale-95 dark:bg-accent-500 dark:text-stone-950"
-          >
+        <div className="flex items-center gap-1">
+          <Button onClick={() => startUndoWindow("taken")} className="flex-1">
             Έλαβα
-          </button>
-          <button
-            type="button"
-            onClick={() => startUndoWindow("skipped")}
-            className="min-h-14 flex-1 rounded-full border border-stone-300 px-3 py-3 text-sm font-medium transition-transform duration-150 active:scale-95 dark:border-stone-700"
-          >
+          </Button>
+          <Button variant="tertiary" onClick={() => startUndoWindow("skipped")}>
             Παράλειψη
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="tertiary"
             onClick={() => {
               playSound("button");
               onSnoozed(dose.id);
             }}
-            className="min-h-14 flex-1 rounded-full border border-stone-300 px-3 py-3 text-sm font-medium transition-transform duration-150 active:scale-95 dark:border-stone-700"
           >
             Αναβολή
-          </button>
+          </Button>
         </div>
       )}
 
       {showMissedRecovery && (
-        <button
-          type="button"
-          onClick={() => startUndoWindow("taken_late")}
-          className="inline-flex items-center justify-center min-h-14 self-start rounded-full border border-stone-300 px-4 py-3 text-sm font-medium transition-transform duration-150 active:scale-95 dark:border-stone-700"
-        >
+        <Button variant="tertiary" onClick={() => startUndoWindow("taken_late")} className="self-start px-0 font-semibold text-accent-700 dark:text-accent-400">
           Το πήρα, καταγραφή ως αργοπορημένη λήψη
-        </button>
+        </Button>
       )}
     </div>
   );
