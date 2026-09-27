@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { usePurchaseLists } from "@/lib/lists/client/use-purchase-lists";
+import { CardLink } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 /** Phase 3 §2.7 Lists (purchase lists) — overview + create (Phase 13). */
@@ -43,13 +45,9 @@ export default function ListsPage() {
             this button was being pushed past the right edge by the input's
             flex-1 growth and silently clipped there. shrink-0 keeps it at
             its own natural size regardless of how little room is left. */}
-        <button
-          type="submit"
-          disabled={!newName.trim() || creating}
-          className="inline-flex shrink-0 items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white transition-transform duration-150 active:scale-95 disabled:opacity-50 disabled:active:scale-100 dark:bg-accent-500 dark:text-stone-950"
-        >
+        <Button type="submit" disabled={!newName.trim() || creating} className="shrink-0">
           Προσθήκη
-        </button>
+        </Button>
       </form>
 
       {status === "loading" && (
@@ -58,25 +56,28 @@ export default function ListsPage() {
         </p>
       )}
 
-      {status === "ready" && lists.length === 0 && (
-        <p className="p-8 text-center text-stone-600 dark:text-stone-400">Δεν έχετε δημιουργήσει ακόμα καμία λίστα.</p>
-      )}
+      {status === "ready" && lists.length === 0 && <EmptyState icon={<EmptyListIcon />} title="Δεν έχετε δημιουργήσει ακόμα καμία λίστα" />}
 
       {status === "ready" && lists.length > 0 && (
         <ul className="flex flex-col gap-2" aria-label="Λίστες αγορών">
           {lists.map((list) => (
             <li key={list.id}>
-              <Link
-                href={`/lists/${list.id}`}
-                onClick={() => playSound("button")}
-                className="flex min-h-12 items-center justify-between rounded-xl shadow-sm shadow-stone-300/40 transition-transform duration-150 active:scale-[0.98] dark:border dark:border-stone-800 px-4 py-3 font-medium"
-              >
+              <CardLink href={`/lists/${list.id}`} onClick={() => playSound("button")} className="min-h-12 justify-between font-medium">
                 {list.name}
-              </Link>
+              </CardLink>
             </li>
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+function EmptyListIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 7h14l-1.2 11.2A2 2 0 0 1 15.8 20H8.2a2 2 0 0 1-2-1.8Z" />
+      <path d="M9 7a3 3 0 0 1 6 0" />
+    </svg>
   );
 }

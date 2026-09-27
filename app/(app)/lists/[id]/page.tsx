@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { usePurchaseListItems } from "@/lib/lists/client/use-purchase-list-items";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { DexiePurchaseListRepository } from "@/lib/db-client/purchase-list-repository";
 import { UndoableDeleteButton } from "@/components/lists/UndoableDeleteButton";
+import { Card } from "@/components/ui/Card";
+import { Button, ButtonLink } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { PurchaseListRecord, PurchaseListItemRecord } from "@/lib/domain/entities";
 import { formatCents, fromDecimalEuros, toCents } from "@/lib/domain/money";
 import { playSound } from "@/lib/sound/client/play-sound";
@@ -85,14 +87,14 @@ export default function PurchaseListDetailPage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center gap-2">
-        <Link href="/lists" onClick={() => playSound("button")} className="flex min-h-12 items-center text-sm font-medium underline">
+        <ButtonLink href="/lists" onClick={() => playSound("button")} variant="tertiary" className="px-0 underline">
           Λίστες
-        </Link>
+        </ButtonLink>
         <span className="text-stone-400">/</span>
         <h1 className="text-xl font-semibold">{list?.name ?? "…"}</h1>
       </div>
 
-      <form onSubmit={handleAdd} className="flex flex-col gap-2 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-3">
+      <Card as="form" onSubmit={handleAdd} className="flex flex-col gap-2 p-3">
         <label htmlFor="new-item-medication" className="sr-only">
           Φάρμακο ή νέο είδος
         </label>
@@ -139,15 +141,11 @@ export default function PurchaseListDetailPage() {
             placeholder="Τιμή € (προαιρετικό)"
             className="min-h-12 flex-1 rounded-xl border border-stone-300 px-4 py-2 dark:border-stone-700 dark:bg-stone-900"
           />
-          <button
-            type="submit"
-            disabled={(usingFreeText && !label.trim()) || adding}
-            className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white disabled:opacity-50 dark:bg-accent-500 dark:text-stone-950"
-          >
+          <Button type="submit" disabled={(usingFreeText && !label.trim()) || adding}>
             Προσθήκη
-          </button>
+          </Button>
         </div>
-      </form>
+      </Card>
 
       {status === "loading" && (
         <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
@@ -155,14 +153,14 @@ export default function PurchaseListDetailPage() {
         </p>
       )}
 
-      {status === "ready" && items.length === 0 && <p className="p-8 text-center text-stone-600 dark:text-stone-400">Η λίστα είναι άδεια.</p>}
+      {status === "ready" && items.length === 0 && <EmptyState icon={<EmptyListIcon />} title="Η λίστα είναι άδεια." />}
 
       {status === "ready" && pending.length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Προς αγορά</h2>
           <ul className="flex flex-col gap-2" aria-label="Προς αγορά">
             {pending.map((item) => (
-              <li key={item.id} className="flex min-h-12 items-center gap-3 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 px-4 py-3">
+              <Card as="li" key={item.id} className="flex min-h-12 flex-row items-center gap-3 px-4 py-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -180,19 +178,19 @@ export default function PurchaseListDetailPage() {
                   <p className="font-medium">{itemDisplayName(item)}</p>
                   {itemPriceLabel(item) && <p className="text-sm text-stone-600 dark:text-stone-400">{itemPriceLabel(item)}</p>}
                 </div>
-                <button
-                  type="button"
+                <Button
+                  variant="tertiary"
                   onClick={() => {
                     playSound("button");
                     void markRemoved(item.id);
                   }}
                   aria-label={`Δεν χρειάζεται πια "${itemDisplayName(item)}"`}
-                  className="inline-flex items-center justify-center min-h-12 min-w-12 text-sm font-medium text-stone-600 dark:text-stone-400"
+                  className="min-w-12"
                 >
                   Όχι πια
-                </button>
+                </Button>
                 <UndoableDeleteButton label={`Διαγραφή "${itemDisplayName(item)}"`} onConfirm={() => void deleteItem(item.id)} />
-              </li>
+              </Card>
             ))}
           </ul>
         </section>
@@ -203,7 +201,7 @@ export default function PurchaseListDetailPage() {
           <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Αγορασμένα</h2>
           <ul className="flex flex-col gap-2" aria-label="Αγορασμένα">
             {purchased.map((item) => (
-              <li key={item.id} className="flex flex-col gap-2 rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 px-4 py-3 opacity-70">
+              <Card as="li" key={item.id} className="flex flex-col gap-2 px-4 py-3 opacity-70">
                 <div className="flex min-h-12 items-center gap-3">
                   <button
                     type="button"
@@ -225,15 +223,11 @@ export default function PurchaseListDetailPage() {
                   <UndoableDeleteButton label={`Διαγραφή "${itemDisplayName(item)}"`} onConfirm={() => void deleteItem(item.id)} />
                 </div>
                 {item.userMedicationId && (
-                  <Link
-                    href={`/medications/${item.userMedicationId}/packages/add`}
-                    onClick={() => playSound("button")}
-                    className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline"
-                  >
+                  <ButtonLink href={`/medications/${item.userMedicationId}/packages/add`} onClick={() => playSound("button")} variant="tertiary" className="self-start px-0 underline">
                     Προσθήκη στο απόθεμα
-                  </Link>
+                  </ButtonLink>
                 )}
-              </li>
+              </Card>
             ))}
           </ul>
         </section>
@@ -248,17 +242,17 @@ export default function PurchaseListDetailPage() {
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{itemDisplayName(item)}</p>
                 </div>
-                <button
-                  type="button"
+                <Button
+                  variant="tertiary"
                   onClick={() => {
                     playSound("button");
                     void markPending(item.id);
                   }}
                   aria-label={`Επαναφορά "${itemDisplayName(item)}" στη λίστα`}
-                  className="inline-flex items-center justify-center min-h-12 min-w-12 text-sm font-medium underline"
+                  className="min-w-12 underline"
                 >
                   Επαναφορά
-                </button>
+                </Button>
                 <UndoableDeleteButton label={`Διαγραφή "${itemDisplayName(item)}"`} onConfirm={() => void deleteItem(item.id)} />
               </li>
             ))}
@@ -266,5 +260,14 @@ export default function PurchaseListDetailPage() {
         </section>
       )}
     </div>
+  );
+}
+
+function EmptyListIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 7h14l-1.2 11.2A2 2 0 0 1 15.8 20H8.2a2 2 0 0 1-2-1.8Z" />
+      <path d="M9 7a3 3 0 0 1 6 0" />
+    </svg>
   );
 }
