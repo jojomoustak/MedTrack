@@ -31,13 +31,13 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
       <GoogleAuthButton mode="sign-in" callbackURL="/today" errorCallbackURL="/register" />
       <p className="text-sm text-stone-600 dark:text-stone-400">
         Έχετε ήδη λογαριασμό;{" "}
-        <Link href="/login" className="font-medium underline">
+        <Link href="/login" className="font-medium text-accent-700 underline dark:text-accent-400">
           Σύνδεση
         </Link>
       </p>
       <p className="text-xs text-stone-500 dark:text-stone-400">
         Δημιουργώντας λογαριασμό, συμφωνείτε με την{" "}
-        <Link href="/privacy" className="underline">
+        <Link href="/privacy" className="text-accent-700 underline dark:text-accent-400">
           Πολιτική Απορρήτου
         </Link>
         .

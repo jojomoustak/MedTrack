@@ -116,7 +116,7 @@ export default function PrivacyPage() {
         <ul className="flex flex-col gap-2 text-sm text-stone-700 dark:text-stone-300">
           <li>
             <strong>Πρόσβαση/Φορητότητα:</strong> μπορείτε να κατεβάσετε όλα τα δεδομένα σας ανά πάσα στιγμή από το{" "}
-            <Link href="/profile" className="underline">
+            <Link href="/profile" className="text-accent-700 underline dark:text-accent-400">
               Προφίλ
             </Link>
             .
@@ -127,7 +127,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Διαγραφή:</strong> μπορείτε να διαγράψετε μόνιμα τον λογαριασμό σας και όλα τα δεδομένα σας από το{" "}
-            <Link href="/profile" className="underline">
+            <Link href="/profile" className="text-accent-700 underline dark:text-accent-400">
               Προφίλ
             </Link>
             .

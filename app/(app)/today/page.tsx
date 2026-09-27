@@ -282,7 +282,7 @@ export default function TodayPage() {
           <p className="max-w-sm text-sm text-stone-500 dark:text-stone-400">
             Μπορείτε να προσθέσετε πρόγραμμα δόσεων όταν προσθέτετε ένα φάρμακο.
           </p>
-          <Link href="/medications" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
+          <Link href="/medications" className="inline-flex items-center justify-center min-h-12 text-sm font-medium text-accent-700 underline dark:text-accent-400">
             Δείτε τα φάρμακά σας
           </Link>
         </div>

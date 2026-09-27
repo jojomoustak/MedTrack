@@ -68,7 +68,7 @@ export function LoginForm() {
       <Link
         href="/forgot-password"
         onClick={() => playSound("button")}
-        className="self-end text-sm font-medium underline"
+        className="self-end text-sm font-medium text-accent-700 underline dark:text-accent-400"
       >
         Ξεχάσατε τον κωδικό;
       </Link>

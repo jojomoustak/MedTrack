@@ -34,7 +34,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <GoogleAuthButton mode="sign-in" callbackURL="/today" errorCallbackURL="/login" />
       <p className="text-sm text-stone-600 dark:text-stone-400">
         Δεν έχετε λογαριασμό;{" "}
-        <Link href="/register" className="font-medium underline">
+        <Link href="/register" className="font-medium text-accent-700 underline dark:text-accent-400">
           Δημιουργία λογαριασμού
         </Link>
       </p>
