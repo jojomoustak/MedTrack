@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
+import { BrandWordmark } from "@/components/shell/BrandMark";
 import { useGlobalSyncSummary } from "@/lib/sync/client/use-global-sync-summary";
 import { createSyncManager } from "@/lib/sync/client/sync-manager";
 
@@ -49,7 +50,7 @@ export function AppBar() {
 
   return (
     <header className="flex min-h-12 items-center justify-between border-b border-stone-200 bg-stone-50 px-4 py-2 dark:border-stone-800 dark:bg-stone-950">
-      <span className="font-semibold">MedTracking</span>
+      <BrandWordmark />
       {summary === "failed" ? (
         <SyncStatusChip state={summary} onRetry={retrying ? undefined : handleRetry} />
       ) : (
