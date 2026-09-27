@@ -13,7 +13,7 @@ const PALETTE = [
   { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-700 dark:text-amber-300" },
   { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-700 dark:text-rose-300" },
   { bg: "bg-violet-100 dark:bg-violet-900/40", text: "text-violet-700 dark:text-violet-300" },
-  { bg: "bg-accent-100 dark:bg-accent-900/40", text: "text-accent-700 dark:text-accent-300" },
+  { bg: "bg-accent-100 dark:bg-accent-900/40", text: "text-accent-700 dark:text-accent-400" },
 ] as const;
 
 export interface MedicationColor {

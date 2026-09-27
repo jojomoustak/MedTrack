@@ -3,17 +3,39 @@
 import { useState } from "react";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { usePurchaseLists } from "@/lib/lists/client/use-purchase-lists";
+import { usePurchaseListSummaries } from "@/lib/lists/client/use-purchase-list-summaries";
 import { CardLink } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { SegmentedControl, type Segment as SegmentDef } from "@/components/ui/SegmentedControl";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { playSound } from "@/lib/sound/client/play-sound";
 
-/** Phase 3 §2.7 Lists (purchase lists) — overview + create (Phase 13). */
+type Segment = "active" | "completed";
+
+const EMPTY_SEGMENT_MESSAGE: Record<Segment, string> = {
+  active: "Καμία ενεργή λίστα αυτή τη στιγμή.",
+  completed: "Καμία ολοκληρωμένη λίστα ακόμα.",
+};
+
+/**
+ * Phase 3 §2.7 Lists (purchase lists) — overview + create (Phase 13).
+ * Design pass (2026-09-28, reference mockup comparison): added the
+ * reference's Active/Completed filter (completion derived from real item
+ * state, see usePurchaseListSummaries's own doc) and a per-list item count.
+ */
 export default function ListsPage() {
   const profileId = useProfileId();
   const { status, lists, createList } = usePurchaseLists(profileId);
+  const { status: summaryStatus, summaries } = usePurchaseListSummaries(lists);
+  const [segment, setSegment] = useState<Segment>("active");
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const segments: SegmentDef<Segment>[] = [
+    { value: "active", label: `Ενεργές (${lists.filter((l) => !summaries.get(l.id)?.completed).length})` },
+    { value: "completed", label: `Ολοκληρωμένες (${lists.filter((l) => summaries.get(l.id)?.completed).length})` },
+  ];
+  const visibleLists = lists.filter((l) => (segment === "completed") === Boolean(summaries.get(l.id)?.completed));
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -50,7 +72,19 @@ export default function ListsPage() {
         </Button>
       </form>
 
-      {status === "loading" && (
+      {status === "ready" && lists.length > 0 && (
+        <SegmentedControl
+          segments={segments}
+          value={segment}
+          onChange={(next) => {
+            playSound("button");
+            setSegment(next);
+          }}
+          label="Φίλτρο λιστών"
+        />
+      )}
+
+      {(status === "loading" || summaryStatus === "loading") && (
         <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
           Φόρτωση…
         </p>
@@ -58,15 +92,27 @@ export default function ListsPage() {
 
       {status === "ready" && lists.length === 0 && <EmptyState icon={<EmptyListIcon />} title="Δεν έχετε δημιουργήσει ακόμα καμία λίστα" />}
 
-      {status === "ready" && lists.length > 0 && (
+      {status === "ready" && summaryStatus === "ready" && lists.length > 0 && visibleLists.length === 0 && (
+        <EmptyState icon={<EmptyListIcon />} title={EMPTY_SEGMENT_MESSAGE[segment]} />
+      )}
+
+      {status === "ready" && summaryStatus === "ready" && visibleLists.length > 0 && (
         <ul className="flex flex-col gap-2" aria-label="Λίστες αγορών">
-          {lists.map((list) => (
-            <li key={list.id}>
-              <CardLink href={`/lists/${list.id}`} onClick={() => playSound("button")} className="min-h-12 justify-between font-medium">
-                {list.name}
-              </CardLink>
-            </li>
-          ))}
+          {visibleLists.map((list) => {
+            const itemCount = summaries.get(list.id)?.itemCount ?? 0;
+            return (
+              <li key={list.id}>
+                <CardLink href={`/lists/${list.id}`} onClick={() => playSound("button")} className="min-h-12">
+                  <div className="flex flex-col">
+                    <span className="font-medium">{list.name}</span>
+                    <span className="text-sm text-stone-500 dark:text-stone-400">
+                      {itemCount} {itemCount === 1 ? "είδος" : "είδη"}
+                    </span>
+                  </div>
+                </CardLink>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

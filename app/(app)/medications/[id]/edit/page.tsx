@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
-import { ButtonLink } from "@/components/ui/Button";
-import { EditMedicationForm, type EditMedicationValues } from "@/components/medications/EditMedicationForm";
+import { Button, ButtonLink } from "@/components/ui/Button";
+import { EditMedicationForm, EDIT_MEDICATION_FORM_ID, type EditMedicationValues } from "@/components/medications/EditMedicationForm";
 import { DeleteMedicationSection } from "@/components/medications/DeleteMedicationSection";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { recordMedicationInteraction } from "@/lib/medications/client/record-interaction";
@@ -86,18 +86,26 @@ export default function EditMedicationPage() {
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 p-4">
-      <div className="flex items-center gap-3">
-        <ButtonLink href={`/medications/${params.id}`} onClick={() => playSound("button")} aria-label="Πίσω" variant="tertiary" className="px-0 underline">
-          ← Πίσω
-        </ButtonLink>
-        <h1 className="text-xl font-semibold">Επεξεργασία φαρμάκου</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <ButtonLink href={`/medications/${params.id}`} onClick={() => playSound("button")} aria-label="Πίσω" variant="tertiary" className="px-0 underline">
+            ← Πίσω
+          </ButtonLink>
+          <h1 className="text-xl font-semibold">Επεξεργασία φαρμάκου</h1>
+        </div>
+        {/* Design pass (2026-09-28, reference mockup comparison): Save
+            moved from the bottom of the form to the header, matching the
+            reference — a real HTML `form` attribute submits
+            EditMedicationForm from outside it, no ref/JS wiring needed. */}
+        <Button form={EDIT_MEDICATION_FORM_ID} type="submit" size="sm" disabled={submitting} aria-busy={submitting}>
+          {submitting ? "…" : "Αποθήκευση"}
+        </Button>
       </div>
 
       <EditMedicationForm
         medication={medication}
         displayName={names.get(medication.id) ?? "…"}
         onSubmit={(values) => void handleSubmit(values)}
-        submitting={submitting}
         error={error}
       />
 

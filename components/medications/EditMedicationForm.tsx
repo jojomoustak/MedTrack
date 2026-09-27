@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
 import { FORM_LABELS, FORM_OPTIONS } from "@/components/medications/DetailsStep";
 import { playSound } from "@/lib/sound/client/play-sound";
 import type { MedicationForm, TreatmentState, UserMedicationRecord } from "@/lib/domain/user-medication";
@@ -33,18 +32,20 @@ export interface EditMedicationValues {
  * be edited for that case, matching `DetailsStep`'s own precedent of
  * skipping them entirely for a confirmed catalog match.
  */
+/** Stable, single-instance id — lets the page's header "Αποθήκευση" button (reference mockup comparison, 2026-09-28: Save moved to the header, matching the reference's own layout rather than a bottom-of-form button) submit this form via the standard HTML `form="…"` attribute, with no ref/JS wiring needed. */
+export const EDIT_MEDICATION_FORM_ID = "edit-medication-form";
+
 export function EditMedicationForm({
   medication,
   displayName,
   onSubmit,
-  submitting,
   error,
 }: {
   medication: UserMedicationRecord;
   /** Resolved display name (catalog product name, or `medication.customName`) — shown read-only when catalog-linked. */
   displayName: string;
   onSubmit: (values: EditMedicationValues) => void;
-  submitting: boolean;
+  /** Submit-in-flight state now lives entirely in the page's own header Save button (`EDIT_MEDICATION_FORM_ID`) — this component has no button of its own left to disable. */
   error: string | null;
 }) {
   const isCatalogLinked = medication.catalogProductId !== null;
@@ -86,7 +87,7 @@ export function EditMedicationForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form id={EDIT_MEDICATION_FORM_ID} onSubmit={handleSubmit} className="flex flex-col gap-4">
       {isCatalogLinked ? (
         <div>
           <span className="text-sm text-stone-500">Φάρμακο από τον κατάλογο</span>
@@ -229,10 +230,6 @@ export function EditMedicationForm({
           {validationError ?? error}
         </p>
       )}
-
-      <Button type="submit" disabled={submitting} aria-busy={submitting}>
-        {submitting ? "Αποθήκευση…" : "Αποθήκευση"}
-      </Button>
     </form>
   );
 }

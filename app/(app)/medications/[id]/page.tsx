@@ -9,6 +9,7 @@ import { InventorySummary } from "@/components/medications/InventorySummary";
 import { PackageList } from "@/components/medications/PackageList";
 import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { Tabs, type TabItem } from "@/components/ui/Tabs";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
@@ -39,6 +40,13 @@ function formatHistoryDate(iso: string | null): string {
 function unitLabel(unit: string): string {
   return FORM_LABELS[unit as MedicationForm] ?? unit;
 }
+
+const TREATMENT_STATE_LABELS: Record<UserMedicationRecord["treatmentState"], string> = {
+  active: "Ενεργό",
+  paused: "Σε παύση",
+  completed: "Ολοκληρωμένο",
+  discontinued: "Διακοπή",
+};
 
 function describeSchedule(schedule: MedicationScheduleRecord): string {
   const quantity = `${formatQuantity(schedule.doseQuantityValue)} ${unitLabel(schedule.doseQuantityUnit)}`;
@@ -147,7 +155,10 @@ export default function MedicationDetailPage() {
           {displayName.charAt(0).toUpperCase()}
         </div>
         <div>
-          <h1 className="text-xl font-semibold">{displayName}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold">{displayName}</h1>
+            <Badge tone={medication.treatmentState === "active" ? "accent" : "neutral"}>{TREATMENT_STATE_LABELS[medication.treatmentState]}</Badge>
+          </div>
           {medication.customStrengthValue && (
             <p className="text-sm text-stone-600 dark:text-stone-400">
               {formatQuantity(medication.customStrengthValue)} {medication.customStrengthUnit}
@@ -165,6 +176,30 @@ export default function MedicationDetailPage() {
           </p>
         ) : (
           <>
+            {/* Design pass (2026-09-28, reference comparison): Overview was
+                inventory-only, missing the reference's own info-dense
+                summary — real medication facts (form, notes), never a
+                "purpose"/diagnosis field (CLAUDE.md rule 1: this app holds
+                no clinical-adjacent data, so there's nothing honest to show
+                there). Omitted entirely for a catalog-linked medication
+                whose form lives on the catalog product, not here (ADR-004). */}
+            {(medication.customForm || medication.notes) && (
+              <Card as="dl" className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+                {medication.customForm && (
+                  <>
+                    <dt className="text-stone-500 dark:text-stone-400">Μορφή</dt>
+                    <dd>{unitLabel(medication.customForm)}</dd>
+                  </>
+                )}
+                {medication.notes && (
+                  <>
+                    <dt className="text-stone-500 dark:text-stone-400">Σημειώσεις</dt>
+                    <dd>{medication.notes}</dd>
+                  </>
+                )}
+              </Card>
+            )}
+
             <InventorySummary
               currentStock={inventory.currentStock}
               quantityUnit={medication.inventoryUnit}

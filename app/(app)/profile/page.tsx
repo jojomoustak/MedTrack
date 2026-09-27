@@ -9,7 +9,7 @@ import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { EmailVerificationBanner } from "@/components/profile/EmailVerificationBanner";
 import { ReminderPermissionToggle } from "@/components/profile/ReminderPermissionToggle";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
-import { Card } from "@/components/ui/Card";
+import { Card, CardLink } from "@/components/ui/Card";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 
@@ -100,7 +100,7 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center gap-3.5">
-        <div aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-accent-100 text-2xl font-bold text-accent-800 dark:bg-accent-900/40 dark:text-accent-300">
+        <div aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-accent-100 text-2xl font-bold text-accent-800 dark:bg-accent-900/40 dark:text-accent-400">
           {(data?.user?.name?.trim().charAt(0) || data?.user?.email?.charAt(0) || "?").toUpperCase()}
         </div>
         <div>
@@ -147,6 +147,20 @@ export default function ProfilePage() {
         </Button>
       </Card>
 
+      {/* Design pass (2026-09-28, reference mockup comparison): the
+          reference's Profile is a real settings menu (Account/
+          Notifications/Health information/Privacy/Help & Support) — this
+          app already has a real Privacy page (`/privacy`) that was never
+          actually linked from Profile until now. "Health information" and
+          "Help & Support" are deliberately NOT added here: neither
+          corresponds to any real screen or feature in this app, and a
+          settings row that goes nowhere is worse than one that's honestly
+          absent. */}
+      <CardLink href="/privacy" onClick={() => playSound("button")} className="justify-between">
+        <span className="font-medium">Πολιτική Απορρήτου</span>
+        <ChevronRightIcon />
+      </CardLink>
+
       <section className="flex flex-col gap-2 rounded-2xl border-2 border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
         <div className="flex items-center gap-2 text-red-800 dark:text-red-300">
           <WarningIcon />
@@ -157,6 +171,14 @@ export default function ProfilePage() {
         </ButtonLink>
       </section>
     </div>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-stone-400">
+      <path d="M7.5 4.5 13 10l-5.5 5.5" />
+    </svg>
   );
 }
 

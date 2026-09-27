@@ -13,7 +13,13 @@ import { DateNavigator } from "@/components/calendar/DateNavigator";
 import { DoseCard } from "@/components/today/DoseCard";
 import { ProjectedDoseRow } from "@/components/calendar/ProjectedDoseRow";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { BrandMark } from "@/components/shell/BrandMark";
 import { dateToParam, paramToDate } from "@/components/calendar/date-param";
+import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
+
+function isSameLocalDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
 
 function startOfLocalDay(date: Date): Date {
   const d = new Date(date);
@@ -89,6 +95,14 @@ export default function CalendarPage() {
   const isLoading = medsStatus === "loading" || dosesStatus === "loading";
   const isEmpty = dosesStatus === "ready" && doses.length === 0 && projected.length === 0;
 
+  // Encouragement card (reference mockup comparison, 2026-09-28) — same
+  // quiet, honest "X of Y" restatement Today shows, but only when this
+  // view is actually showing today: the copy says "today", so it must not
+  // render while browsing a past/future day.
+  const isToday = isSameLocalDay(date, new Date());
+  const resolvedCount = doses.filter((d) => isTerminalDoseEventStatus(d.status)).length;
+  const allResolved = doses.length > 0 && resolvedCount === doses.length && projected.length === 0;
+
   return (
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-xl font-semibold">Ημερολόγιο</h1>
@@ -124,6 +138,15 @@ export default function CalendarPage() {
               <ProjectedDoseRow key={`${item.instant.scheduleId}-${i}`} medicationName={names.get(item.instant.userMedicationId) ?? "…"} scheduledAt={item.instant.scheduledAt} />
             ),
           )}
+        </div>
+      )}
+
+      {isToday && !allResolved && resolvedCount > 0 && (
+        <div className="flex items-center gap-3 rounded-2xl border border-accent-100 bg-accent-50 p-4 dark:border-accent-900 dark:bg-accent-950">
+          <BrandMark size={20} className="shrink-0 text-accent-700 dark:text-accent-400" />
+          <p className="text-sm font-medium text-accent-800 dark:text-accent-400">
+            Συνεχίστε έτσι! {resolvedCount} από {doses.length} δόσεις ολοκληρώθηκαν σήμερα.
+          </p>
         </div>
       )}
     </div>

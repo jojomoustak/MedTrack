@@ -27,6 +27,7 @@ import { syncNativeRemindersNow } from "@/lib/reminders/client/native-reminder-s
 import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-package-repository";
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import { AlertBanner } from "@/components/ui/AlertBanner";
+import { Button } from "@/components/ui/Button";
 import { consumeInventoryForDoseTaken } from "@/lib/inventory/client/consume-dose";
 import { recordMedicationInteraction } from "@/lib/medications/client/record-interaction";
 import { playSound } from "@/lib/sound/client/play-sound";
@@ -196,6 +197,8 @@ export default function TodayPage() {
   // fires from the AlarmManager/OS layer regardless of whether this page
   // is even open.
   const { status: dosesStatus, todayDoses, needsAttention, refresh } = useTodayDoseEvents(profileId, () => playSound("notification"));
+  const [confirmingMarkAll, setConfirmingMarkAll] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
 
   async function handleTaken(doseId: string) {
     const repo = new DexieDoseEventRepository();
@@ -248,6 +251,33 @@ export default function TodayPage() {
     refresh();
   }
 
+  /**
+   * Bulk "Mark all as taken" (reference mockup comparison, 2026-09-28) —
+   * requires an explicit confirm tap first (`confirmingMarkAll`) rather
+   * than firing instantly: unlike a single dose card's own 5s undo
+   * window, one tap here can commit several real medications as taken at
+   * once, so the safety net is a confirm step instead (CLAUDE.md's
+   * priority order puts Safety/Data integrity above a faster bulk
+   * action). Reuses the exact same transition + inventory-consumption
+   * path `handleTaken` uses per dose, just looped.
+   */
+  async function handleMarkAllTaken() {
+    setConfirmingMarkAll(false);
+    setMarkingAll(true);
+    const repo = new DexieDoseEventRepository();
+    const inventoryDeps = { medicationPackages: new DexieMedicationPackageRepository(), inventoryTransactions: new DexieInventoryTransactionRepository() };
+    const actionable = todayDoses.filter((d) => d.status === "scheduled" || d.status === "reminded" || d.status === "snoozed");
+    for (const dose of actionable) {
+      const taken = await repo.transition(dose.id, { status: "taken", takenAt: new Date().toISOString() }, newId());
+      await consumeInventoryForDoseTaken(taken, inventoryDeps);
+      recordMedicationInteraction(profileId, dose.userMedicationId, "marked_taken");
+    }
+    pushNativeRemindersAfterTransition(profileId);
+    playSound("success");
+    setMarkingAll(false);
+    refresh();
+  }
+
   if (medsStatus === "loading" || dosesStatus === "loading") {
     return (
       <p role="status" className="p-6 text-sm text-stone-600 dark:text-stone-400">
@@ -292,6 +322,7 @@ export default function TodayPage() {
 
   const allResolved = allTodayDosesResolved(todayDoses);
   const resolvedCount = todayDoses.filter((d) => isTerminalDoseEventStatus(d.status)).length;
+  const hasActionableDose = todayDoses.some((d) => d.status === "scheduled" || d.status === "reminded" || d.status === "snoozed");
 
   return (
     <div className="flex flex-col gap-4">
@@ -340,6 +371,43 @@ export default function TodayPage() {
             />
           ))}
         </div>
+
+        {/* Encouragement card (reference mockup comparison, 2026-09-28) —
+            real progress, not a decorative filler: only shown with a real
+            partial count, distinct from the plain "all done" status text
+            above. Medication-adherence UX research this app was built
+            against explicitly warns off streak/points gamification, so
+            this stays a quiet, honest "X of Y" restatement, not a score. */}
+        {!allResolved && resolvedCount > 0 && (
+          <div className="flex items-center gap-3 rounded-2xl border border-accent-100 bg-accent-50 p-4 dark:border-accent-900 dark:bg-accent-950">
+            <BrandMark size={20} className="shrink-0 text-accent-700 dark:text-accent-400" />
+            <p className="text-sm font-medium text-accent-800 dark:text-accent-400">
+              Συνεχίστε έτσι! {resolvedCount} από {todayDoses.length} δόσεις ολοκληρώθηκαν σήμερα.
+            </p>
+          </div>
+        )}
+
+        {hasActionableDose &&
+          (confirmingMarkAll ? (
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={() => setConfirmingMarkAll(false)} fullWidth>
+                Ακύρωση
+              </Button>
+              <Button onClick={() => void handleMarkAllTaken()} disabled={markingAll} aria-busy={markingAll} fullWidth>
+                {markingAll ? "Καταγραφή…" : "Ναι, όλα"}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              onClick={() => {
+                playSound("button");
+                setConfirmingMarkAll(true);
+              }}
+              fullWidth
+            >
+              Καταγραφή όλων ως ελήφθησαν
+            </Button>
+          ))}
       </div>
     </div>
   );

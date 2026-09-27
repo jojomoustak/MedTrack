@@ -24,6 +24,7 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 export function ResetPasswordForm({ token }: { token: string | null }) {
   const router = useRouter();
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -35,6 +36,11 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
 
     if (!token) {
       setError("Ο σύνδεσμος επαναφοράς δεν είναι έγκυρος ή έχει λήξει. Ζητήστε νέο σύνδεσμο.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("Οι κωδικοί δεν ταιριάζουν.");
       return;
     }
 
@@ -73,6 +79,16 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
         required
         minLength={8}
         ariaLabel="Νέος κωδικός πρόσβασης"
+      />
+
+      <PasswordInput
+        label="Επιβεβαίωση κωδικού"
+        value={confirmPassword}
+        onChange={setConfirmPassword}
+        autoComplete="new-password"
+        required
+        minLength={8}
+        ariaLabel="Επιβεβαίωση νέου κωδικού πρόσβασης"
       />
 
       {error && (

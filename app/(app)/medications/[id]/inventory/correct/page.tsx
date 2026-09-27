@@ -5,10 +5,12 @@ import { useParams, useRouter } from "next/navigation";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { ButtonLink } from "@/components/ui/Button";
 import { InventoryCorrectionForm, type InventoryCorrectionValues } from "@/components/medications/InventoryCorrectionForm";
+import { useMedicationInventory } from "@/lib/inventory/client/use-medication-inventory";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import { newId } from "@/lib/domain/ids";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
 /**
@@ -26,6 +28,7 @@ export default function InventoryCorrectionPage() {
   const [medication, setMedication] = useState<UserMedicationRecord | null | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inventory = useMedicationInventory(params.id, medication?.lowStockThresholdValue ?? null);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,7 +96,19 @@ export default function InventoryCorrectionPage() {
         <h1 className="text-xl font-semibold">Διόρθωση αποθέματος</h1>
       </div>
 
-      <InventoryCorrectionForm onSubmit={(values) => void handleSubmit(values)} submitting={submitting} error={error} />
+      {inventory.status === "loading" ? (
+        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+          Φόρτωση αποθέματος…
+        </p>
+      ) : (
+        <InventoryCorrectionForm
+          currentStock={inventory.currentStock}
+          quantityUnit={FORM_LABELS[medication.inventoryUnit]}
+          onSubmit={(values) => void handleSubmit(values)}
+          submitting={submitting}
+          error={error}
+        />
+      )}
     </div>
   );
 }
