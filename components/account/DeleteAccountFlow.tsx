@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
+import { Button } from "@/components/ui/Button";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
 import { clearAllLocalProfileData } from "@/lib/db-client/clear-local-profile-data";
 import { createNetworkMonitor } from "@/lib/sync/client/network";
@@ -140,20 +141,12 @@ export function DeleteAccountFlow() {
           <p>Μόλις ολοκληρωθεί, αυτά τα δεδομένα δεν μπορούν να ανακτηθούν.</p>
         </div>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="inline-flex items-center justify-center min-h-12 rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
-          >
+          <Button variant="secondary" onClick={handleCancel}>
             Άκυρο
-          </button>
-          <button
-            type="button"
-            onClick={goToSummary}
-            className="inline-flex items-center justify-center min-h-12 rounded-full bg-red-700 px-5 py-3 font-medium text-white"
-          >
+          </Button>
+          <Button variant="danger" onClick={goToSummary}>
             Συνέχεια
-          </button>
+          </Button>
         </div>
         {summaryError && (
           <p role="alert" className="text-sm text-red-700 dark:text-red-400">
@@ -174,20 +167,12 @@ export function DeleteAccountFlow() {
           <li>{summary.lists} λίστες</li>
         </ul>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="inline-flex items-center justify-center min-h-12 rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
-          >
+          <Button variant="secondary" onClick={handleCancel}>
             Άκυρο
-          </button>
-          <button
-            type="button"
-            onClick={goToConfirm}
-            className="inline-flex items-center justify-center min-h-12 rounded-full bg-red-700 px-5 py-3 font-medium text-white"
-          >
+          </Button>
+          <Button variant="danger" onClick={goToConfirm}>
             Συνέχεια
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -222,21 +207,12 @@ export function DeleteAccountFlow() {
         )}
 
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="inline-flex items-center justify-center min-h-12 rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
-          >
+          <Button variant="secondary" onClick={handleCancel}>
             Άκυρο
-          </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={offline || confirmText !== CONFIRM_PHRASE}
-            className="inline-flex items-center justify-center min-h-12 rounded-full bg-red-700 px-5 py-3 font-medium text-white disabled:opacity-50"
-          >
+          </Button>
+          <Button variant="danger" onClick={handleDelete} disabled={offline || confirmText !== CONFIRM_PHRASE}>
             Οριστική διαγραφή λογαριασμού
-          </button>
+          </Button>
         </div>
       </div>
     );
