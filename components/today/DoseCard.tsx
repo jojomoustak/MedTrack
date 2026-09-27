@@ -17,6 +17,16 @@ export interface DoseCardProps {
   medicationStrength?: string | null;
   /** Read-only everywhere except today's own cards (ux-accessibility-designer design, 2026-08-30): a past/future-day card, or a `missed`/other-terminal one, never renders the Taken/Skip/Snooze trio. */
   actionable: boolean;
+  /**
+   * Today-only (UX feedback, 2026-09-27): hides the scheduled-time and
+   * status-text lines, leaving just the name + strength — Calendar's day
+   * and timeline views still pass this as `false` (their default) since
+   * browsing a day of doses without any time shown defeats the view's own
+   * purpose. Visual state for a resolved dose is still conveyed via the
+   * existing strikethrough/muted styling below, and screen readers still
+   * get the full time/status via `aria-label` regardless of this flag.
+   */
+  minimal?: boolean;
   onTaken: (doseId: string) => void;
   onSkipped: (doseId: string) => void;
   onSnoozed: (doseId: string) => void;
@@ -95,7 +105,7 @@ function buildAriaLabel(
  * since `transition()` can't un-terminal a row once committed. Snooze is
  * non-terminal (freely repeatable) and fires immediately.
  */
-export function DoseCard({ dose, medicationName, medicationStrength, actionable, onTaken, onSkipped, onSnoozed, onRetrySync, onTakenLate }: DoseCardProps) {
+export function DoseCard({ dose, medicationName, medicationStrength, actionable, minimal = false, onTaken, onSkipped, onSnoozed, onRetrySync, onTakenLate }: DoseCardProps) {
   const [pendingAction, setPendingAction] = useState<"taken" | "skipped" | "taken_late" | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -165,7 +175,7 @@ export function DoseCard({ dose, medicationName, medicationStrength, actionable,
               {/* tabular-nums keeps digit widths steady down a whole list
                   of cards (impeccable craft: numerals in tabular data are
                   a browser default until themed on purpose). */}
-              {timeLabel && (
+              {!minimal && timeLabel && (
                 <span className="shrink-0 text-[15px] font-extrabold tabular-nums text-accent-700 dark:text-accent-400">{timeLabel}</span>
               )}
             </div>
@@ -178,8 +188,12 @@ export function DoseCard({ dose, medicationName, medicationStrength, actionable,
                 status change (e.g. tapping Έλαβα) is announced to a screen
                 reader without re-announcing the medication name/quantity
                 alongside it every time (accessibility audit, Phase 15
-                Hardening). */}
-            {label && (
+                Hardening). Omitted in `minimal` mode (UX feedback,
+                2026-09-27) — a resolved dose still reads as "done" via the
+                strikethrough/opacity styling above, and the group's own
+                `aria-label` (built above, unaffected by `minimal`) still
+                carries the status to screen readers either way. */}
+            {!minimal && label && (
               <p aria-live="polite" className="text-sm text-stone-600 dark:text-stone-400">
                 {label}
               </p>

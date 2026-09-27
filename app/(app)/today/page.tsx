@@ -304,6 +304,7 @@ export default function TodayPage() {
                   medicationName={names.get(dose.userMedicationId) ?? "…"}
                   medicationStrength={strengths.get(dose.userMedicationId)}
                   actionable={false}
+                  minimal
                   onTaken={handleTaken}
                   onSkipped={handleSkipped}
                   onSnoozed={handleSnoozed}
@@ -328,6 +329,7 @@ export default function TodayPage() {
               medicationName={names.get(dose.userMedicationId) ?? "…"}
               medicationStrength={strengths.get(dose.userMedicationId)}
               actionable
+              minimal
               onTaken={handleTaken}
               onSkipped={handleSkipped}
               onSnoozed={handleSnoozed}
