@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 
 export interface ManualEntryValues {
   name: string;
@@ -85,12 +86,7 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
         </div>
       )}
 
-      <button
-        type="submit"
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
-      >
-        Συνέχεια
-      </button>
+      <Button type="submit">Συνέχεια</Button>
     </form>
   );
 }

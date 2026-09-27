@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { zonedWallClockToUtc } from "@/lib/domain/dose-event-generation";
+import { Button } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface ElapsedScheduleValues {
@@ -92,19 +93,19 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
       )}
 
       <div className="flex gap-2">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={() => {
             playSound("button");
             onBack();
           }}
-          className="min-h-12 flex-1 rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
+          className="flex-1"
         >
           Πίσω
-        </button>
-        <button type="submit" className="min-h-12 flex-1 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950">
+        </Button>
+        <Button type="submit" className="flex-1">
           Συνέχεια
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { WEEKDAY_BIT } from "@/lib/domain/medication-schedule";
 import { ALL_WEEKDAYS_MASK } from "@/lib/domain/schedule-draft";
+import { Button } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface WallClockScheduleValues {
@@ -97,13 +98,9 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
             )}
           </div>
         ))}
-        <button
-          type="button"
-          onClick={addTimeRow}
-          className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-4 py-2 text-sm font-medium dark:border-stone-700"
-        >
+        <Button variant="secondary" onClick={addTimeRow} className="self-start">
           + Προσθήκη ώρας
-        </button>
+        </Button>
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
@@ -161,12 +158,12 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
       )}
 
       <div className="flex gap-2">
-        <button type="button" onClick={() => { playSound("button"); onBack(); }} className="min-h-12 flex-1 rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700">
+        <Button variant="secondary" onClick={() => { playSound("button"); onBack(); }} className="flex-1">
           Πίσω
-        </button>
-        <button type="submit" className="min-h-12 flex-1 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950">
+        </Button>
+        <Button type="submit" className="flex-1">
           Συνέχεια
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -1,6 +1,8 @@
 "use client";
 
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { formatQuantity } from "@/lib/domain/quantity";
 import type { ScheduleDraft } from "@/lib/domain/schedule-draft";
@@ -58,7 +60,7 @@ export function ReviewStep({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl border border-stone-300 p-4 dark:border-stone-700">
+      <Card>
         <h2 className="text-lg font-semibold">{name}</h2>
         <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           {form && (
@@ -78,22 +80,22 @@ export function ReviewStep({
           <dt className="text-stone-500">Μονάδα αποθέματος</dt>
           <dd>{FORM_LABELS[inventoryUnit as MedicationForm] ?? inventoryUnit}</dd>
         </dl>
-      </div>
+      </Card>
 
-      <div className="rounded-xl border border-stone-300 p-4 dark:border-stone-700">
+      <Card>
         <div className="flex items-center justify-between">
           <h3 className="font-medium">Πρόγραμμα δόσεων</h3>
-          <button type="button" onClick={onEditSchedule} className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
+          <Button variant="tertiary" onClick={onEditSchedule} className="px-0 underline">
             {schedule ? "Επεξεργασία" : "Προσθήκη"}
-          </button>
+          </Button>
         </div>
         <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
           {schedule ? describeSchedule(schedule) : "Χωρίς πρόγραμμα ακόμα — μπορείτε να προσθέσετε αργότερα."}
         </p>
-      </div>
+      </Card>
 
       {hasPackageData && (
-        <div className="rounded-xl border border-stone-300 p-4 dark:border-stone-700">
+        <Card>
           <h3 className="font-medium">Αρχικό απόθεμα</h3>
           <dl className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
             {packageBatch && (
@@ -124,7 +126,7 @@ export function ReviewStep({
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
             Αν το συμπληρώσετε, θα δημιουργηθεί μια πραγματική συσκευασία στο απόθεμά σας.
           </p>
-        </div>
+        </Card>
       )}
 
       {error && (
@@ -133,18 +135,16 @@ export function ReviewStep({
         </p>
       )}
 
-      <button
-        type="button"
+      <Button
         onClick={() => {
           playSound("button");
           onFinish();
         }}
         disabled={submitting}
         aria-busy={submitting}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white disabled:opacity-60 dark:bg-accent-500 dark:text-stone-950"
       >
         {submitting ? "Αποθήκευση…" : "Ολοκλήρωση"}
-      </button>
+      </Button>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/Card";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 export type EntryChoice = "scan" | "search" | "manual";
@@ -33,17 +34,16 @@ export function EntryChooser({ onChoose, scanAvailable }: EntryChooserProps) {
 
   return (
     <div className="flex flex-col gap-3" role="group" aria-label="Πώς θέλετε να προσθέσετε το φάρμακο;">
-      <button
+      <Card
+        as="button"
         type="button"
         disabled={!scanAvailable}
         aria-disabled={!scanAvailable}
         aria-label={scanAvailable ? "Σάρωση barcode" : "Σάρωση barcode — διαθέσιμο μόνο στην εφαρμογή για κινητά"}
         onClick={scanAvailable ? () => handleChoose("scan") : undefined}
-        className={
-          scanAvailable
-            ? "flex min-h-12 items-center rounded-xl border border-stone-300 px-4 py-3 text-left hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-900"
-            : "flex min-h-12 items-center justify-between rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 px-4 py-3 text-left text-stone-400 dark:text-stone-600"
-        }
+        className={`flex min-h-12 items-center px-4 py-3 text-left transition-transform duration-150 ${
+          scanAvailable ? "active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900" : "text-stone-400 dark:text-stone-600"
+        }`}
       >
         <span>
           <span className="block font-medium">Σάρωση barcode</span>
@@ -51,29 +51,31 @@ export function EntryChooser({ onChoose, scanAvailable }: EntryChooserProps) {
             {scanAvailable ? "Σαρώστε τη συσκευασία του φαρμάκου" : "Διαθέσιμο μόνο στην εφαρμογή για κινητά"}
           </span>
         </span>
-      </button>
+      </Card>
 
-      <button
+      <Card
+        as="button"
         type="button"
         onClick={() => handleChoose("search")}
-        className="flex min-h-12 items-center rounded-xl border border-stone-300 px-4 py-3 text-left hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-900"
+        className="flex min-h-12 items-center px-4 py-3 text-left transition-transform duration-150 active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900"
       >
         <span>
           <span className="block font-medium">Αναζήτηση</span>
           <span className="block text-sm text-stone-600 dark:text-stone-400">Βρείτε το φάρμακο στον κατάλογο</span>
         </span>
-      </button>
+      </Card>
 
-      <button
+      <Card
+        as="button"
         type="button"
         onClick={() => handleChoose("manual")}
-        className="flex min-h-12 items-center rounded-xl border border-stone-300 px-4 py-3 text-left hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-900"
+        className="flex min-h-12 items-center px-4 py-3 text-left transition-transform duration-150 active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900"
       >
         <span>
           <span className="block font-medium">Χειροκίνητη καταχώριση</span>
           <span className="block text-sm text-stone-600 dark:text-stone-400">Εισαγάγετε τα στοιχεία με το χέρι</span>
         </span>
-      </button>
+      </Card>
     </div>
   );
 }

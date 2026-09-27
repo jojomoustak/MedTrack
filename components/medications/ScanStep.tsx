@@ -17,6 +17,8 @@ import { logger } from "@/lib/logging/logger";
 import { CandidateConfirmation } from "@/components/medications/CandidateConfirmation";
 import { ScanDiagnosticsPanel, type ScanDiagnostics } from "@/components/medications/ScanDiagnosticsPanel";
 import { PackageOcrCandidateFlow } from "@/components/medications/PackageOcrCandidateFlow";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface ScanStepProps {
@@ -253,9 +255,9 @@ export function ScanStep({
         <p role="status" aria-live="polite" className="text-sm text-stone-600 dark:text-stone-400">
           {view.phase === "scanning" ? "Άνοιγμα κάμερας…" : "Αναζήτηση φαρμάκου…"}
         </p>
-        <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
+        <Button variant="tertiary" onClick={() => { playSound("button"); onCancel(); }} className="px-0 underline">
           Ακύρωση
-        </button>
+        </Button>
       </div>
     );
   }
@@ -268,16 +270,12 @@ export function ScanStep({
             Η σάρωση barcode διατίθεται μόνο μέσα από την εφαρμογή MedTracking για κινητά.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => { playSound("button"); onFallbackToManual(null); }}
-          className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
-        >
+        <Button onClick={() => { playSound("button"); onFallbackToManual(null); }}>
           Συνέχεια με χειροκίνητη καταχώριση
-        </button>
-        <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium underline">
+        </Button>
+        <Button variant="tertiary" onClick={() => { playSound("button"); onCancel(); }} className="self-start px-0 underline">
           ← Πίσω
-        </button>
+        </Button>
       </div>
     );
   }
@@ -288,27 +286,21 @@ export function ScanStep({
         <p role="alert" className="text-sm text-red-700 dark:text-red-400">
           {view.message}
         </p>
-        <button
-          type="button"
+        <Button
           onClick={() => {
             playSound("button");
             startedRef.current = false;
             void runScan();
           }}
-          className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
         >
           Δοκιμάστε ξανά
-        </button>
-        <button
-          type="button"
-          onClick={() => { playSound("button"); onFallbackToManual(null); }}
-          className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline"
-        >
+        </Button>
+        <Button variant="tertiary" onClick={() => { playSound("button"); onFallbackToManual(null); }} className="px-0 underline">
           Συνέχεια με χειροκίνητη καταχώριση
-        </button>
-        <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium underline">
+        </Button>
+        <Button variant="tertiary" onClick={() => { playSound("button"); onCancel(); }} className="self-start px-0 underline">
           ← Πίσω
-        </button>
+        </Button>
       </div>
     );
   }
@@ -382,16 +374,12 @@ export function ScanStep({
       }
       {searchTerm && !view.offline && <OfficialSourceSearchLinks searchTerm={searchTerm} />}
       {view.diagnostics && <ScanDiagnosticsPanel diagnostics={view.diagnostics} />}
-      <button
-        type="button"
-        onClick={() => { playSound("button"); onFallbackToManual(view.parsed); }}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
-      >
+      <Button onClick={() => { playSound("button"); onFallbackToManual(view.parsed); }}>
         Συνέχεια με χειροκίνητη καταχώριση
-      </button>
-      <button type="button" onClick={() => { playSound("button"); onCancel(); }} className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium underline">
+      </Button>
+      <Button variant="tertiary" onClick={() => { playSound("button"); onCancel(); }} className="self-start px-0 underline">
         ← Πίσω
-      </button>
+      </Button>
     </div>
   );
 }
@@ -432,7 +420,7 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
   }
 
   return (
-    <div className="rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 p-4">
+    <Card>
       <p className="mb-2 text-sm font-medium text-stone-700 dark:text-stone-300">
         Αναζήτηση σε επίσημες πηγές
       </p>
@@ -443,20 +431,16 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
       </p>
       <div className="mb-3 flex items-center gap-2 rounded-lg bg-stone-50 px-3 py-2 dark:bg-stone-900">
         <code className="flex-1 truncate text-sm">{searchTerm}</code>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="inline-flex items-center justify-center min-h-12 shrink-0 rounded-full border border-stone-300 px-3 text-xs font-medium dark:border-stone-700"
-        >
+        <Button variant="secondary" size="sm" onClick={handleCopy} className="shrink-0 px-3 text-xs">
           {copied ? "Αντιγράφηκε ✓" : "Αντιγραφή"}
-        </button>
+        </Button>
       </div>
       <div className="flex flex-col gap-2">
         <a
           href="https://services.eof.gr/human-search/home.xhtml"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex min-h-12 items-center justify-center rounded-full border border-stone-300 px-4 py-2 text-center text-sm font-medium underline dark:border-stone-700"
+          className={buttonClasses("secondary", "md", "underline")}
         >
           Αναζήτηση στον ΕΟΦ (eof.gr)
         </a>
@@ -464,11 +448,11 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
           href="https://www.ema.europa.eu/en/medicines"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex min-h-12 items-center justify-center rounded-full border border-stone-300 px-4 py-2 text-center text-sm font-medium underline dark:border-stone-700"
+          className={buttonClasses("secondary", "md", "underline")}
         >
           Αναζήτηση στον EMA (ema.europa.eu)
         </a>
       </div>
-    </div>
+    </Card>
   );
 }

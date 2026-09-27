@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 export type ScheduleKindChoice = "wall_clock" | "elapsed" | "prn";
@@ -28,47 +30,50 @@ export function ScheduleKindChooser({ onChoose, onSkip, onBack }: ScheduleKindCh
     <div className="flex flex-col gap-3">
       <h2 className="text-lg font-semibold">Πρόγραμμα δόσεων</h2>
       <div className="flex flex-col gap-3" role="group" aria-label="Πώς παίρνετε αυτό το φάρμακο;">
-        <button
+        <Card
+          as="button"
           type="button"
           onClick={() => handleChoose("wall_clock")}
-          className="flex min-h-12 items-center rounded-xl border border-stone-300 px-4 py-3 text-left hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-900"
+          className="flex min-h-12 items-center px-4 py-3 text-left transition-transform duration-150 active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900"
         >
           <span>
             <span className="block font-medium">Σταθερές ώρες</span>
             <span className="block text-sm text-stone-600 dark:text-stone-400">Παίρνετε το φάρμακο σε συγκεκριμένες ώρες κάθε μέρα</span>
           </span>
-        </button>
+        </Card>
 
-        <button
+        <Card
+          as="button"
           type="button"
           onClick={() => handleChoose("elapsed")}
-          className="flex min-h-12 items-center rounded-xl border border-stone-300 px-4 py-3 text-left hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-900"
+          className="flex min-h-12 items-center px-4 py-3 text-left transition-transform duration-150 active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900"
         >
           <span>
             <span className="block font-medium">Κάθε πόσες ώρες</span>
             <span className="block text-sm text-stone-600 dark:text-stone-400">Π.χ. κάθε 8 ώρες, ανεξαρτήτως ώρας ημέρας</span>
           </span>
-        </button>
+        </Card>
 
-        <button
+        <Card
+          as="button"
           type="button"
           onClick={() => handleChoose("prn")}
-          className="flex min-h-12 items-center rounded-xl border border-stone-300 px-4 py-3 text-left hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-900"
+          className="flex min-h-12 items-center px-4 py-3 text-left transition-transform duration-150 active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900"
         >
           <span>
             <span className="block font-medium">Όποτε χρειάζεται</span>
             <span className="block text-sm text-stone-600 dark:text-stone-400">Χωρίς σταθερό πρόγραμμα</span>
           </span>
-        </button>
+        </Card>
       </div>
 
-      <button type="button" onClick={() => { playSound("button"); onSkip(); }} className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium underline">
+      <Button variant="tertiary" onClick={() => { playSound("button"); onSkip(); }} className="self-start px-0 underline">
         Παράλειψη — θα προσθέσω πρόγραμμα αργότερα
-      </button>
+      </Button>
 
-      <button type="button" onClick={() => { playSound("button"); onBack(); }} className="inline-flex items-center justify-center min-h-12 self-start rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700">
+      <Button variant="secondary" onClick={() => { playSound("button"); onBack(); }} className="self-start">
         Πίσω
-      </button>
+      </Button>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FORM_LABELS, FORM_OPTIONS } from "@/components/medications/DetailsStep";
 import type { MedicationForm } from "@/lib/domain/user-medication";
+import { Button } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface PrnScheduleValues {
@@ -74,19 +75,19 @@ export function PrnScheduleBuilder({ onSubmit, onBack, initial }: PrnScheduleBui
       )}
 
       <div className="flex gap-2">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={() => {
             playSound("button");
             onBack();
           }}
-          className="min-h-12 flex-1 rounded-full border border-stone-300 px-5 py-3 font-medium dark:border-stone-700"
+          className="flex-1"
         >
           Πίσω
-        </button>
-        <button type="submit" className="min-h-12 flex-1 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950">
+        </Button>
+        <Button type="submit" className="flex-1">
           Συνέχεια
-        </button>
+        </Button>
       </div>
     </form>
   );

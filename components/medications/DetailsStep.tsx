@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 import { playSound } from "@/lib/sound/client/play-sound";
@@ -139,12 +140,7 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
         </select>
       </label>
 
-      <button
-        type="submit"
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
-      >
-        Συνέχεια
-      </button>
+      <Button type="submit">Συνέχεια</Button>
     </form>
   );
 }

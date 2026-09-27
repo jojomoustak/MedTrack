@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { AddMedicationFlow } from "@/components/medications/AddMedicationFlow";
 import { OfflineBanner } from "@/components/sync/OfflineBanner";
+import { ButtonLink } from "@/components/ui/Button";
 import { useCurrentProfile } from "@/lib/auth/client/use-current-profile";
 
 /**
@@ -25,9 +25,9 @@ export default function AddMedicationPage() {
     <main className="min-h-dvh bg-stone-50 dark:bg-stone-950">
       <OfflineBanner />
       <div className="mx-auto flex max-w-md items-center gap-3 px-4 py-4">
-        <Link href="/medications" aria-label="Πίσω στα φάρμακα" className="inline-flex items-center justify-center min-h-12 text-sm font-medium underline">
+        <ButtonLink href="/medications" aria-label="Πίσω στα φάρμακα" variant="tertiary" className="px-0 underline">
           ← Πίσω
-        </Link>
+        </ButtonLink>
         <h1 className="text-xl font-semibold">Προσθήκη φαρμάκου</h1>
       </div>
       {session.status === "loading" && (

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useCatalogSearch } from "@/lib/catalog/client/use-catalog-search";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import { CandidateConfirmation } from "@/components/medications/CandidateConfirmation";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { formatQuantity } from "@/lib/domain/quantity";
 
@@ -67,14 +69,15 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
         <ul className="flex flex-col gap-2" aria-label="Αποτελέσματα αναζήτησης">
           {results.map((product) => (
             <li key={product.id}>
-              <button
+              <Card
+                as="button"
                 type="button"
                 onClick={() => { playSound("button"); setCandidate(product); }}
-                className="flex min-h-12 w-full flex-col items-start rounded-xl border border-stone-300 px-4 py-3 text-left hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-900"
+                className="flex min-h-12 w-full flex-col items-start px-4 py-3 text-left transition-transform duration-150 active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900"
               >
                 <span className="font-medium">{product.name}</span>
                 <span className="text-sm text-stone-600 dark:text-stone-400">{formatSubtitle(product)}</span>
-              </button>
+              </Card>
             </li>
           ))}
         </ul>
@@ -86,24 +89,16 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
             Δεν βρέθηκε το φάρμακο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος.
           </p>
           {/* Equally weighted with search results, never a dead end (Phase 3 §2.4/§8). */}
-          <button
-            type="button"
-            onClick={() => { playSound("button"); onFallbackToManual(); }}
-            className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-2 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
-          >
+          <Button onClick={() => { playSound("button"); onFallbackToManual(); }}>
             Συνέχεια με χειροκίνητη καταχώριση
-          </button>
+          </Button>
         </div>
       )}
 
       {status === "idle" && (
-        <button
-          type="button"
-          onClick={() => { playSound("button"); onFallbackToManual(); }}
-          className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium text-stone-700 underline dark:text-stone-300"
-        >
+        <Button variant="tertiary" onClick={() => { playSound("button"); onFallbackToManual(); }} className="self-start px-0 underline">
           Προτιμώ χειροκίνητη καταχώριση
-        </button>
+        </Button>
       )}
     </div>
   );

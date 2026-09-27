@@ -3,6 +3,8 @@
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import { SEED_PLACEHOLDER_SOURCE } from "@/lib/domain/catalog";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { formatQuantity } from "@/lib/domain/quantity";
 import type { MedicationForm } from "@/lib/domain/user-medication";
@@ -26,18 +28,18 @@ export interface CandidateConfirmationProps {
 export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry, parsedBatch, parsedSerial }: CandidateConfirmationProps) {
   return (
     <div className="flex flex-col gap-4">
-      <button
-        type="button"
+      <Button
+        variant="tertiary"
         onClick={() => {
           playSound("button");
           onBack();
         }}
-        className="inline-flex items-center justify-center min-h-12 self-start text-sm font-medium underline"
+        className="self-start px-0 underline"
       >
         ← Πίσω στα αποτελέσματα
-      </button>
+      </Button>
 
-      <div className="rounded-xl border border-stone-300 p-4 dark:border-stone-700">
+      <Card>
         <h2 className="text-lg font-semibold">{product.name}</h2>
         {product.manufacturer && <p className="text-sm text-stone-600 dark:text-stone-400">{product.manufacturer}</p>}
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -67,7 +69,7 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
             Δοκιμαστικά δεδομένα καταλόγου — όχι επίσημη πηγή.
           </p>
         )}
-      </div>
+      </Card>
 
       {(parsedExpiry || parsedBatch || parsedSerial) && (
         <div className="rounded-xl border border-dashed border-stone-300 p-4 dark:border-stone-700">
@@ -95,16 +97,14 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
         </div>
       )}
 
-      <button
-        type="button"
+      <Button
         onClick={() => {
           playSound("button");
           onConfirm();
         }}
-        className="inline-flex items-center justify-center min-h-12 rounded-full bg-accent-700 px-5 py-3 font-medium text-white dark:bg-accent-500 dark:text-stone-950"
       >
         Επιβεβαίωση — είναι αυτό το φάρμακο
-      </button>
+      </Button>
     </div>
   );
 }

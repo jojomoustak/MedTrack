@@ -14,6 +14,8 @@ import { confirmCatalogIdentifier } from "@/lib/catalog/client/api";
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import { MobilePlatformUnavailableError, type MobilePlatform } from "@/lib/platform/mobile-platform";
 import { CandidateConfirmation } from "@/components/medications/CandidateConfirmation";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { logger } from "@/lib/logging/logger";
 import { formatQuantity } from "@/lib/domain/quantity";
@@ -172,16 +174,15 @@ export function PackageOcrCandidateFlow({
 
   if (state.phase === "idle") {
     return (
-      <button
-        type="button"
+      <Button
+        variant="secondary"
         onClick={() => {
           playSound("button");
           void startOcr();
         }}
-        className="inline-flex items-center justify-center min-h-12 rounded-full border border-stone-300 px-5 py-2 text-sm font-medium dark:border-stone-700"
       >
         Δοκιμή αναγνώρισης από την ετικέτα του πακέτου
-      </button>
+      </Button>
     );
   }
 
@@ -199,9 +200,9 @@ export function PackageOcrCandidateFlow({
         <p role="alert" className="text-sm text-red-700 dark:text-red-400">
           {state.message}
         </p>
-        <button type="button" onClick={() => { playSound("button"); setState({ phase: "idle" }); }} className="inline-flex items-center justify-center min-h-10 self-start text-sm font-medium underline">
+        <Button variant="tertiary" size="sm" onClick={() => { playSound("button"); setState({ phase: "idle" }); }} className="self-start px-0 underline">
           Δοκιμάστε ξανά
-        </button>
+        </Button>
       </div>
     );
   }
@@ -213,12 +214,12 @@ export function PackageOcrCandidateFlow({
           Δεν βρέθηκε αντιστοιχία από την ετικέτα. Δοκιμάστε ξανά με καλύτερο φωτισμό ή αναζητήστε χειροκίνητα.
         </p>
         <div className="flex gap-3">
-          <button type="button" onClick={() => { playSound("button"); setState({ phase: "idle" }); }} className="inline-flex items-center justify-center min-h-10 text-sm font-medium underline">
+          <Button variant="tertiary" size="sm" onClick={() => { playSound("button"); setState({ phase: "idle" }); }} className="px-0 underline">
             Δοκιμάστε ξανά
-          </button>
-          <button type="button" onClick={() => { playSound("button"); onFallbackToManual(); }} className="inline-flex items-center justify-center min-h-10 text-sm font-medium underline">
+          </Button>
+          <Button variant="tertiary" size="sm" onClick={() => { playSound("button"); onFallbackToManual(); }} className="px-0 underline">
             Χειροκίνητη αναζήτηση
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -231,19 +232,20 @@ export function PackageOcrCandidateFlow({
         <ul className="flex flex-col gap-2">
           {state.scores.map((score) => (
             <li key={score.entry.id}>
-              <button
+              <Card
+                as="button"
                 type="button"
                 onClick={() => { playSound("button"); setState({ phase: "confirming", entry: score.entry, confidence: "OCR_AMBIGUOUS" }); }}
-                className="inline-flex items-center justify-center min-h-10 w-full rounded-lg shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 px-3 py-2 text-left text-sm"
+                className="flex w-full items-center px-3 py-2 text-left text-sm transition-transform duration-150 active:scale-[0.98]"
               >
                 {formatCandidateLabel(score.entry)}
-              </button>
+              </Card>
             </li>
           ))}
         </ul>
-        <button type="button" onClick={() => { playSound("button"); onFallbackToManual(); }} className="inline-flex items-center justify-center min-h-10 self-start text-sm font-medium underline">
+        <Button variant="tertiary" size="sm" onClick={() => { playSound("button"); onFallbackToManual(); }} className="self-start px-0 underline">
           Καμία δεν ταιριάζει — χειροκίνητη αναζήτηση
-        </button>
+        </Button>
       </div>
     );
   }
