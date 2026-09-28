@@ -66,6 +66,7 @@ export function BrandMarkDetailed({ size = 52, className }: { size?: number; cla
         ribWidth={0.05}
         veinCount={0}
         stalk={0.06}
+        stemWidth={0.52}
       />
     </svg>
   );

@@ -18,6 +18,7 @@ import { ILLUSTRATION_PALETTE, LeafArt, leafOutline, type LeafSpec } from "@/com
 const BACKDROP_VIEWBOX = "0 60 390 365";
 const LEAVES_VIEWBOX = "0 150 390 275";
 const ROOT = { x: 178, y: 408 };
+const STEM_WIDTH = 3.4;
 
 const LEAVES: LeafSpec[] = [
   { base: { x: 170, y: 392 }, tip: { x: 52, y: 256 }, width: 0.47, bend: 0.03, skew: 0.9 },
@@ -60,10 +61,10 @@ export function WelcomeIllustration({ className = "" }: { className?: string }) 
           <path key={i} d={leafOutline(spec)} strokeWidth="5" strokeLinejoin="round" className="fill-none stroke-[#FCFBF7] dark:stroke-stone-950" />
         ))}
         {STEMS.map((d) => (
-          <path key={d} d={d} fill="none" stroke="#174F3B" strokeWidth="3.4" strokeLinecap="round" />
+          <path key={d} d={d} fill="none" stroke="#174F3B" strokeWidth={STEM_WIDTH} strokeLinecap="round" />
         ))}
         {LEAVES.map((spec, i) => (
-          <LeafArt key={i} spec={spec} palette={ILLUSTRATION_PALETTE} id={`${uid}l${i}`} />
+          <LeafArt key={i} spec={spec} palette={ILLUSTRATION_PALETTE} id={`${uid}l${i}`} stemWidth={STEM_WIDTH} />
         ))}
       </svg>
     </div>

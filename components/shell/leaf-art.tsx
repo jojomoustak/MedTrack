@@ -31,8 +31,8 @@ export interface LeafPalette {
   shaded: { near: string; far: string };
   rim: string;
   rimOpacity: number;
-  /** Midrib highlight colors at its base, middle and end, with opacities. */
-  rib: [string, number][];
+  /** Midrib highlight stops along its length: [offset 0..1, color, opacity]. */
+  rib: [number, string, number][];
   groove: string;
   vein: string;
   veinOpacity: number;
@@ -46,9 +46,9 @@ export const ILLUSTRATION_PALETTE: LeafPalette = {
   rim: "#0D3A2A",
   rimOpacity: 0.55,
   rib: [
-    ["#92C2A9", 0.9],
-    ["#5E9A7F", 0.7],
-    ["#3F7A62", 0.15],
+    [0.14, "#92C2A9", 0.9],
+    [0.5, "#5E9A7F", 0.7],
+    [1, "#3F7A62", 0.15],
   ],
   groove: "#0D402F",
   vein: "#A7D1BC",
@@ -63,9 +63,9 @@ export const LOGO_PALETTE: LeafPalette = {
   rim: "#0A5A42",
   rimOpacity: 0.7,
   rib: [
-    ["#7CC4AC", 0.95],
-    ["#5FAB95", 0.9],
-    ["#4E9A82", 0.2],
+    [0.12, "#7CC4AC", 0.95],
+    [0.55, "#5FAB95", 0.9],
+    [1, "#4E9A82", 0.2],
   ],
   groove: "#0E5F47",
   vein: "#8FD0B8",
@@ -139,6 +139,7 @@ export function LeafArt({
   ribWidth = 0.013,
   veinCount = 3,
   stalk = 0,
+  stemWidth = 0,
 }: {
   spec: LeafSpec;
   palette: LeafPalette;
@@ -150,6 +151,13 @@ export function LeafArt({
   veinCount?: number;
   /** Length of a stalk extending back from the base, as a fraction of leaf length. */
   stalk?: number;
+  /**
+   * Width (absolute units) of the stem/stalk entering this leaf. When set,
+   * the midrib starts at the base at this width, in the stem's color, and
+   * blends into the highlight — so the stem visibly continues into the
+   * leaf as its midrib, instead of stopping at the base point.
+   */
+  stemWidth?: number;
 }) {
   const { len, ux, uy, half, mid, normal, edge, ts } = frame(spec);
   const { base } = spec;
@@ -170,23 +178,31 @@ export function LeafArt({
   const sheenAt = { x: sheenC.x + n45.x * half * 0.45 * litSide, y: sheenC.y + n45.y * half * 0.45 * litSide };
   const angle = (Math.atan2(uy, ux) * 180) / Math.PI;
 
-  // Midrib: a tapered filled sliver, widest at the base.
-  const ribTs = ts.filter((t) => t >= 0.04 && t <= ribEnd);
+  // Midrib: a tapered filled sliver. With a stem it starts right at the
+  // base at the stem's width and narrows to the rib width by ~15% up;
+  // without one it starts just inside the base.
+  const ribT0 = stemWidth > 0 ? 0 : 0.04;
+  const ribTs = [ribT0, ...ts.filter((t) => t > ribT0 && t <= ribEnd)];
   const ribW0 = len * ribWidth;
   const ribW1 = len * ribWidth * 0.15;
+  const ribWidthAt = (t: number) => {
+    if (stemWidth > 0 && t < 0.15) return stemWidth + (ribW0 - stemWidth) * (t / 0.15);
+    const k = (t - 0.15) / (ribEnd - 0.15);
+    return ribW0 * (1 - Math.max(0, k)) + ribW1 * Math.max(0, k);
+  };
   const ribSide = (side: 1 | -1) =>
     ribTs.map((t) => {
       const m = mid(t);
       const n = normal(t);
-      const k = (t - 0.04) / (ribEnd - 0.04);
-      const w = (ribW0 * (1 - k) + ribW1 * k) / 2;
+      const w = ribWidthAt(t) / 2;
       return { x: m.x + n.x * w * side, y: m.y + n.y * w * side };
     });
   const ribA = ribSide(1);
   const ribB = ribSide(-1).reverse();
   const midrib = `M${pt(ribA[0])}${smooth(ribA)} L${pt(ribB[0])}${smooth(ribB)} Z`;
-  const ribStart = mid(0.04);
+  const ribStart = mid(ribT0);
   const ribStop = mid(ribEnd);
+  const ribStops: [number, string, number][] = stemWidth > 0 ? [[0, palette.stalk, 1], ...palette.rib] : palette.rib;
 
   // Groove: a thin dark line just off the midrib on the shaded side.
   const shadedSide = (litSide === 1 ? -1 : 1) as 1 | -1;
@@ -230,8 +246,8 @@ export function LeafArt({
           <stop offset="1" stopColor={minusTone.far} />
         </linearGradient>
         <linearGradient id={`${id}r`} gradientUnits="userSpaceOnUse" x1={ribStart.x} y1={ribStart.y} x2={ribStop.x} y2={ribStop.y}>
-          {palette.rib.map(([color, opacity], i) => (
-            <stop key={i} offset={i / (palette.rib.length - 1)} stopColor={color} stopOpacity={opacity} />
+          {ribStops.map(([offset, color, opacity], i) => (
+            <stop key={i} offset={offset} stopColor={color} stopOpacity={opacity} />
           ))}
         </linearGradient>
         <radialGradient
@@ -261,9 +277,11 @@ export function LeafArt({
           <path key={v} d={v} fill="none" stroke={palette.vein} strokeOpacity={palette.veinOpacity} strokeWidth={len * 0.0075} strokeLinecap="round" />
         ))}
         <path d={groove} fill="none" stroke={palette.groove} strokeOpacity="0.6" strokeWidth={len * 0.005} strokeLinecap="round" />
-        <path d={midrib} fill={`url(#${id}r)`} />
       </g>
       <path d={outline} fill="none" stroke={palette.rim} strokeOpacity={palette.rimOpacity} strokeWidth={len * 0.0055} strokeLinejoin="round" />
+      {/* Unclipped and last: near the base the rib is wider than the leaf
+          itself (it's still the stem there), so clipping would cut it. */}
+      <path d={midrib} fill={`url(#${id}r)`} />
     </g>
   );
 }
