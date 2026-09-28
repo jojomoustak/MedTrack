@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ComponentProps } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "tertiary" | "danger" | "danger-outline";
-export type ButtonSize = "md" | "sm";
+export type ButtonSize = "lg" | "md" | "sm";
 
 /**
  * One shared button visual language for the whole app (design-system
@@ -22,14 +22,16 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   "danger-outline": "border border-red-300 dark:border-red-900 text-red-700 dark:text-red-400",
 };
 
+// Rounded rectangles, not pills: every button in the reference mockup
+// (2026-09-28 comparison) has visible corners, on every screen.
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  md: "min-h-12 px-5 text-sm",
-  sm: "min-h-11 px-4 text-sm",
+  lg: "min-h-14 px-6 text-lg rounded-2xl",
+  md: "min-h-12 px-5 text-sm rounded-xl",
+  sm: "min-h-11 px-4 text-sm rounded-xl",
 };
 
 export function buttonClasses(variant: ButtonVariant, size: ButtonSize = "md", className = ""): string {
-  const shape = variant === "tertiary" ? "rounded-full" : "rounded-full";
-  return `inline-flex items-center justify-center gap-1.5 ${shape} font-medium transition-transform duration-150 active:scale-95 disabled:opacity-50 disabled:active:scale-100 ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`;
+  return `inline-flex items-center justify-center gap-1.5 font-semibold transition-transform duration-150 active:scale-95 disabled:opacity-50 disabled:active:scale-100 ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`;
 }
 
 export interface ButtonProps extends ComponentProps<"button"> {
