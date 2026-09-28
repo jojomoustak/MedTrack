@@ -53,6 +53,7 @@ export function RegisterForm() {
           type="email"
           required
           autoComplete="email"
+          placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           aria-label="Email"
@@ -76,7 +77,7 @@ export function RegisterForm() {
         </p>
       )}
 
-      <Button type="submit" disabled={submitting} aria-busy={submitting}>
+      <Button type="submit" fullWidth disabled={submitting} aria-busy={submitting}>
         {submitting ? "Δημιουργία λογαριασμού…" : "Δημιουργία λογαριασμού"}
       </Button>
     </form>

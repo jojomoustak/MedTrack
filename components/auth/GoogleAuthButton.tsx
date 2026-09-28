@@ -30,6 +30,7 @@ interface GoogleAuthButtonProps {
   label?: string;
   /** Test-only injection point — real callers always get `MedianMobilePlatform`. */
   platform?: MobilePlatform;
+  fullWidth?: boolean;
 }
 
 /**
@@ -56,7 +57,7 @@ interface GoogleAuthButtonProps {
  *   both success and failure, so — unlike the redirect branch — it owns
  *   real loading/error/navigation handling.
  */
-export function GoogleAuthButton({ mode, callbackURL, errorCallbackURL, label, platform = new MedianMobilePlatform() }: GoogleAuthButtonProps) {
+export function GoogleAuthButton({ mode, callbackURL, errorCallbackURL, label, platform = new MedianMobilePlatform(), fullWidth }: GoogleAuthButtonProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [nativeError, setNativeError] = useState<string | null>(null);
@@ -107,7 +108,7 @@ export function GoogleAuthButton({ mode, callbackURL, errorCallbackURL, label, p
 
   return (
     <div className="flex flex-col gap-2">
-      <Button variant="secondary" onClick={handleClick} disabled={pending} aria-busy={pending}>
+      <Button variant="secondary" fullWidth={fullWidth} onClick={handleClick} disabled={pending} aria-busy={pending}>
         <GoogleGlyph />
         {label ?? (mode === "sign-in" ? "Σύνδεση με Google" : "Σύνδεση λογαριασμού Google")}
       </Button>

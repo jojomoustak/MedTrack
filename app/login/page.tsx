@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { OrDivider } from "@/components/auth/OrDivider";
+import { BrandWordmark } from "@/components/shell/BrandMark";
 import { mapGoogleAuthError, mapSessionExpiredReason } from "@/lib/auth/client/google-auth-errors";
 
 interface LoginPageProps {
@@ -15,6 +17,15 @@ interface LoginPageProps {
  * doesn't need a `Suspense` boundary for this. `reason=session_expired` is
  * a second, independent source of a `/login` message: `app/(app)/layout.tsx`
  * sets it when `lib/auth/client/session-expired-signal.ts` fires.
+ *
+ * Design pass (2026-09-28, reference mockup comparison — user flagged this
+ * screen specifically): the reference's Login is brand header + "Welcome
+ * back" + subcopy + full-width form + a divider + social auth, not a bare
+ * `<h1>Σύνδεση</h1>` over the form. Matched here, with one deliberate
+ * departure: the reference shows Google *and* Apple side by side — Apple
+ * Sign-In isn't a real provider this app supports (CLAUDE.md rule 4, no
+ * unavailable integration), so only Google renders, full-width rather than
+ * left orphaned at half-width next to a button that would go nowhere.
  */
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { error, reason } = await searchParams;
@@ -23,15 +34,28 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const message = googleError ?? sessionExpiredMessage;
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-stone-50 px-4 py-12 dark:bg-stone-950">
-      <h1 className="text-2xl font-semibold">Σύνδεση</h1>
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-stone-50 px-6 py-12 dark:bg-stone-950">
+      <BrandWordmark className="text-sm" />
+
+      <div className="flex flex-col items-center gap-1 text-center">
+        <h1 className="text-2xl font-semibold">Καλώς ήρθατε ξανά</h1>
+        <p className="text-stone-600 dark:text-stone-400">Συνδεθείτε για να συνεχίσετε στο MedTrack.</p>
+      </div>
+
       {message && (
         <p role="alert" className="w-full max-w-sm text-sm text-red-700 dark:text-red-400">
           {message}
         </p>
       )}
+
       <LoginForm />
-      <GoogleAuthButton mode="sign-in" callbackURL="/today" errorCallbackURL="/login" />
+
+      <OrDivider label="ή συνεχίστε με" />
+
+      <div className="w-full max-w-sm">
+        <GoogleAuthButton mode="sign-in" callbackURL="/today" errorCallbackURL="/login" fullWidth />
+      </div>
+
       <p className="text-sm text-stone-600 dark:text-stone-400">
         Δεν έχετε λογαριασμό;{" "}
         <Link href="/register" className="font-medium text-accent-700 underline dark:text-accent-400">
