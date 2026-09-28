@@ -2,7 +2,7 @@ import Link from "next/link";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { OrDivider } from "@/components/auth/OrDivider";
-import { BrandWordmark } from "@/components/shell/BrandMark";
+import { BrandLockup } from "@/components/shell/BrandMark";
 import { mapGoogleAuthError } from "@/lib/auth/client/google-auth-errors";
 
 interface RegisterPageProps {
@@ -22,6 +22,11 @@ interface RegisterPageProps {
  * — the same gap the user flagged on Login applied here too, and leaving
  * only one of the pair redone would read as broken rather than finished.
  * Same Apple-omission call as Login (see that page's doc comment).
+ *
+ * Design pass 2 (2026-09-28, same day — user: "It doesnt look identical.
+ * Be more careful"): same `BrandLockup` swap and two-line, non-underlined
+ * cross-link fix as Login (see that page's doc comment for how the crop
+ * comparison found these).
  */
 export default async function RegisterPage({ searchParams }: RegisterPageProps) {
   const { error } = await searchParams;
@@ -29,10 +34,10 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-stone-50 px-6 py-12 dark:bg-stone-950">
-      <BrandWordmark className="text-sm" />
+      <BrandLockup />
 
       <div className="flex flex-col items-center gap-1 text-center">
-        <h1 className="text-2xl font-semibold">Δημιουργία λογαριασμού</h1>
+        <h1 className="text-2xl font-bold">Δημιουργία λογαριασμού</h1>
         <p className="text-stone-600 dark:text-stone-400">Εγγραφείτε στο MedTrack και αναλάβετε τον έλεγχο της υγείας σας.</p>
       </div>
 
@@ -50,9 +55,10 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
         <GoogleAuthButton mode="sign-in" callbackURL="/today" errorCallbackURL="/register" fullWidth />
       </div>
 
-      <p className="text-sm text-stone-600 dark:text-stone-400">
-        Έχετε ήδη λογαριασμό;{" "}
-        <Link href="/login" className="font-medium text-accent-700 underline dark:text-accent-400">
+      <p className="text-center text-sm text-stone-600 dark:text-stone-400">
+        Έχετε ήδη λογαριασμό;
+        <br />
+        <Link href="/login" className="font-bold text-accent-700 dark:text-accent-400">
           Σύνδεση
         </Link>
       </p>

@@ -1,4 +1,4 @@
-import { BrandWordmark } from "@/components/shell/BrandMark";
+import { BrandLockup } from "@/components/shell/BrandMark";
 import { WelcomeIllustration } from "@/components/shell/WelcomeIllustration";
 import { ButtonLink } from "@/components/ui/Button";
 
@@ -22,6 +22,17 @@ import { ButtonLink } from "@/components/ui/Button";
  * settings row linking nowhere) — those implied a specific action that
  * would silently fail; a static dot row implies nothing actionable at all.
  *
+ * Design pass 3 (2026-09-28, same day — user: "It doesnt look identical.
+ * Be more careful"): cropped and upscaled the actual reference screen
+ * instead of eyeballing the grid thumbnail, which turned up real gaps
+ * this pass fixes — the logo here is the bigger stacked lockup the
+ * reference uses on every entry screen (Welcome/Login/Register), not the
+ * small inline header mark (`BrandLockup` vs `BrandWordmark`), the
+ * wordmark is colored (green, not default text color) everywhere it
+ * appears, and "already have an account?" / "Sign in" is two stacked
+ * lines with a bold, non-underlined colored link, not one line with an
+ * underline.
+ *
  * One remaining deliberate departure from the reference:
  * - The standalone "Privacy Policy" link this screen used to have at the
  *   bottom isn't in the reference either — Register's fine print already
@@ -33,7 +44,7 @@ import { ButtonLink } from "@/components/ui/Button";
 export default function WelcomePage() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-stone-50 px-6 py-10 text-center dark:bg-stone-950">
-      <BrandWordmark className="text-sm" />
+      <BrandLockup />
 
       <div className="flex flex-col items-center gap-3">
         <h1 className="max-w-[15ch] text-3xl font-bold text-balance">Η υγεία σας στα χέρια σας</h1>
@@ -55,8 +66,9 @@ export default function WelcomePage() {
           Ξεκινήστε τώρα
         </ButtonLink>
         <p className="text-sm text-stone-600 dark:text-stone-400">
-          Έχετε ήδη λογαριασμό;{" "}
-          <ButtonLink href="/login" variant="tertiary" className="px-0 underline">
+          Έχετε ήδη λογαριασμό;
+          <br />
+          <ButtonLink href="/login" variant="tertiary" className="px-0 font-bold text-accent-700 dark:text-accent-400">
             Σύνδεση
           </ButtonLink>
         </p>
