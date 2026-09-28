@@ -14,13 +14,15 @@ import { ButtonLink } from "@/components/ui/Button";
  * heading is now the actual visual lead (bigger, bolder) rather than a
  * standard h1 sitting under the picture.
  *
- * Two deliberate departures from the reference, both judgment calls rather
- * than oversights:
- * - The reference shows a row of pagination dots under the illustration.
- *   This app has exactly one welcome message, not a swipeable multi-step
- *   carousel — dots would imply more screens to swipe to that don't exist,
- *   the same "UI that goes nowhere" problem already avoided elsewhere
- *   (no fake Apple Sign-In button, no dead-end settings rows). Omitted.
+ * Design pass 2 (2026-09-28, same day — user: "I want them identical"):
+ * the dots below were reconsidered and added back. They're purely
+ * decorative (no swipe handler, no route change) rather than a real
+ * carousel control, which is a materially different case from the still-
+ * declined fakes elsewhere (no Apple Sign-In button wired to nothing, no
+ * settings row linking nowhere) — those implied a specific action that
+ * would silently fail; a static dot row implies nothing actionable at all.
+ *
+ * One remaining deliberate departure from the reference:
  * - The standalone "Privacy Policy" link this screen used to have at the
  *   bottom isn't in the reference either — Register's fine print already
  *   links Privacy at the actual point of data collection, so it's not
@@ -41,6 +43,12 @@ export default function WelcomePage() {
       </div>
 
       <WelcomeIllustration />
+
+      <div className="flex items-center gap-1.5" aria-hidden="true">
+        <span className="h-1.5 w-4 rounded-full bg-accent-600 dark:bg-accent-500" />
+        <span className="h-1.5 w-1.5 rounded-full bg-stone-300 dark:bg-stone-700" />
+        <span className="h-1.5 w-1.5 rounded-full bg-stone-300 dark:bg-stone-700" />
+      </div>
 
       <div className="flex w-full max-w-xs flex-col items-center gap-3">
         <ButtonLink href="/register" fullWidth>
