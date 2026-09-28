@@ -68,7 +68,7 @@ export default function WelcomePage() {
         <p className="text-sm text-stone-600 dark:text-stone-400">
           Έχετε ήδη λογαριασμό;
           <br />
-          <ButtonLink href="/login" variant="tertiary" className="px-0 font-bold text-accent-700 dark:text-accent-400">
+          <ButtonLink href="/login" variant="tertiary" className="px-0 font-semibold text-accent-700 dark:text-accent-400">
             Σύνδεση
           </ButtonLink>
         </p>

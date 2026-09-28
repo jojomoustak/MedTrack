@@ -66,7 +66,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <p className="text-center text-sm text-stone-600 dark:text-stone-400">
         Δεν έχετε λογαριασμό;
         <br />
-        <Link href="/register" className="font-bold text-accent-700 dark:text-accent-400">
+        <Link href="/register" className="font-semibold text-accent-700 dark:text-accent-400">
           Δημιουργία λογαριασμού
         </Link>
       </p>

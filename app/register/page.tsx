@@ -58,7 +58,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
       <p className="text-center text-sm text-stone-600 dark:text-stone-400">
         Έχετε ήδη λογαριασμό;
         <br />
-        <Link href="/login" className="font-bold text-accent-700 dark:text-accent-400">
+        <Link href="/login" className="font-semibold text-accent-700 dark:text-accent-400">
           Σύνδεση
         </Link>
       </p>
