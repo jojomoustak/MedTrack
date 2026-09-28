@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { LOGO_PALETTE, LeafArt } from "@/components/shell/leaf-art";
 
 /**
  * The one MedTrack mark, everywhere. Rebrand (2026-09-27, confirmed user
@@ -45,6 +46,32 @@ export function BrandWordmark({ className = "" }: { className?: string }) {
 }
 
 /**
+ * The mark at display size, with the reference logo's surface detail
+ * (zoomed + sampled 2026-09-28): lighter upper-left half, darker
+ * lower-right, a mint midrib (~#5FAB95) with a dark groove beside it that
+ * fades before the tip, and a short stalk at the base. Fixed greens rather
+ * than `currentColor` — it only appears where the mark is green anyway.
+ * The flat `BrandMark` stays for small sizes, where this detail can't
+ * be seen.
+ */
+export function BrandMarkDetailed({ size = 52, className }: { size?: number; className?: string }) {
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <LeafArt
+        spec={{ base: { x: 5.5, y: 21 }, tip: { x: 20.5, y: 3 }, width: 0.58, bend: -0.03, skew: 1.1 }}
+        palette={LOGO_PALETTE}
+        id={`${id}logo`}
+        ribEnd={0.78}
+        ribWidth={0.05}
+        veinCount={0}
+        stalk={0.06}
+      />
+    </svg>
+  );
+}
+
+/**
  * Bigger, stacked (icon above wordmark) lockup — the reference's "brand
  * moment" treatment on entry screens (Welcome, Login, Register), distinct
  * from the compact inline `BrandWordmark` used in interior-screen headers.
@@ -60,7 +87,7 @@ export function BrandLockup({
 }) {
   return (
     <div className={`flex flex-col items-center text-accent-700 dark:text-accent-400 ${className}`}>
-      <BrandMark size={iconSize} />
+      <BrandMarkDetailed size={iconSize} />
       <span className={`font-bold tracking-tight ${textClassName}`}>MedTrack</span>
     </div>
   );
