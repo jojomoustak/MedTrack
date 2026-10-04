@@ -16,7 +16,8 @@
  * class directly — always go through a repository (ADR-008).
  */
 import Dexie, { type EntityTable } from "dexie";
-import type { OutboxEntry } from "@/lib/domain/outbox";
+import { outboxEntryProfileId, type OutboxEntry } from "@/lib/domain/outbox";
+import { getCachedProfileId } from "@/lib/auth/client/use-current-profile";
 import type { PurchaseListItemRecord, PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { CatalogProduct } from "@/lib/domain/catalog";
@@ -282,7 +283,12 @@ export class MedTrackingDexie extends Dexie {
     // signal only fires once the write is actually committed, not
     // speculatively during an in-flight transaction that could still
     // abort. See `lib/sync/client/outbox-signal.ts` for why this exists.
-    this.outbox.hook("creating", (_primKey, _obj, transaction) => {
+    //
+    // Also the one place every entry gets its owning profile stamped (see
+    // `OutboxEntry.profileId`): the record's own `profileId` when the
+    // payload carries one, else the signed-in profile at write time.
+    this.outbox.hook("creating", (_primKey, obj, transaction) => {
+      obj.profileId ??= outboxEntryProfileId(obj) ?? getCachedProfileId() ?? undefined;
       transaction.on("complete", () => notifyOutboxWrite());
     });
 

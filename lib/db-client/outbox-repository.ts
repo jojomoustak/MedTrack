@@ -1,4 +1,4 @@
-import { isOutboxEntryDue, type OutboxEntry } from "@/lib/domain/outbox";
+import { selectDueOutboxEntries, type OutboxEntry } from "@/lib/domain/outbox";
 import type { OutboxRepository } from "@/lib/domain/repositories";
 import { getClientDb, type MedTrackingDexie } from "@/lib/db-client/dexie";
 
@@ -43,9 +43,8 @@ export class DexieOutboxRepository implements OutboxRepository {
    * random primary-key order for those ties. `seq` (`nextOutboxSeq()`) is
    * a locally-assigned strictly-increasing counter with no such collision.
    */
-  async listPending(now: string): Promise<OutboxEntry[]> {
-    const entries = await this.db.outbox.toArray();
-    return entries.filter((e) => isOutboxEntryDue(e, now)).sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0) || a.createdAt.localeCompare(b.createdAt));
+  async listPending(now: string, profileId: string): Promise<OutboxEntry[]> {
+    return selectDueOutboxEntries(await this.db.outbox.toArray(), now, profileId);
   }
 
   async markSyncing(clientMutationId: string): Promise<void> {

@@ -1601,6 +1601,17 @@ export async function applyMutations(
 
   const results: SyncMutationResult[] = [];
   for (const mutation of mutations) {
+    // Every handler writes under the SESSION's profile. A payload naming a
+    // different profile is another profile's queued change — e.g. user A
+    // signed out with unsent work and user B signed in on the same device —
+    // and applying it would copy A's health data into B's account. Refused,
+    // never applied (CLAUDE.md rule 7: never trust a client's "this is mine").
+    const payloadProfileId = (mutation.payload as { profileId?: unknown } | null)?.profileId;
+    if (typeof payloadProfileId === "string" && payloadProfileId !== ctx.profileId) {
+      logger.warn("sync.mutation.profile_mismatch", { entityType: mutation.entityType, operation: mutation.operation });
+      results.push({ clientMutationId: mutation.clientMutationId, result: "rejected", error: "profile_mismatch" });
+      continue;
+    }
     try {
       results.push(await applyOneMutation(ctx, mutation));
     } catch (err) {

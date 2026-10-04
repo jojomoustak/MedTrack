@@ -45,7 +45,7 @@ describe("DexieDoseEventRepository (idempotent-by-id)", () => {
     expect(record.snoozeCount).toBe(0);
     expect(record.syncState).toBe("pending");
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), "profile-1");
     expect(pending).toHaveLength(1);
     expect(pending[0].entityType).toBe("doseEvent");
     expect(pending[0].baseVersion).toBeUndefined();
@@ -56,7 +56,7 @@ describe("DexieDoseEventRepository (idempotent-by-id)", () => {
     await repo.createIfMissing(input);
     await repo.createIfMissing(input);
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), "profile-1");
     expect(pending).toHaveLength(1);
   });
 
@@ -70,7 +70,7 @@ describe("DexieDoseEventRepository (idempotent-by-id)", () => {
     expect(updated.status).toBe("taken");
     expect(updated.takenAt).toBe(takenAt);
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), "profile-1");
     const transitionEntry = pending.find((e) => e.operation === "update");
     expect(transitionEntry?.baseVersion).toBeUndefined();
   });
@@ -89,9 +89,9 @@ describe("DexieDoseEventRepository (idempotent-by-id)", () => {
     const created = await repo.createIfMissing(scheduledInput());
     await repo.transition(created.id, { status: "taken", takenAt: new Date().toISOString() }, crypto.randomUUID());
 
-    const pendingBefore = await outbox.listPending(new Date().toISOString());
+    const pendingBefore = await outbox.listPending(new Date().toISOString(), "profile-1");
     await expect(repo.transition(created.id, { status: "skipped" }, crypto.randomUUID())).rejects.toThrow(/cannot move/);
-    const pendingAfter = await outbox.listPending(new Date().toISOString());
+    const pendingAfter = await outbox.listPending(new Date().toISOString(), "profile-1");
     expect(pendingAfter).toHaveLength(pendingBefore.length);
   });
 

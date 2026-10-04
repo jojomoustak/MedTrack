@@ -4,13 +4,14 @@ import { MedTrackingDexie } from "@/lib/db-client/dexie";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
+import { DexieFavoriteRepository } from "@/lib/db-client/favorite-repository";
 import { hydrateLocalDataFromServer } from "@/lib/sync/client/hydrate-local-data";
 import { DexieSyncPullCursorRepository } from "@/lib/db-client/sync-pull-cursor-repository";
 import { onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
 import type { SyncChangesResponseBody } from "@/lib/sync/protocol";
 
 /** One favorite-change page per cursor step — the cheapest entity to fabricate; content is irrelevant to the paging behaviour under test. */
-function fakeFeed(totalPages: number, pageSize = 100) {
+function fakeFeed(totalPages: number, pageSize = 100, withRecords = false) {
   const requestedCursors: number[] = [];
   const pullChanges = async (cursor: number): Promise<SyncChangesResponseBody> => {
     requestedCursors.push(cursor);
@@ -25,7 +26,9 @@ function fakeFeed(totalPages: number, pageSize = 100) {
         operation: "create" as const,
         serverVersion: null,
         occurredAt: "2026-01-01T00:00:00.000Z",
-        record: undefined,
+        record: withRecords
+          ? { id: `fav-${id}`, profileId: "profile-1", userMedicationId: crypto.randomUUID(), createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", clientUpdatedAt: null, removedAt: null, clientMutationId: crypto.randomUUID() }
+          : undefined,
       };
     });
     return { nextCursor: cursor + pageSize, changes };
@@ -198,7 +201,7 @@ describe("hydrateLocalDataFromServer", () => {
       // gave up after 10 pages, so a long-time user restoring on a new
       // device only ever got their OLDEST 1,000 changes.
       const { pullChanges, requestedCursors } = fakeFeed(15);
-      await hydrateLocalDataFromServer({ profileId: "profile-1", cursorStore, pullChanges });
+      await hydrateLocalDataFromServer({ profileId: "profile-1", currentProfileId: () => "profile-1", cursorStore, pullChanges });
 
       expect(requestedCursors.at(-1)).toBe(1500);
       expect(await cursorStore.get("profile-1")).toBe(1500);
@@ -208,7 +211,7 @@ describe("hydrateLocalDataFromServer", () => {
       await cursorStore.set("profile-1", 300);
       const { pullChanges, requestedCursors } = fakeFeed(5);
 
-      await hydrateLocalDataFromServer({ profileId: "profile-1", cursorStore, pullChanges });
+      await hydrateLocalDataFromServer({ profileId: "profile-1", currentProfileId: () => "profile-1", cursorStore, pullChanges });
 
       expect(requestedCursors[0]).toBe(300);
       expect(await cursorStore.get("profile-1")).toBe(500);
@@ -222,12 +225,12 @@ describe("hydrateLocalDataFromServer", () => {
         return fakeFeed(10).pullChanges(cursor);
       };
 
-      await hydrateLocalDataFromServer({ profileId: "profile-1", cursorStore, pullChanges });
+      await hydrateLocalDataFromServer({ profileId: "profile-1", currentProfileId: () => "profile-1", cursorStore, pullChanges });
       expect(await cursorStore.get("profile-1")).toBe(200);
     });
 
     it("keeps cursors separate per profile", async () => {
-      await hydrateLocalDataFromServer({ profileId: "profile-1", cursorStore, pullChanges: fakeFeed(2).pullChanges });
+      await hydrateLocalDataFromServer({ profileId: "profile-1", currentProfileId: () => "profile-1", cursorStore, pullChanges: fakeFeed(2).pullChanges });
       expect(await cursorStore.get("profile-1")).toBe(200);
       expect(await cursorStore.get("profile-2")).toBe(0);
     });
@@ -235,10 +238,38 @@ describe("hydrateLocalDataFromServer", () => {
     it("shares one pass between concurrent calls for the same profile", async () => {
       const { pullChanges, requestedCursors } = fakeFeed(3);
       await Promise.all([
-        hydrateLocalDataFromServer({ profileId: "profile-1", cursorStore, pullChanges }),
-        hydrateLocalDataFromServer({ profileId: "profile-1", cursorStore, pullChanges }),
+        hydrateLocalDataFromServer({ profileId: "profile-1", currentProfileId: () => "profile-1", cursorStore, pullChanges }),
+        hydrateLocalDataFromServer({ profileId: "profile-1", currentProfileId: () => "profile-1", cursorStore, pullChanges }),
       ]);
       expect(requestedCursors).toEqual([0, 100, 200, 300]);
+    });
+
+    it("stores nothing when the server says the feed belongs to a different profile", async () => {
+      // Security review (2026-10-04): if another user signs in on this
+      // device mid-restore, later pages come back under THEIR session.
+      const { pullChanges } = fakeFeed(3, 100, true);
+      const otherUsersFeed = async (cursor: number) => ({ ...(await pullChanges(cursor)), profileId: "profile-2" });
+
+      await hydrateLocalDataFromServer({ profileId: "profile-1", currentProfileId: () => "profile-1", cursorStore, favorite: new DexieFavoriteRepository(db), pullChanges: otherUsersFeed });
+
+      expect(await db.favorite.count()).toBe(0);
+      expect(await cursorStore.get("profile-1")).toBe(0);
+    });
+
+    it("stops between pages once the signed-in profile changes", async () => {
+      let signedIn = "profile-1";
+      const { pullChanges, requestedCursors } = fakeFeed(5, 100, true);
+      const switchingFeed = async (cursor: number) => {
+        const page = await pullChanges(cursor);
+        if (cursor === 100) signedIn = "profile-2"; // sign-out/in lands while page 2 is in flight
+        return page;
+      };
+
+      await hydrateLocalDataFromServer({ profileId: "profile-1", currentProfileId: () => signedIn, cursorStore, favorite: new DexieFavoriteRepository(db), pullChanges: switchingFeed });
+
+      expect(requestedCursors).toEqual([0, 100]);
+      expect(await cursorStore.get("profile-1")).toBe(100);
+      expect(await db.favorite.count()).toBe(100);
     });
   });
 

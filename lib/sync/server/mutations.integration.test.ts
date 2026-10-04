@@ -1068,4 +1068,74 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     expect(eventChange?.record).toBeTruthy();
     expect((eventChange?.record as { interactionType: string } | undefined)?.interactionType).toBe("scanned");
   });
+
+  it("rejects a mutation whose record names a different profile than the session's, and writes nothing", async () => {
+    // Security review (2026-10-04): a shared device's outbox can still hold
+    // a previous user's unsent changes; they must never land in the account
+    // that happens to be signed in when they're sent.
+    const signedIn = await seedAccountAndProfile();
+    const previousUser = await seedAccountAndProfile();
+    const listId = randomUUID();
+
+    const results = await applyMutations({ profileId: signedIn.profileId, accountId: signedIn.accountId, db }, [
+      { clientMutationId: randomUUID(), entityType: "purchaseList", entityId: listId, operation: "create", payload: { profileId: previousUser.profileId, name: "Not yours" } },
+    ]);
+
+    expect(results[0]).toMatchObject({ result: "rejected", error: "profile_mismatch" });
+    const stored = await adminPool.query("SELECT 1 FROM purchase_list WHERE id = $1", [listId]);
+    expect(stored.rowCount).toBe(0);
+  });
+
+  it("sync_change_log ids for one profile become visible in commit order, so a pull can't skip a late-committing change", async () => {
+    // Security review (2026-10-04), migration 0018: with a plain bigserial,
+    // T1 takes id N, T2 takes N+1 and commits first, a device pulls N+1 and
+    // moves its cursor past N — and T1's change is never delivered.
+    const { accountId, profileId } = await seedAccountAndProfile();
+    const other = await seedAccountAndProfile();
+    const insertLog = (client: { query: Pool["query"] }, forProfile: string) =>
+      client.query<{ id: string }>(
+        "INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation) VALUES ($1, 'favorite', $2, 'create') RETURNING id",
+        [forProfile, randomUUID()],
+      );
+
+    const t1 = await adminPool.connect();
+    const t2 = await adminPool.connect();
+    const t3 = await adminPool.connect();
+    try {
+      await t1.query("BEGIN");
+      const first = await insertLog(t1, profileId);
+
+      await t2.query("BEGIN");
+      let secondDone = false;
+      const secondInsert = insertLog(t2, profileId).then((r) => {
+        secondDone = true;
+        return r;
+      });
+
+      // A different profile is never held up by this one's open transaction.
+      await t3.query("BEGIN");
+      await insertLog(t3, other.profileId);
+      await t3.query("COMMIT");
+
+      await new Promise((r) => setTimeout(r, 300));
+      expect(secondDone).toBe(false); // waiting on T1, hasn't drawn an id yet
+
+      // Before T1 commits, a pull must see neither row; after, T1's first.
+      expect((await pullChanges(profileId, accountId, 0, 100, db)).changes).toHaveLength(0);
+      await t1.query("COMMIT");
+      const second = await secondInsert;
+      expect(BigInt(second.rows[0].id)).toBeGreaterThan(BigInt(first.rows[0].id));
+
+      const afterT1 = await pullChanges(profileId, accountId, 0, 100, db);
+      expect(afterT1.changes.map((c) => String(c.id))).toEqual([first.rows[0].id]);
+      await t2.query("COMMIT");
+      const afterT2 = await pullChanges(profileId, accountId, afterT1.nextCursor, 100, db);
+      expect(afterT2.changes.map((c) => String(c.id))).toEqual([second.rows[0].id]);
+      expect(afterT2.profileId).toBe(profileId);
+    } finally {
+      t1.release();
+      t2.release();
+      t3.release();
+    }
+  });
 });

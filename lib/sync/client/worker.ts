@@ -24,6 +24,8 @@ import { logger } from "@/lib/logging/logger";
 
 export interface SyncWorkerDeps {
   outbox: OutboxRepository;
+  /** The signed-in profile — only its queued entries are sent (`selectDueOutboxEntries`). */
+  profileId: string;
   /** Dispatches a server result back into the right entity repository (applyRemote/markConflict/markFailed). */
   applyResult: (entry: OutboxEntry, result: SyncMutationResult) => Promise<void>;
   postMutations?: typeof defaultPostMutations;
@@ -49,7 +51,7 @@ export async function drainOutbox(deps: SyncWorkerDeps): Promise<DrainSummary> {
   const post = deps.postMutations ?? defaultPostMutations;
   const batchSize = deps.batchSize ?? 50;
 
-  const pending = await deps.outbox.listPending(now());
+  const pending = await deps.outbox.listPending(now(), deps.profileId);
   if (pending.length === 0) {
     return { attempted: 0, synced: 0, conflicts: 0, failed: 0 };
   }

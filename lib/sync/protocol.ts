@@ -66,6 +66,8 @@ export interface SyncChangeEntry {
 }
 
 export interface SyncChangesResponseBody {
+  /** The profile this feed belongs to — the session's, not anything the client asked for. Lets a client notice the session switched users mid-pull (see `hydrate-local-data.ts`). Optional only so older responses still parse. */
+  profileId?: string;
   changes: SyncChangeEntry[];
   /** The cursor to pass as `?cursor=` on the next pull; equals the last returned change's `id`, or the input cursor unchanged if nothing new. */
   nextCursor: number;

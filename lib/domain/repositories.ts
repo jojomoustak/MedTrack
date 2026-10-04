@@ -24,7 +24,8 @@ import type { CreateRecentlyUsedEventInput, RecentlyUsedEventRecord } from "@/li
 
 export interface OutboxRepository {
   enqueue(entry: OutboxEntry): Promise<void>;
-  listPending(now: string): Promise<OutboxEntry[]>;
+  /** Entries due to send for `profileId` — see `selectDueOutboxEntries`. */
+  listPending(now: string, profileId: string): Promise<OutboxEntry[]>;
   markSyncing(clientMutationId: string): Promise<void>;
   markSynced(clientMutationId: string): Promise<void>;
   markFailed(clientMutationId: string, error: string, nextAttemptAt: string): Promise<void>;

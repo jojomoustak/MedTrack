@@ -127,6 +127,13 @@
       "when": 1789710000000,
       "tag": "0017_account_email_verified_boolean",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789720000000,
+      "tag": "0018_sync_change_log_commit_ordered_ids",
+      "breakpoints": true
     }
   ]
 }

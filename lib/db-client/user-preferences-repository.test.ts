@@ -34,7 +34,7 @@ describe("DexiePreferencesRepository (LWW)", () => {
     const stored = await repo.get(accountId);
     expect(stored?.theme).toBe("dark");
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await db.outbox.toArray();
     expect(pending).toHaveLength(1);
     expect(pending[0].entityType).toBe("userPreferences");
     expect(pending[0].entityId).toBe(accountId);
@@ -52,7 +52,7 @@ describe("DexiePreferencesRepository (LWW)", () => {
 
   it("applyRemote() marks the record synced and never creates an outbox entry (it's the ack/pull path, not a new local edit)", async () => {
     await repo.update(accountId, { theme: "dark" });
-    await outbox.markSynced((await outbox.listPending(new Date().toISOString()))[0].clientMutationId);
+    await outbox.markSynced((await db.outbox.toArray())[0].clientMutationId);
 
     await repo.applyRemote({
       accountId,
@@ -68,6 +68,6 @@ describe("DexiePreferencesRepository (LWW)", () => {
     const stored = await repo.get(accountId);
     expect(stored?.syncState).toBe("synced");
     expect(stored?.theme).toBe("light");
-    expect(await outbox.listPending(new Date().toISOString())).toHaveLength(0);
+    expect(await db.outbox.toArray()).toHaveLength(0);
   });
 });

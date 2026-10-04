@@ -125,6 +125,7 @@ export class DexieDoseEventRepository implements DoseEventRepository {
       entityType: "doseEvent",
       entityId: id,
       operation: "update",
+      profileId: existing.profileId,
       payload: patch,
       baseVersion: undefined,
       createdAt: now,

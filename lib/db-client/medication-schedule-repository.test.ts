@@ -48,7 +48,7 @@ describe("DexieMedicationScheduleRepository (optimistic concurrency)", () => {
     expect(record.version).toBe(1);
     expect(record.syncState).toBe("pending");
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), "profile-1");
     expect(pending).toHaveLength(1);
     expect(pending[0].entityType).toBe("medicationSchedule");
     expect(pending[0].operation).toBe("create");
@@ -74,7 +74,7 @@ describe("DexieMedicationScheduleRepository (optimistic concurrency)", () => {
     expect(updated.version).toBe(2);
     expect(updated.timesOfDay).toEqual(["09:00:00"]);
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), "profile-1");
     const updateEntry = pending.find((e) => e.operation === "update");
     expect(updateEntry?.baseVersion).toBe(1);
   });

@@ -43,7 +43,7 @@ describe("DexieUserMedicationRepository (optimistic concurrency, optional catalo
     expect(record.version).toBe(1);
     expect(record.syncState).toBe("pending");
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), profileId);
     expect(pending).toHaveLength(1);
     expect(pending[0].entityType).toBe("userMedication");
     expect(pending[0].operation).toBe("create");
@@ -158,7 +158,7 @@ describe("DexieUserMedicationRepository (optimistic concurrency, optional catalo
     expect(updated.customName).toBe("Depon");
     expect(updated.notes).toBe("Original note"); // untouched field survives locally
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), profileId);
     const updateEntry = pending.find((e) => e.operation === "update");
     expect(updateEntry?.baseVersion).toBe(1);
     expect(updateEntry?.payload).toEqual({ customName: "Depon" });
@@ -229,7 +229,7 @@ describe("DexieUserMedicationRepository (optimistic concurrency, optional catalo
     expect(deleted?.deletedAt).not.toBeNull();
     expect(deleted?.version).toBe(2);
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), profileId);
     const deleteEntry = pending.find((e) => e.operation === "delete");
     expect(deleteEntry?.baseVersion).toBe(1);
     expect(deleteEntry?.payload).toEqual({});

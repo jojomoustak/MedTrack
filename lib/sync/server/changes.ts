@@ -33,7 +33,7 @@ export async function pullChanges(
   );
 
   if (logRows.length === 0) {
-    return { changes: [], nextCursor: cursor };
+    return { profileId, changes: [], nextCursor: cursor };
   }
 
   const purchaseListIds = logRows.filter((r) => r.entityType === "purchaseList").map((r) => r.entityId);
@@ -208,5 +208,5 @@ export async function pullChanges(
     };
   });
 
-  return { changes, nextCursor: changes[changes.length - 1]?.id ?? cursor };
+  return { profileId, changes, nextCursor: changes[changes.length - 1]?.id ?? cursor };
 }

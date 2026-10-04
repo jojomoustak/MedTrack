@@ -51,6 +51,38 @@ export interface OutboxEntry<TPayload = Record<string, unknown>> {
   lastError?: string;
   /** When this entry last went in flight (`markSyncing`) — see `isOutboxEntryDue`. Missing on entries marked `syncing` before this field existed. */
   syncingSince?: string;
+  /**
+   * The profile this change belongs to — stamped on every outbox write (see
+   * `dexie.ts`'s outbox `creating` hook). Sign-out keeps unsent entries so
+   * nothing is lost, so the queue can hold a previous user's changes; only
+   * the signed-in profile's entries are ever sent. Missing on entries
+   * written before this field existed — see `outboxEntryProfileId`.
+   */
+  profileId?: string;
+}
+
+/** The profile an entry belongs to: its stamp, else the `profileId` in its record snapshot (pre-stamp entries). Undefined when neither says. */
+export function outboxEntryProfileId(entry: Pick<OutboxEntry, "profileId" | "payload">): string | undefined {
+  if (entry.profileId) return entry.profileId;
+  const fromPayload = (entry.payload as { profileId?: unknown } | null)?.profileId;
+  return typeof fromPayload === "string" ? fromPayload : undefined;
+}
+
+/**
+ * Which queued entries to send next, in send order:
+ * - only `profileId`'s entries — never another profile's (an entry whose
+ *   owner can't be determined is held, not guessed);
+ * - each due per `isOutboxEntryDue`;
+ * - none for an entity that still has a live (unexpired) in-flight entry,
+ *   so a newer change can't overtake an older one still being delivered;
+ * - ordered by `seq`, then `createdAt`.
+ */
+export function selectDueOutboxEntries(entries: OutboxEntry[], now: string, profileId: string): OutboxEntry[] {
+  const own = entries.filter((e) => outboxEntryProfileId(e) === profileId);
+  const blockedEntities = new Set(own.filter((e) => e.status === "syncing" && !isOutboxEntryDue(e, now)).map((e) => e.entityId));
+  return own
+    .filter((e) => !blockedEntities.has(e.entityId) && isOutboxEntryDue(e, now))
+    .sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0) || a.createdAt.localeCompare(b.createdAt));
 }
 
 /**

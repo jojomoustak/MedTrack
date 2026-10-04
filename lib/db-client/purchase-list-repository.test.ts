@@ -28,7 +28,7 @@ describe("DexiePurchaseListRepository (optimistic concurrency)", () => {
     expect(record.version).toBe(1);
     expect(record.syncState).toBe("pending");
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), profileId);
     expect(pending).toHaveLength(1);
     expect(pending[0].operation).toBe("create");
     expect(pending[0].baseVersion).toBeUndefined();
@@ -37,7 +37,7 @@ describe("DexiePurchaseListRepository (optimistic concurrency)", () => {
   it("rename() bumps the local version optimistically and records baseVersion for the server to check", async () => {
     const id = crypto.randomUUID();
     await repo.create({ id, profileId, name: "Original", clientMutationId: crypto.randomUUID() });
-    await outbox.markSynced((await outbox.listPending(new Date().toISOString()))[0].clientMutationId);
+    await outbox.markSynced((await outbox.listPending(new Date().toISOString(), profileId))[0].clientMutationId);
 
     const renameMutationId = crypto.randomUUID();
     const renamed = await repo.rename(id, "Updated", renameMutationId);
@@ -45,7 +45,7 @@ describe("DexiePurchaseListRepository (optimistic concurrency)", () => {
     expect(renamed.version).toBe(2);
     expect(renamed.name).toBe("Updated");
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), profileId);
     expect(pending).toHaveLength(1);
     expect(pending[0].baseVersion).toBe(1); // the version this edit was BUILT ON, not the new local version
     expect(pending[0].operation).toBe("update");

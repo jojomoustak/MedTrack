@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { drainOutbox, drainOutboxFully } from "@/lib/sync/client/worker";
-import type { OutboxEntry } from "@/lib/domain/outbox";
+import { selectDueOutboxEntries, type OutboxEntry } from "@/lib/domain/outbox";
 import type { OutboxRepository } from "@/lib/domain/repositories";
 import type { SyncMutationResult } from "@/lib/sync/protocol";
 
@@ -11,6 +11,7 @@ function makeEntry(overrides: Partial<OutboxEntry> = {}): OutboxEntry {
     entityId: crypto.randomUUID(),
     operation: "create",
     payload: { name: "Test list" },
+    profileId: "profile-1",
     createdAt: new Date().toISOString(),
     status: "pending",
     attempts: 0,
@@ -27,12 +28,12 @@ function createFakeOutbox(initial: OutboxEntry[] = []): OutboxRepository & { ent
     async enqueue(entry) {
       entries.set(entry.clientMutationId, entry);
     },
-    async listPending(now) {
-      return [...entries.values()].filter((e) => e.status !== "syncing" && e.nextAttemptAt <= now);
+    async listPending(now, profileId) {
+      return selectDueOutboxEntries([...entries.values()], now, profileId);
     },
     async markSyncing(id) {
       const e = entries.get(id);
-      if (e) e.status = "syncing";
+      if (e) Object.assign(e, { status: "syncing", syncingSince: new Date().toISOString() });
     },
     async markSynced(id) {
       entries.delete(id);
@@ -60,9 +61,22 @@ describe("drainOutbox", () => {
     const outbox = createFakeOutbox();
     const applyResult = vi.fn();
     const postMutations = vi.fn();
-    const summary = await drainOutbox({ outbox, applyResult, postMutations });
+    const summary = await drainOutbox({ outbox, applyResult, postMutations, profileId: "profile-1" });
     expect(summary).toEqual({ attempted: 0, synced: 0, conflicts: 0, failed: 0 });
     expect(postMutations).not.toHaveBeenCalled();
+  });
+
+  it("sends only the signed-in profile's entries, leaving another profile's queued", async () => {
+    const mine = makeEntry({ profileId: "profile-1" });
+    const theirs = makeEntry({ profileId: "profile-2" });
+    const outbox = createFakeOutbox([mine, theirs]);
+    const postMutations = vi.fn().mockResolvedValue({ results: [{ clientMutationId: mine.clientMutationId, result: "applied", serverRecord: { id: mine.entityId } }] });
+
+    await drainOutboxFully({ outbox, applyResult: vi.fn(), postMutations, profileId: "profile-1" });
+
+    expect(postMutations).toHaveBeenCalledTimes(1);
+    expect(postMutations.mock.calls[0][0].map((m: { clientMutationId: string }) => m.clientMutationId)).toEqual([mine.clientMutationId]);
+    expect(outbox.entries.get(theirs.clientMutationId)?.status).toBe("pending");
   });
 
   it("on an 'applied' server result: calls applyResult, removes the outbox entry (via markSynced)", async () => {
@@ -72,7 +86,7 @@ describe("drainOutbox", () => {
     const result: SyncMutationResult = { clientMutationId: entry.clientMutationId, result: "applied", serverRecord: { id: entry.entityId } };
     const postMutations = vi.fn().mockResolvedValue({ results: [result] });
 
-    const summary = await drainOutbox({ outbox, applyResult, postMutations });
+    const summary = await drainOutbox({ outbox, applyResult, postMutations, profileId: "profile-1" });
 
     expect(summary).toEqual({ attempted: 1, synced: 1, conflicts: 0, failed: 0 });
     expect(applyResult).toHaveBeenCalledWith(entry, result);
@@ -86,7 +100,7 @@ describe("drainOutbox", () => {
     const result: SyncMutationResult = { clientMutationId: entry.clientMutationId, result: "conflict", serverRecord: { version: 3 } };
     const postMutations = vi.fn().mockResolvedValue({ results: [result] });
 
-    const summary = await drainOutbox({ outbox, applyResult, postMutations });
+    const summary = await drainOutbox({ outbox, applyResult, postMutations, profileId: "profile-1" });
 
     expect(summary.conflicts).toBe(1);
     expect(applyResult).toHaveBeenCalledWith(entry, result);
@@ -101,7 +115,7 @@ describe("drainOutbox", () => {
     const result: SyncMutationResult = { clientMutationId: entry.clientMutationId, result: "rejected", error: "invalid payload" };
     const postMutations = vi.fn().mockResolvedValue({ results: [result] });
 
-    const summary = await drainOutbox({ outbox, applyResult, postMutations });
+    const summary = await drainOutbox({ outbox, applyResult, postMutations, profileId: "profile-1" });
 
     expect(summary.failed).toBe(1);
     const stored = outbox.entries.get(entry.clientMutationId);
@@ -119,7 +133,7 @@ describe("drainOutbox", () => {
     const applyResult = vi.fn();
     const postMutations = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
 
-    const summary = await drainOutbox({ outbox, applyResult, postMutations });
+    const summary = await drainOutbox({ outbox, applyResult, postMutations, profileId: "profile-1" });
 
     expect(summary).toEqual({ attempted: 2, synced: 0, conflicts: 0, failed: 2 });
     expect(applyResult).not.toHaveBeenCalled();
@@ -137,7 +151,7 @@ describe("drainOutbox", () => {
       return { results: [{ clientMutationId: entry.clientMutationId, result: "applied" as const }] };
     });
 
-    await drainOutbox({ outbox, applyResult: vi.fn(), postMutations });
+    await drainOutbox({ outbox, applyResult: vi.fn(), postMutations, profileId: "profile-1" });
     expect(statusDuringRequest).toBe("syncing");
   });
 });
@@ -152,7 +166,7 @@ describe("drainOutboxFully", () => {
       results: mutations.map((m) => ({ clientMutationId: m.clientMutationId, result: "applied" as const })),
     }));
 
-    const summary = await drainOutboxFully({ outbox, applyResult, postMutations });
+    const summary = await drainOutboxFully({ outbox, applyResult, postMutations, profileId: "profile-1" });
     expect(summary.synced).toBe(3);
     expect(outbox.entries.size).toBe(0);
   });

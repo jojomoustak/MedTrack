@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MedTrackingDexie } from "@/lib/db-client/dexie";
 import { DexieOutboxRepository } from "@/lib/db-client/outbox-repository";
 import { SYNCING_LEASE_MS, type OutboxEntry } from "@/lib/domain/outbox";
@@ -11,6 +11,7 @@ function makeEntry(overrides: Partial<OutboxEntry> = {}): OutboxEntry {
     entityId: crypto.randomUUID(),
     operation: "create",
     payload: { name: "Pharmacy run" },
+    profileId: "profile-1",
     createdAt: new Date().toISOString(),
     status: "pending",
     attempts: 0,
@@ -35,7 +36,7 @@ describe("DexieOutboxRepository", () => {
   it("enqueue + listPending round-trips a due entry", async () => {
     const entry = makeEntry();
     await repo.enqueue(entry);
-    const pending = await repo.listPending(new Date().toISOString());
+    const pending = await repo.listPending(new Date().toISOString(), "profile-1");
     expect(pending).toHaveLength(1);
     expect(pending[0].clientMutationId).toBe(entry.clientMutationId);
   });
@@ -54,7 +55,7 @@ describe("DexieOutboxRepository", () => {
     await repo.enqueue(late);
     await repo.enqueue(early);
 
-    const pending = await repo.listPending(new Date().toISOString());
+    const pending = await repo.listPending(new Date().toISOString(), "profile-1");
     expect(pending.map((e) => e.clientMutationId)).toEqual([early.clientMutationId, late.clientMutationId]);
   });
 
@@ -76,14 +77,14 @@ describe("DexieOutboxRepository", () => {
     await repo.enqueue(first);
     await repo.enqueue(second);
 
-    const pending = await repo.listPending(new Date().toISOString());
+    const pending = await repo.listPending(new Date().toISOString(), "profile-1");
     expect(pending.map((e) => e.clientMutationId)).toEqual([first.clientMutationId, second.clientMutationId, third.clientMutationId]);
   });
 
   it("listPending excludes entries whose nextAttemptAt is still in the future (backoff)", async () => {
     const future = new Date(Date.now() + 60_000).toISOString();
     await repo.enqueue(makeEntry({ nextAttemptAt: future }));
-    const pending = await repo.listPending(new Date().toISOString());
+    const pending = await repo.listPending(new Date().toISOString(), "profile-1");
     expect(pending).toHaveLength(0);
   });
 
@@ -91,7 +92,7 @@ describe("DexieOutboxRepository", () => {
     const entry = makeEntry();
     await repo.enqueue(entry);
     await repo.markSyncing(entry.clientMutationId);
-    const pending = await repo.listPending(new Date().toISOString());
+    const pending = await repo.listPending(new Date().toISOString(), "profile-1");
     expect(pending).toHaveLength(0);
   });
 
@@ -104,10 +105,10 @@ describe("DexieOutboxRepository", () => {
     await repo.markSyncing(entry.clientMutationId);
 
     const justBeforeExpiry = new Date(Date.now() + SYNCING_LEASE_MS - 5_000).toISOString();
-    expect(await repo.listPending(justBeforeExpiry)).toHaveLength(0);
+    expect(await repo.listPending(justBeforeExpiry, "profile-1")).toHaveLength(0);
 
     const afterExpiry = new Date(Date.now() + SYNCING_LEASE_MS + 1_000).toISOString();
-    const pending = await repo.listPending(afterExpiry);
+    const pending = await repo.listPending(afterExpiry, "profile-1");
     expect(pending.map((e) => e.clientMutationId)).toEqual([entry.clientMutationId]);
   });
 
@@ -116,15 +117,74 @@ describe("DexieOutboxRepository", () => {
     // version's dead JS context — it can't still be in flight.
     const entry = makeEntry({ status: "syncing" });
     await repo.enqueue(entry);
-    const pending = await repo.listPending(new Date().toISOString());
+    const pending = await repo.listPending(new Date().toISOString(), "profile-1");
     expect(pending.map((e) => e.clientMutationId)).toEqual([entry.clientMutationId]);
+  });
+
+  it("listPending only returns the given profile's entries, never another profile's", async () => {
+    // Security review (2026-10-04): sign-out keeps unsent entries so nothing
+    // is lost, so a shared device's queue can hold a previous user's changes
+    // — they must never be sent under the next user's session.
+    const mine = makeEntry({ profileId: "profile-1" });
+    await repo.enqueue(mine);
+    await repo.enqueue(makeEntry({ profileId: "profile-2" }));
+
+    const pending = await repo.listPending(new Date().toISOString(), "profile-1");
+    expect(pending.map((e) => e.clientMutationId)).toEqual([mine.clientMutationId]);
+  });
+
+  it("listPending attributes an unstamped (pre-upgrade) entry by its payload's profileId, and holds one with no owner at all", async () => {
+    const legacyMine = makeEntry({ profileId: undefined, payload: { profileId: "profile-1" } });
+    const legacyOther = makeEntry({ profileId: undefined, payload: { profileId: "profile-2" } });
+    const ownerless = makeEntry({ profileId: undefined, payload: { name: "?" } });
+    for (const e of [legacyMine, legacyOther, ownerless]) await db.outbox.add(e);
+
+    const pending = await repo.listPending(new Date().toISOString(), "profile-1");
+    expect(pending.map((e) => e.clientMutationId)).toEqual([legacyMine.clientMutationId]);
+  });
+
+  it("listPending holds back later entries for an entity whose earlier entry is still in flight", async () => {
+    // Otherwise a newer change could be delivered before an older one still
+    // being sent, and the older one would then overwrite it server-side.
+    const entityId = crypto.randomUUID();
+    const first = makeEntry({ entityId, seq: 1 });
+    const second = makeEntry({ entityId, seq: 2 });
+    const unrelated = makeEntry({ seq: 3 });
+    for (const e of [first, second, unrelated]) await repo.enqueue(e);
+    await repo.markSyncing(first.clientMutationId);
+
+    const pending = await repo.listPending(new Date().toISOString(), "profile-1");
+    expect(pending.map((e) => e.clientMutationId)).toEqual([unrelated.clientMutationId]);
+
+    const afterExpiry = new Date(Date.now() + SYNCING_LEASE_MS + 1_000).toISOString();
+    const afterLease = await repo.listPending(afterExpiry, "profile-1");
+    expect(afterLease.map((e) => e.clientMutationId)).toEqual([first.clientMutationId, second.clientMutationId, unrelated.clientMutationId]);
+  });
+
+  it("stamps every new entry with its owning profile — from the payload, else the signed-in profile", async () => {
+    vi.stubGlobal("localStorage", {
+      getItem: () => JSON.stringify({ profileId: "signed-in", accountId: "acct" }),
+      setItem: () => {},
+      removeItem: () => {},
+    });
+    try {
+      const fromPayload = makeEntry({ profileId: undefined, payload: { profileId: "profile-1" } });
+      const fromSession = makeEntry({ profileId: undefined, payload: { theme: "dark" } });
+      await repo.enqueue(fromPayload);
+      await repo.enqueue(fromSession);
+
+      expect((await db.outbox.get(fromPayload.clientMutationId))?.profileId).toBe("profile-1");
+      expect((await db.outbox.get(fromSession.clientMutationId))?.profileId).toBe("signed-in");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("markSynced removes the entry entirely", async () => {
     const entry = makeEntry();
     await repo.enqueue(entry);
     await repo.markSynced(entry.clientMutationId);
-    const pending = await repo.listPending(new Date().toISOString());
+    const pending = await repo.listPending(new Date().toISOString(), "profile-1");
     expect(pending).toHaveLength(0);
   });
 
@@ -134,10 +194,10 @@ describe("DexieOutboxRepository", () => {
     const later = new Date(Date.now() + 10_000).toISOString();
     await repo.markFailed(entry.clientMutationId, "network error", later);
 
-    const notYetDue = await repo.listPending(new Date().toISOString());
+    const notYetDue = await repo.listPending(new Date().toISOString(), "profile-1");
     expect(notYetDue).toHaveLength(0);
 
-    const dueLater = await repo.listPending(later);
+    const dueLater = await repo.listPending(later, "profile-1");
     expect(dueLater).toHaveLength(1);
     expect(dueLater[0].attempts).toBe(1);
     expect(dueLater[0].lastError).toBe("network error");

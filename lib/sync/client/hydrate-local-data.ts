@@ -60,6 +60,7 @@ import type { InventoryTransactionRecord } from "@/lib/domain/inventory-transact
 import type { FavoriteRecord } from "@/lib/domain/favorite";
 import type { RecentlyUsedEventRecord } from "@/lib/domain/recently-used-event";
 import type { PurchaseListItemRecord, PurchaseListRecord } from "@/lib/domain/entities";
+import { getCachedProfileId } from "@/lib/auth/client/use-current-profile";
 import { logger } from "@/lib/logging/logger";
 
 export interface HydrateLocalDataDeps {
@@ -81,6 +82,8 @@ export interface HydrateLocalDataDeps {
    */
   profileId?: string;
   cursorStore?: DexieSyncPullCursorRepository;
+  /** Who is signed in right now — injectable for tests; defaults to `getCachedProfileId`. */
+  currentProfileId?: () => string | null;
 }
 
 /** Upper bound on pages per call — only spreads a very large first restore across calls; progress is saved per page, so nothing is skipped. */
@@ -115,12 +118,21 @@ async function runHydration(deps: HydrateLocalDataDeps): Promise<void> {
   const pull = deps.pullChanges ?? pullChanges;
   const profileId = deps.profileId;
   const cursorStore = profileId ? (deps.cursorStore ?? new DexieSyncPullCursorRepository()) : null;
+  const currentProfileId = deps.currentProfileId ?? getCachedProfileId;
   let applied = 0;
 
   try {
     let cursor = cursorStore && profileId ? await cursorStore.get(profileId) : 0;
     for (let page = 0; page < MAX_PAGES_PER_CALL; page++) {
+      // A pass can outlive the session it started under (sign-out, or
+      // another user signing in on this device mid-restore). Stop before
+      // fetching, and again before storing, rather than file one user's
+      // records — or cursor — under another's profile.
+      if (profileId && currentProfileId() !== profileId) return stopForProfileSwitch(applied);
       const response = await pull(cursor);
+      if (profileId && ((response.profileId !== undefined && response.profileId !== profileId) || currentProfileId() !== profileId)) {
+        return stopForProfileSwitch(applied);
+      }
       for (const change of response.changes) {
         if (!change.record) continue;
         if (change.entityType === "userMedication") {
@@ -154,5 +166,10 @@ async function runHydration(deps: HydrateLocalDataDeps): Promise<void> {
     logger.warn("sync.hydrate.local_data_failed", { message: (err as Error).message });
   }
 
+  if (applied > 0) notifyLocalDataHydrated();
+}
+
+function stopForProfileSwitch(applied: number): void {
+  logger.warn("sync.hydrate.profile_switched", {});
   if (applied > 0) notifyLocalDataHydrated();
 }

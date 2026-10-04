@@ -86,6 +86,22 @@ export interface SyncManager {
   runSchedulingTickNow(): Promise<void>;
 }
 
+/**
+ * Serializes outbox drains across tabs/windows of the app sharing one
+ * IndexedDB. `draining` only guards this tab; without this, two tabs could
+ * each pick up the same entries and send them in parallel. Duplicates are
+ * harmless server-side (idempotent on `clientMutationId`), but parallel
+ * sends can deliver two changes to one entity out of order. A tab that
+ * finds the lock held waits for it rather than skipping, so the write that
+ * triggered it is never left unsent. Runs directly where the Web Locks API
+ * is unavailable (older WebViews).
+ */
+async function withCrossTabDrainLock<T>(fn: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+  if (!locks) return fn();
+  return locks.request("medtrack:outbox-drain", fn);
+}
+
 export function createSyncManager(): SyncManager {
   const outbox = new DexieOutboxRepository();
   const medicationSchedule = new DexieMedicationScheduleRepository();
@@ -121,9 +137,13 @@ export function createSyncManager(): SyncManager {
 
   async function drainNow(): Promise<DrainSummary | null> {
     if (draining) return null;
+    // Only the signed-in profile's entries are ever sent — signed out,
+    // nothing is (unsent entries stay queued for their owner's next login).
+    const profileId = getCachedProfileId();
+    if (!profileId) return null;
     draining = true;
     try {
-      const summary = await drainOutboxFully({ outbox, applyResult });
+      const summary = await withCrossTabDrainLock(() => drainOutboxFully({ outbox, applyResult, profileId }));
       if (summary.attempted > 0) {
         logger.info("sync.manager.drained", { ...summary });
       }

@@ -37,7 +37,7 @@ describe("DexiePurchaseListItemRepository", () => {
     expect(item.userMedicationId).toBeNull();
     expect(item.currency).toBe("EUR");
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), PROFILE_ID);
     expect(pending).toHaveLength(1);
     expect(pending[0].entityType).toBe("purchaseListItem");
     expect(pending[0].operation).toBe("create");
@@ -81,7 +81,7 @@ describe("DexiePurchaseListItemRepository", () => {
     expect(updated.estimatedUnitPriceCents).toBe(500);
     expect(updated.label).toBe("Vitamin D"); // untouched field survives
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), PROFILE_ID);
     const updateEntry = pending.find((e) => e.operation === "update");
     expect(updateEntry?.baseVersion).toBe(1);
     expect(updateEntry?.payload).toEqual({ estimatedUnitPriceCents: 500 });
@@ -117,7 +117,7 @@ describe("DexiePurchaseListItemRepository", () => {
     expect(removed.deletedAt).not.toBeNull();
     expect(removed.version).toBe(2);
 
-    const pending = await outbox.listPending(new Date().toISOString());
+    const pending = await outbox.listPending(new Date().toISOString(), PROFILE_ID);
     const deleteEntry = pending.find((e) => e.operation === "delete");
     expect(deleteEntry?.baseVersion).toBe(1);
   });
