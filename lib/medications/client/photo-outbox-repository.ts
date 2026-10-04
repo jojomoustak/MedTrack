@@ -1,4 +1,5 @@
 import type { PhotoOutboxEnqueueInput, PhotoOutboxOperation, PhotoOutboxRepository } from "@/lib/domain/repositories";
+import { isOutboxEntryDue } from "@/lib/domain/outbox";
 import { getClientDb, type MedTrackingDexie } from "@/lib/db-client/dexie";
 
 export class DexiePhotoOutboxRepository implements PhotoOutboxRepository {
@@ -29,9 +30,12 @@ export class DexiePhotoOutboxRepository implements PhotoOutboxRepository {
   async listPending(
     now: string,
   ): Promise<{ userMedicationId: string; operation: PhotoOutboxOperation; blob: Blob | null; contentType: string | null; enqueuedAt: string; attempts: number }[]> {
-    const rows = await this.db.photoOutboxEntry.where("status").notEqual("syncing").toArray();
+    // Same in-flight lease as the main outbox: an upload abandoned mid-request
+    // (app killed) is retried rather than stranded. Re-sending is harmless —
+    // an upload replaces the medication's photo, a delete removes it.
+    const rows = await this.db.photoOutboxEntry.toArray();
     return rows
-      .filter((row) => row.nextAttemptAt <= now)
+      .filter((row) => isOutboxEntryDue(row, now))
       .map((row) => ({
         userMedicationId: row.userMedicationId,
         operation: row.operation,
@@ -43,7 +47,7 @@ export class DexiePhotoOutboxRepository implements PhotoOutboxRepository {
   }
 
   async markSyncing(userMedicationId: string): Promise<void> {
-    await this.db.photoOutboxEntry.update(userMedicationId, { status: "syncing" });
+    await this.db.photoOutboxEntry.update(userMedicationId, { status: "syncing", syncingSince: new Date().toISOString() });
   }
 
   async markFailed(userMedicationId: string, error: string, nextAttemptAt: string): Promise<void> {

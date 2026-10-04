@@ -49,6 +49,32 @@ export interface OutboxEntry<TPayload = Record<string, unknown>> {
   /** Backoff scheduling — the worker skips entries whose `nextAttemptAt` is in the future. */
   nextAttemptAt: string;
   lastError?: string;
+  /** When this entry last went in flight (`markSyncing`) — see `isOutboxEntryDue`. Missing on entries marked `syncing` before this field existed. */
+  syncingSince?: string;
+}
+
+/**
+ * How long an entry may sit in `syncing` before it's treated as abandoned.
+ * Only the request's own success/failure handlers ever move an entry out
+ * of `syncing`, so if the app is killed mid-request (Android reclaiming a
+ * backgrounded WebView, the user swiping the app away, a reload) the
+ * entry would otherwise stay `syncing` forever and its change would never
+ * reach the server. Well above any normal request round-trip; re-sending
+ * one that did in fact land is safe, because the server deduplicates on
+ * `clientMutationId` and returns the stored result.
+ */
+export const SYNCING_LEASE_MS = 2 * 60_000;
+
+/**
+ * Whether an outbox entry should be included in the next send: `pending`/
+ * `failed` once its backoff has elapsed, or `syncing` once its lease has
+ * expired (an abandoned in-flight attempt). A `syncing` entry with no
+ * `syncingSince` predates the lease and is always stranded, so it's due.
+ */
+export function isOutboxEntryDue(entry: Pick<OutboxEntry, "status" | "nextAttemptAt" | "syncingSince">, now: string): boolean {
+  if (entry.status !== "syncing") return entry.nextAttemptAt <= now;
+  if (!entry.syncingSince) return true;
+  return new Date(entry.syncingSince).getTime() + SYNCING_LEASE_MS <= new Date(now).getTime();
 }
 
 let lastOutboxSeq = 0;

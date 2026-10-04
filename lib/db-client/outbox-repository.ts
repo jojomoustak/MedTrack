@@ -1,4 +1,4 @@
-import type { OutboxEntry } from "@/lib/domain/outbox";
+import { isOutboxEntryDue, type OutboxEntry } from "@/lib/domain/outbox";
 import type { OutboxRepository } from "@/lib/domain/repositories";
 import { getClientDb, type MedTrackingDexie } from "@/lib/db-client/dexie";
 
@@ -12,7 +12,9 @@ export class DexieOutboxRepository implements OutboxRepository {
   /**
    * Entries ready for a (re)send attempt: `pending` (never tried, or
    * backoff elapsed after a `failed` attempt) or `failed` whose backoff
-   * window has passed — `syncing` (already in flight) is excluded. A
+   * window has passed. `syncing` (already in flight) is excluded until its
+   * lease expires — an entry abandoned mid-request when the app was killed
+   * is retried rather than stranded forever (`isOutboxEntryDue`). A
    * `failed` outbox entry keeps auto-retrying in the background (Phase 3
    * §5's "tap to retry" is an ADDITIONAL manual affordance, not a
    * requirement that background retry stop) — the persistent `failed`
@@ -42,12 +44,12 @@ export class DexieOutboxRepository implements OutboxRepository {
    * a locally-assigned strictly-increasing counter with no such collision.
    */
   async listPending(now: string): Promise<OutboxEntry[]> {
-    const entries = await this.db.outbox.where("status").notEqual("syncing").toArray();
-    return entries.filter((e) => e.nextAttemptAt <= now).sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0) || a.createdAt.localeCompare(b.createdAt));
+    const entries = await this.db.outbox.toArray();
+    return entries.filter((e) => isOutboxEntryDue(e, now)).sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0) || a.createdAt.localeCompare(b.createdAt));
   }
 
   async markSyncing(clientMutationId: string): Promise<void> {
-    await this.db.outbox.update(clientMutationId, { status: "syncing" });
+    await this.db.outbox.update(clientMutationId, { status: "syncing", syncingSince: new Date().toISOString() });
   }
 
   async markSynced(clientMutationId: string): Promise<void> {

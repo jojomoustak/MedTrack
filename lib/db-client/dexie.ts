@@ -125,6 +125,8 @@ export interface LocalPhotoOutboxEntry {
   attempts: number;
   nextAttemptAt: string;
   lastError?: string;
+  /** When this entry last went in flight — an expired lease means the attempt was abandoned (see `isOutboxEntryDue`). Not indexed, so no schema version bump. */
+  syncingSince?: string;
 }
 
 export class MedTrackingDexie extends Dexie {

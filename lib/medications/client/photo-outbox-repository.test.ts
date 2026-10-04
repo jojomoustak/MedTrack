@@ -2,6 +2,7 @@ import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MedTrackingDexie } from "@/lib/db-client/dexie";
 import { DexiePhotoOutboxRepository } from "@/lib/medications/client/photo-outbox-repository";
+import { SYNCING_LEASE_MS } from "@/lib/domain/outbox";
 
 function blob(): Blob {
   return new Blob(["bytes"], { type: "image/jpeg" });
@@ -48,6 +49,14 @@ describe("DexiePhotoOutboxRepository", () => {
     await repo.enqueue({ userMedicationId: "med-1", operation: "delete" });
     await repo.markSyncing("med-1");
     expect(await repo.listPending(new Date().toISOString())).toHaveLength(0);
+  });
+
+  it("listPending retries a syncing entry whose lease has expired (the app was killed mid-upload)", async () => {
+    await repo.enqueue({ userMedicationId: "med-1", operation: "upload", blob: blob(), contentType: "image/jpeg" });
+    await repo.markSyncing("med-1");
+    const afterExpiry = new Date(Date.now() + SYNCING_LEASE_MS + 1_000).toISOString();
+    const pending = await repo.listPending(afterExpiry);
+    expect(pending.map((e) => e.userMedicationId)).toEqual(["med-1"]);
   });
 
   it("markFailed records the error, bumps attempts, and reschedules for later", async () => {
