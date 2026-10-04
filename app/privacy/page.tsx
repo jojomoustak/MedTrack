@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ButtonLink } from "@/components/ui/Button";
+import { BackButton } from "@/components/shell/BackButton";
+import { BrandWordmark } from "@/components/shell/BrandMark";
 
 /**
  * Public route (outside the `(app)` auth-gated group, same tier as
@@ -17,141 +18,202 @@ import { ButtonLink } from "@/components/ui/Button";
  * user (and, before a real public launch, by a lawyer) before the
  * placeholder contact details below are filled in and the draft notice is
  * removed.
+ *
+ * Presentation matched to the reference mockup (2026-10-04): back arrow
+ * beside the compact wordmark, a large bold title, larger body text,
+ * numbered section headings, green bullets. Content deliberately NOT
+ * taken from the reference — its body is placeholder text; this page's
+ * wording reflects what the app actually does and stays as written.
  */
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-8 bg-stone-50 px-6 py-12 dark:bg-stone-950">
-      <div className="flex flex-col gap-2">
-        <ButtonLink href="/welcome" variant="tertiary" className="w-fit px-0 text-stone-600 underline dark:text-stone-400">
-          ← Αρχική
-        </ButtonLink>
-        <h1 className="text-2xl font-semibold">Πολιτική Απορρήτου</h1>
-        <p className="text-sm text-stone-500 dark:text-stone-400">Τελευταία ενημέρωση: 15 Σεπτεμβρίου 2026</p>
-      </div>
+    <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-12 pt-4 dark:bg-stone-950">
+      <div className="mx-auto flex max-w-2xl flex-col gap-8">
+        <div className="flex flex-col">
+          <div className="relative flex items-center justify-center">
+            <BackButton fallback="/welcome" className="absolute -left-3" />
+            <BrandWordmark className="text-xl" />
+          </div>
+          <h1 className="mt-6 text-[34px] font-bold leading-tight tracking-tight text-stone-900 dark:text-stone-50">
+            Πολιτική Απορρήτου
+          </h1>
+          <p className="mt-1 text-lg text-stone-500 dark:text-stone-400">
+            Τελευταία ενημέρωση: 15 Σεπ 2026
+          </p>
+        </div>
 
-      <div
-        role="note"
-        className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
-      >
-        <strong>Προσχέδιο.</strong> Αυτό το κείμενο περιγράφει με ακρίβεια τι κάνει η εφαρμογή σήμερα, αλλά δεν έχει
-        ακόμα ελεγχθεί από νομικό σύμβουλο και τα στοιχεία επικοινωνίας παρακάτω είναι προσωρινά. Πρέπει να
-        αντικατασταθούν πριν η εφαρμογή γίνει διαθέσιμη σε πραγματικούς χρήστες πέρα από δοκιμαστική χρήση.
-      </div>
+        <div
+          role="note"
+          className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+        >
+          <strong>Προσχέδιο.</strong> Αυτό το κείμενο περιγράφει με ακρίβεια τι
+          κάνει η εφαρμογή σήμερα, αλλά δεν έχει ακόμα ελεγχθεί από νομικό
+          σύμβουλο και τα στοιχεία επικοινωνίας παρακάτω είναι προσωρινά. Πρέπει
+          να αντικατασταθούν πριν η εφαρμογή γίνει διαθέσιμη σε πραγματικούς
+          χρήστες πέρα από δοκιμαστική χρήση.
+        </div>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Τι είναι το MedTrack</h2>
-        <p className="text-sm text-stone-700 dark:text-stone-300">
-          Το MedTrack είναι μια εφαρμογή διαχείρισης φαρμάκων: σας βοηθά να θυμάστε πότε να πάρετε τα φάρμακά σας,
-          να παρακολουθείτε το απόθεμά σας και το ιστορικό λήψης. <strong>Δεν παρέχει ιατρικές συμβουλές, διάγνωση ή
-          συστάσεις δοσολογίας</strong> — καταγράφει μόνο όσα εσείς δηλώνετε ότι σας έχουν συνταγογραφηθεί.
-        </p>
-      </section>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900 dark:text-stone-50">
+            Τι είναι το MedTrack
+          </h2>
+          <p className="text-[17px] leading-relaxed text-stone-700 dark:text-stone-300">
+            Το MedTrack είναι μια εφαρμογή διαχείρισης φαρμάκων: σας βοηθά να
+            θυμάστε πότε να πάρετε τα φάρμακά σας, να παρακολουθείτε το απόθεμά
+            σας και το ιστορικό λήψης.{" "}
+            <strong>
+              Δεν παρέχει ιατρικές συμβουλές, διάγνωση ή συστάσεις δοσολογίας
+            </strong>{" "}
+            — καταγράφει μόνο όσα εσείς δηλώνετε ότι σας έχουν συνταγογραφηθεί.
+          </p>
+        </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Ποια δεδομένα συλλέγουμε</h2>
-        <ul className="flex flex-col gap-2 text-sm text-stone-700 dark:text-stone-300">
-          <li>
-            <strong>Στοιχεία λογαριασμού:</strong> email, όνομα (προαιρετικό), κρυπτογραφημένος κωδικός πρόσβασης
-            (ποτέ ο ίδιος ο κωδικός σε απλό κείμενο) ή σύνδεση μέσω λογαριασμού Google.
-          </li>
-          <li>
-            <strong>Δεδομένα φαρμάκων:</strong> τα φάρμακα, τα προγράμματα λήψης, το ιστορικό δόσεων, το απόθεμα και
-            οι λίστες αγορών που καταχωρείτε εσείς οι ίδιοι.
-          </li>
-          <li>
-            <strong>Φωτογραφίες φαρμάκων</strong> (προαιρετικό): αν επιλέξετε να προσθέσετε φωτογραφία σε ένα φάρμακο.
-          </li>
-          <li>
-            <strong>Τεχνικά δεδομένα ασφαλείας:</strong> ένα κρυπτογραφημένο (όχι το πραγματικό) αποτύπωμα της
-            διεύθυνσης IP και το είδος συσκευής/browser, χρησιμοποιούνται αποκλειστικά για ανίχνευση κατάχρησης και
-            προστασία του λογαριασμού σας — ποτέ για διαφημίσεις ή στατιστικά χρήσης.
-          </li>
-        </ul>
-      </section>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900 dark:text-stone-50">
+            1. Ποια δεδομένα συλλέγουμε
+          </h2>
+          <ul className="flex flex-col gap-3 [&>li]:relative [&>li]:pl-5 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[0.62em] [&>li]:before:size-2 [&>li]:before:rounded-full [&>li]:before:bg-accent-600 text-[17px] leading-relaxed text-stone-700 dark:text-stone-300">
+            <li>
+              <strong>Στοιχεία λογαριασμού:</strong> email, όνομα (προαιρετικό),
+              κρυπτογραφημένος κωδικός πρόσβασης (ποτέ ο ίδιος ο κωδικός σε απλό
+              κείμενο) ή σύνδεση μέσω λογαριασμού Google.
+            </li>
+            <li>
+              <strong>Δεδομένα φαρμάκων:</strong> τα φάρμακα, τα προγράμματα
+              λήψης, το ιστορικό δόσεων, το απόθεμα και οι λίστες αγορών που
+              καταχωρείτε εσείς οι ίδιοι.
+            </li>
+            <li>
+              <strong>Φωτογραφίες φαρμάκων</strong> (προαιρετικό): αν επιλέξετε
+              να προσθέσετε φωτογραφία σε ένα φάρμακο.
+            </li>
+            <li>
+              <strong>Τεχνικά δεδομένα ασφαλείας:</strong> ένα κρυπτογραφημένο
+              (όχι το πραγματικό) αποτύπωμα της διεύθυνσης IP και το είδος
+              συσκευής/browser, χρησιμοποιούνται αποκλειστικά για ανίχνευση
+              κατάχρησης και προστασία του λογαριασμού σας — ποτέ για
+              διαφημίσεις ή στατιστικά χρήσης.
+            </li>
+          </ul>
+        </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Γιατί τα χρησιμοποιούμε</h2>
-        <p className="text-sm text-stone-700 dark:text-stone-300">
-          Αποκλειστικά για να λειτουργήσει η εφαρμογή: να σας υπενθυμίζουμε τις δόσεις σας, να συγχρονίζουμε τα
-          δεδομένα σας ανάμεσα σε συσκευές και να προστατεύουμε τον λογαριασμό σας. Δεν πουλάμε, ενοικιάζουμε ή
-          χρησιμοποιούμε τα δεδομένα υγείας σας για διαφημίσεις, μάρκετινγκ ή οποιονδήποτε σκοπό πέρα από τη λειτουργία
-          της εφαρμογής.
-        </p>
-      </section>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900 dark:text-stone-50">
+            2. Γιατί τα χρησιμοποιούμε
+          </h2>
+          <p className="text-[17px] leading-relaxed text-stone-700 dark:text-stone-300">
+            Αποκλειστικά για να λειτουργήσει η εφαρμογή: να σας υπενθυμίζουμε
+            τις δόσεις σας, να συγχρονίζουμε τα δεδομένα σας ανάμεσα σε συσκευές
+            και να προστατεύουμε τον λογαριασμό σας. Δεν πουλάμε, ενοικιάζουμε ή
+            χρησιμοποιούμε τα δεδομένα υγείας σας για διαφημίσεις, μάρκετινγκ ή
+            οποιονδήποτε σκοπό πέρα από τη λειτουργία της εφαρμογής.
+          </p>
+        </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Με ποιους μοιραζόμαστε δεδομένα</h2>
-        <p className="text-sm text-stone-700 dark:text-stone-300">
-          Χρησιμοποιούμε τους παρακάτω τρίτους αποκλειστικά ως πάροχοι υποδομής (όχι ως αποδέκτες για δικούς τους
-          σκοπούς):
-        </p>
-        <ul className="flex flex-col gap-2 text-sm text-stone-700 dark:text-stone-300">
-          <li>
-            <strong>Vercel</strong> — φιλοξενία της εφαρμογής και (προαιρετικά) αποθήκευση φωτογραφιών φαρμάκων.
-          </li>
-          <li>
-            <strong>Neon</strong> — η βάση δεδομένων όπου αποθηκεύονται τα δεδομένα σας.
-          </li>
-          <li>
-            <strong>Google</strong> — μόνο αν επιλέξετε σύνδεση μέσω λογαριασμού Google.
-          </li>
-          <li>
-            <strong>Resend</strong> — αποστολή email επιβεβαίωσης λογαριασμού και επαναφοράς κωδικού πρόσβασης.
-          </li>
-        </ul>
-      </section>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900 dark:text-stone-50">
+            3. Με ποιους μοιραζόμαστε δεδομένα
+          </h2>
+          <p className="text-[17px] leading-relaxed text-stone-700 dark:text-stone-300">
+            Χρησιμοποιούμε τους παρακάτω τρίτους αποκλειστικά ως πάροχοι
+            υποδομής (όχι ως αποδέκτες για δικούς τους σκοπούς):
+          </p>
+          <ul className="flex flex-col gap-3 [&>li]:relative [&>li]:pl-5 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[0.62em] [&>li]:before:size-2 [&>li]:before:rounded-full [&>li]:before:bg-accent-600 text-[17px] leading-relaxed text-stone-700 dark:text-stone-300">
+            <li>
+              <strong>Vercel</strong> — φιλοξενία της εφαρμογής και
+              (προαιρετικά) αποθήκευση φωτογραφιών φαρμάκων.
+            </li>
+            <li>
+              <strong>Neon</strong> — η βάση δεδομένων όπου αποθηκεύονται τα
+              δεδομένα σας.
+            </li>
+            <li>
+              <strong>Google</strong> — μόνο αν επιλέξετε σύνδεση μέσω
+              λογαριασμού Google.
+            </li>
+            <li>
+              <strong>Resend</strong> — αποστολή email επιβεβαίωσης λογαριασμού
+              και επαναφοράς κωδικού πρόσβασης.
+            </li>
+          </ul>
+        </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Πόσο καιρό κρατάμε τα δεδομένα σας</h2>
-        <p className="text-sm text-stone-700 dark:text-stone-300">
-          Όσο διατηρείτε ενεργό τον λογαριασμό σας. Αν διαγράψετε τον λογαριασμό σας, τα δεδομένα σας διαγράφονται
-          πραγματικά από τον διακομιστή — δεν πρόκειται για απλό τοπικό καθαρισμό. Για τεχνικούς λόγους αντιγράφων
-          ασφαλείας της βάσης δεδομένων, ένα αντίγραφο μπορεί να παραμείνει ανακτήσιμο για έως 7 ημέρες μετά τη
-          διαγραφή, πριν διαγραφεί οριστικά κι από εκεί.
-        </p>
-      </section>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900 dark:text-stone-50">
+            4. Πόσο καιρό κρατάμε τα δεδομένα σας
+          </h2>
+          <p className="text-[17px] leading-relaxed text-stone-700 dark:text-stone-300">
+            Όσο διατηρείτε ενεργό τον λογαριασμό σας. Αν διαγράψετε τον
+            λογαριασμό σας, τα δεδομένα σας διαγράφονται πραγματικά από τον
+            διακομιστή — δεν πρόκειται για απλό τοπικό καθαρισμό. Για τεχνικούς
+            λόγους αντιγράφων ασφαλείας της βάσης δεδομένων, ένα αντίγραφο
+            μπορεί να παραμείνει ανακτήσιμο για έως 7 ημέρες μετά τη διαγραφή,
+            πριν διαγραφεί οριστικά κι από εκεί.
+          </p>
+        </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Τα δικαιώματά σας</h2>
-        <ul className="flex flex-col gap-2 text-sm text-stone-700 dark:text-stone-300">
-          <li>
-            <strong>Πρόσβαση/Φορητότητα:</strong> μπορείτε να κατεβάσετε όλα τα δεδομένα σας ανά πάσα στιγμή από το{" "}
-            <Link href="/profile" className="text-accent-700 underline dark:text-accent-400">
-              Προφίλ
-            </Link>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900 dark:text-stone-50">
+            5. Τα δικαιώματά σας
+          </h2>
+          <ul className="flex flex-col gap-3 [&>li]:relative [&>li]:pl-5 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[0.62em] [&>li]:before:size-2 [&>li]:before:rounded-full [&>li]:before:bg-accent-600 text-[17px] leading-relaxed text-stone-700 dark:text-stone-300">
+            <li>
+              <strong>Πρόσβαση/Φορητότητα:</strong> μπορείτε να κατεβάσετε όλα
+              τα δεδομένα σας ανά πάσα στιγμή από το{" "}
+              <Link
+                href="/profile"
+                className="font-semibold text-accent-700 dark:text-accent-400"
+              >
+                Προφίλ
+              </Link>
+              .
+            </li>
+            <li>
+              <strong>Διόρθωση:</strong> μπορείτε να επεξεργαστείτε τα φάρμακα
+              και τα στοιχεία σας απευθείας μέσα στην εφαρμογή.
+            </li>
+            <li>
+              <strong>Διαγραφή:</strong> μπορείτε να διαγράψετε μόνιμα τον
+              λογαριασμό σας και όλα τα δεδομένα σας από το{" "}
+              <Link
+                href="/profile"
+                className="font-semibold text-accent-700 dark:text-accent-400"
+              >
+                Προφίλ
+              </Link>
+              .
+            </li>
+          </ul>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900 dark:text-stone-50">
+            6. Πώς προστατεύουμε τα δεδομένα σας
+          </h2>
+          <p className="text-[17px] leading-relaxed text-stone-700 dark:text-stone-300">
+            Όλη η επικοινωνία γίνεται κρυπτογραφημένα (HTTPS). Οι κωδικοί
+            πρόσβασης αποθηκεύονται πάντα κρυπτογραφημένοι, ποτέ σε απλό
+            κείμενο. Η βάση δεδομένων επιβάλλει τεχνικά όρια ώστε ο λογαριασμός
+            σας να βλέπει μόνο τα δικά του δεδομένα. Τα αρχεία καταγραφής του
+            συστήματος (logs) δεν περιέχουν ποτέ τα πραγματικά δεδομένα υγείας
+            σας.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900 dark:text-stone-50">
+            7. Επικοινωνία
+          </h2>
+          <p className="text-[17px] leading-relaxed text-stone-700 dark:text-stone-300">
+            Για ερωτήσεις σχετικά με το απόρρητο ή για να ασκήσετε τα δικαιώματά
+            σας:{" "}
+            <span className="font-medium">
+              [προσωρινό placeholder email επικοινωνίας]
+            </span>
             .
-          </li>
-          <li>
-            <strong>Διόρθωση:</strong> μπορείτε να επεξεργαστείτε τα φάρμακα και τα στοιχεία σας απευθείας μέσα στην
-            εφαρμογή.
-          </li>
-          <li>
-            <strong>Διαγραφή:</strong> μπορείτε να διαγράψετε μόνιμα τον λογαριασμό σας και όλα τα δεδομένα σας από το{" "}
-            <Link href="/profile" className="text-accent-700 underline dark:text-accent-400">
-              Προφίλ
-            </Link>
-            .
-          </li>
-        </ul>
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Πώς προστατεύουμε τα δεδομένα σας</h2>
-        <p className="text-sm text-stone-700 dark:text-stone-300">
-          Όλη η επικοινωνία γίνεται κρυπτογραφημένα (HTTPS). Οι κωδικοί πρόσβασης αποθηκεύονται πάντα κρυπτογραφημένοι,
-          ποτέ σε απλό κείμενο. Η βάση δεδομένων επιβάλλει τεχνικά όρια ώστε ο λογαριασμός σας να βλέπει μόνο τα δικά
-          του δεδομένα. Τα αρχεία καταγραφής του συστήματος (logs) δεν περιέχουν ποτέ τα πραγματικά δεδομένα υγείας
-          σας.
-        </p>
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Επικοινωνία</h2>
-        <p className="text-sm text-stone-700 dark:text-stone-300">
-          Για ερωτήσεις σχετικά με το απόρρητο ή για να ασκήσετε τα δικαιώματά σας:{" "}
-          <span className="font-medium">[προσωρινό placeholder email επικοινωνίας]</span>.
-        </p>
-      </section>
+          </p>
+        </section>
+      </div>
     </main>
   );
 }
