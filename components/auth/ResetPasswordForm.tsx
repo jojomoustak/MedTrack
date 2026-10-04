@@ -1,11 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { PasswordInput } from "@/components/auth/PasswordInput";
-import { Button, ButtonLink } from "@/components/ui/Button";
+import { PasswordRule } from "@/components/auth/PasswordRule";
+import { Button } from "@/components/ui/Button";
+
+const MIN_PASSWORD_LENGTH = 8;
 
 /**
  * Reads `token` from the URL query string. Better Auth's reset-link shape
@@ -20,12 +24,18 @@ import { Button, ButtonLink } from "@/components/ui/Button";
  * elsewhere are NOT revoked by this (Better Auth's `revokeSessionsOnPassword
  * Reset` default is `false`, left at its default per this task's own
  * scope — no specific reason to override it here).
+ *
+ * The live checks show only the two rules this form actually enforces —
+ * the server's minimum length and the confirm field matching — not the
+ * reference mockup's "number"/"special character" rules, which nothing
+ * enforces.
  */
 export function ResetPasswordForm({ token }: { token: string | null }) {
   const router = useRouter();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [linkInvalid, setLinkInvalid] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -33,9 +43,11 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
     event.preventDefault();
     playSound("button");
     setError(null);
+    setLinkInvalid(false);
 
     if (!token) {
-      setError("Ο σύνδεσμος επαναφοράς δεν είναι έγκυρος ή έχει λήξει. Ζητήστε νέο σύνδεσμο.");
+      setError("Ο σύνδεσμος επαναφοράς δεν είναι έγκυρος ή έχει λήξει.");
+      setLinkInvalid(true);
       return;
     }
 
@@ -48,7 +60,8 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
     try {
       const { error: resetError } = await authClient.resetPassword({ newPassword, token });
       if (resetError) {
-        setError("Ο σύνδεσμος επαναφοράς δεν είναι έγκυρος ή έχει λήξει. Ζητήστε νέο σύνδεσμο.");
+        setError("Ο σύνδεσμος επαναφοράς δεν είναι έγκυρος ή έχει λήξει.");
+        setLinkInvalid(true);
         return;
       }
       setDone(true);
@@ -63,47 +76,61 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
 
   if (done) {
     return (
-      <p role="status" className="text-sm text-stone-700 dark:text-stone-300">
+      <p role="status" className="text-lg leading-snug text-stone-700 dark:text-stone-300">
         Ο κωδικός σας άλλαξε. Μεταφορά στη σύνδεση…
       </p>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4" noValidate>
+    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4" noValidate>
       <PasswordInput
         label="Νέος κωδικός πρόσβασης"
         value={newPassword}
         onChange={setNewPassword}
         autoComplete="new-password"
         required
-        minLength={8}
+        minLength={MIN_PASSWORD_LENGTH}
         ariaLabel="Νέος κωδικός πρόσβασης"
       />
 
       <PasswordInput
-        label="Επιβεβαίωση κωδικού"
+        label="Επιβεβαίωση νέου κωδικού"
         value={confirmPassword}
         onChange={setConfirmPassword}
         autoComplete="new-password"
         required
-        minLength={8}
+        minLength={MIN_PASSWORD_LENGTH}
         ariaLabel="Επιβεβαίωση νέου κωδικού πρόσβασης"
       />
 
+      <div className="flex flex-col gap-2.5">
+        <PasswordRule met={newPassword.length >= MIN_PASSWORD_LENGTH} label={`Τουλάχιστον ${MIN_PASSWORD_LENGTH} χαρακτήρες`} />
+        <PasswordRule met={confirmPassword.length > 0 && confirmPassword === newPassword} label="Οι δύο κωδικοί ταιριάζουν" />
+      </div>
+
       {error && (
         <p role="alert" className="text-sm text-red-700 dark:text-red-400">
-          {error}
+          {error}{" "}
+          {linkInvalid && (
+            <Link href="/forgot-password" onClick={() => playSound("button")} className="font-semibold text-accent-700 underline dark:text-accent-400">
+              Ζητήστε νέο σύνδεσμο
+            </Link>
+          )}
         </p>
       )}
 
-      <Button type="submit" disabled={submitting} aria-busy={submitting}>
-        {submitting ? "Αποθήκευση…" : "Ορισμός νέου κωδικού"}
+      <Button type="submit" size="lg" fullWidth disabled={submitting} aria-busy={submitting} className="mt-2">
+        {submitting ? "Αποθήκευση…" : "Επαναφορά κωδικού"}
       </Button>
 
-      <ButtonLink href="/forgot-password" onClick={() => playSound("button")} variant="tertiary" className="underline">
-        Ζητήστε νέο σύνδεσμο
-      </ButtonLink>
+      <Link
+        href="/login"
+        onClick={() => playSound("button")}
+        className="self-center py-2 text-[17px] font-semibold text-accent-700 dark:text-accent-400"
+      >
+        Επιστροφή στη σύνδεση
+      </Link>
     </form>
   );
 }

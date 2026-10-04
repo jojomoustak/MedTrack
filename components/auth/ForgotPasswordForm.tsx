@@ -1,9 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { playSound } from "@/lib/sound/client/play-sound";
-import { Button, ButtonLink } from "@/components/ui/Button";
+import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/auth/field-styles";
+import { Button } from "@/components/ui/Button";
+
+function BackToSignIn() {
+  return (
+    <Link
+      href="/login"
+      onClick={() => playSound("button")}
+      className="self-center py-2 text-[17px] font-semibold text-accent-700 dark:text-accent-400"
+    >
+      Επιστροφή στη σύνδεση
+    </Link>
+  );
+}
 
 type Status = "idle" | "sent" | "offline";
 
@@ -53,33 +67,32 @@ export function ForgotPasswordForm() {
 
   if (status === "sent") {
     return (
-      <div role="status" className="flex w-full max-w-sm flex-col gap-4 text-center">
-        <p className="text-sm text-stone-700 dark:text-stone-300">
+      <div role="status" className="flex w-full flex-col gap-6">
+        <p className="text-lg leading-snug text-stone-600 dark:text-stone-400">
           Αν υπάρχει λογαριασμός με αυτό το email, θα λάβετε σύνδεσμο επαναφοράς κωδικού σε λίγα λεπτά.
         </p>
-        <ButtonLink href="/login" onClick={() => playSound("button")} variant="tertiary" className="underline">
-          Επιστροφή στη σύνδεση
-        </ButtonLink>
+        <BackToSignIn />
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4" noValidate>
-      <p className="text-sm text-stone-600 dark:text-stone-400">
-        Πληκτρολογήστε το email του λογαριασμού σας και θα σας στείλουμε σύνδεσμο για επαναφορά κωδικού.
+    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4" noValidate>
+      <p className="mb-4 text-lg leading-snug text-stone-600 dark:text-stone-400">
+        Πληκτρολογήστε το email σας και θα σας στείλουμε σύνδεσμο για επαναφορά του κωδικού σας.
       </p>
 
-      <label className="flex flex-col gap-1">
-        <span className="font-medium">Email</span>
+      <label className={FIELD_WRAPPER}>
+        <span className={FIELD_LABEL}>Email</span>
         <input
           type="email"
           required
           autoComplete="email"
+          placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           aria-label="Email"
-          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+          className={`${FIELD_INPUT} pr-4`}
         />
       </label>
 
@@ -89,13 +102,11 @@ export function ForgotPasswordForm() {
         </p>
       )}
 
-      <Button type="submit" disabled={submitting} aria-busy={submitting}>
-        {submitting ? "Αποστολή…" : "Αποστολή συνδέσμου επαναφοράς"}
+      <Button type="submit" size="lg" fullWidth disabled={submitting} aria-busy={submitting} className="mt-4">
+        {submitting ? "Αποστολή…" : "Αποστολή συνδέσμου"}
       </Button>
 
-      <ButtonLink href="/login" onClick={() => playSound("button")} variant="tertiary" className="underline">
-        Επιστροφή στη σύνδεση
-      </ButtonLink>
+      <BackToSignIn />
     </form>
   );
 }
