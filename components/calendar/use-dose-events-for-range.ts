@@ -7,6 +7,7 @@ import { GENERATION_HORIZON_MS } from "@/lib/scheduling/client/dose-event-genera
 import { projectDoseInstantsForRange, type ProjectedDoseInstant } from "@/lib/domain/dose-instant-projection";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { compareTimestampsAscending } from "@/lib/domain/timestamp";
+import { onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
 
 export interface DoseEventsForRangeState {
   status: "loading" | "ready";
@@ -65,8 +66,12 @@ export function useDoseEventsForRange(profileId: string | null, from: Date, to: 
     }
 
     void load();
+    // Re-read when a server pull lands new data — otherwise a fresh install
+    // or second device shows an empty calendar until the user navigates.
+    const unsubscribe = onLocalDataHydrated(() => void load());
     return () => {
       cancelled = true;
+      unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `fromKey`/`toKey` are the stable, comparable proxies for `from`/`to` (fresh Date objects every render would otherwise re-fire this effect every render).
   }, [profileId, fromKey, toKey]);

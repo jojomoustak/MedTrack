@@ -32,7 +32,7 @@ export function useMedicationsList(profileId: string | null): MedicationsListSta
       const local = await repo.list(profileId!);
       if (!cancelled) setState({ status: "ready", medications: local });
 
-      await hydrateLocalDataFromServer({ userMedication: repo });
+      await hydrateLocalDataFromServer({ userMedication: repo, profileId: profileId! });
       if (cancelled) return;
       const refreshed = await repo.list(profileId!);
       if (!cancelled) setState({ status: "ready", medications: refreshed });

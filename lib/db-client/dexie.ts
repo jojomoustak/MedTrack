@@ -129,6 +129,14 @@ export interface LocalPhotoOutboxEntry {
   syncingSince?: string;
 }
 
+/** See `lib/db-client/sync-pull-cursor-repository.ts`. */
+export interface SyncPullCursorRecord {
+  profileId: string;
+  /** Last applied `sync_change_log` id for this profile. */
+  cursor: number;
+  updatedAt: string;
+}
+
 export class MedTrackingDexie extends Dexie {
   outbox!: EntityTable<OutboxEntry, "clientMutationId">;
   userPreferences!: EntityTable<UserPreferencesRecord, "accountId">;
@@ -148,6 +156,7 @@ export class MedTrackingDexie extends Dexie {
   photoOutboxEntry!: EntityTable<LocalPhotoOutboxEntry, "userMedicationId">;
   medicationPackage!: EntityTable<MedicationPackageRecord, "id">;
   inventoryTransaction!: EntityTable<InventoryTransactionRecord, "id">;
+  syncPullCursor!: EntityTable<SyncPullCursorRecord, "profileId">;
 
   constructor(name = "medtracking") {
     super(name);
@@ -254,6 +263,14 @@ export class MedTrackingDexie extends Dexie {
     this.version(8).stores({
       medicationPackage: "id, profileId, userMedicationId, status, expiryDate, syncState, deletedAt",
       inventoryTransaction: "id, profileId, userMedicationId, packageId, doseEventId, transactionType, occurredAt, syncState",
+    });
+
+    // v9: per-profile pull cursor, so hydration resumes where it left off
+    // instead of replaying the change feed from 0 (and giving up after a
+    // fixed number of pages) on every load. New table only; existing
+    // installs start with no cursor, i.e. one full replay.
+    this.version(9).stores({
+      syncPullCursor: "profileId",
     });
 
     // Single choke point for "a new outbox entry was durably written" —

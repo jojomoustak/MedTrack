@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
+import { onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
 import { compareTimestampsAscending, isTimestampAtOrBefore } from "@/lib/domain/timestamp";
@@ -95,9 +96,13 @@ export function useTodayDoseEvents(profileId: string | null, onNewlyDue?: (dose:
 
     void load();
     const interval = setInterval(() => void load(), DUE_CHECK_INTERVAL_MS);
+    // Re-read as soon as a server pull lands new data (fresh install, second
+    // device) rather than waiting up to DUE_CHECK_INTERVAL_MS.
+    const unsubscribe = onLocalDataHydrated(() => void load());
     return () => {
       cancelled = true;
       clearInterval(interval);
+      unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onNewlyDue is read via onNewlyDueRef precisely so it doesn't need to be a dependency here (see this function's doc comment).
   }, [profileId, nonce]);

@@ -19,6 +19,11 @@ import { getClientDb, type MedTrackingDexie } from "@/lib/db-client/dexie";
  * than each new offline feature needing to remember to wire itself into
  * sign-out separately.
  *
+ * `medicationPackage` and `inventoryTransaction` (added in Dexie v8) were
+ * missing from this list until 2026-10-04 — a shared device kept the
+ * previous user's packages and stock ledger after sign-out. The pull
+ * cursor (v9) is cleared too, so the next sign-in restores from 0.
+ *
  * Deliberately does NOT touch `catalogProductCache`, `offlineIndexEntry`,
  * `offlineIndexMeta`, or `learnedGtinMapping` — those hold shared
  * reference/catalog data (which GTIN maps to which public product), not
@@ -50,9 +55,15 @@ export async function clearAllLocalProfileData(db: MedTrackingDexie = getClientD
       db.unresolvedScan,
       db.medicationPhotoCache,
       db.photoOutboxEntry,
+      db.medicationPackage,
+      db.inventoryTransaction,
+      db.syncPullCursor,
     ],
     async () => {
       await Promise.all([
+        db.medicationPackage.clear(),
+        db.inventoryTransaction.clear(),
+        db.syncPullCursor.clear(),
         db.outbox.clear(),
         db.userPreferences.clear(),
         db.purchaseList.clear(),

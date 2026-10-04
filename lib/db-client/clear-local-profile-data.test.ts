@@ -102,6 +102,21 @@ describe("clearAllLocalProfileData", () => {
     expect(await db.photoOutboxEntry.count()).toBe(0);
   });
 
+  it("also clears inventory (packages, stock ledger) and the sync pull cursor", async () => {
+    // Real bug (2026-10-04): the v8 inventory tables were never added to
+    // this list, so a shared device kept the previous user's packages and
+    // stock ledger after they signed out.
+    await db.medicationPackage.put({ id: "pkg-1", profileId: "profile-1", userMedicationId: "med-1" } as never);
+    await db.inventoryTransaction.put({ id: "tx-1", profileId: "profile-1", userMedicationId: "med-1" } as never);
+    await db.syncPullCursor.put({ profileId: "profile-1", cursor: 42, updatedAt: new Date().toISOString() });
+
+    await clearAllLocalProfileData(db);
+
+    expect(await db.medicationPackage.count()).toBe(0);
+    expect(await db.inventoryTransaction.count()).toBe(0);
+    expect(await db.syncPullCursor.count()).toBe(0);
+  });
+
   it("leaves shared catalog/reference data untouched", async () => {
     await clearAllLocalProfileData(db);
 

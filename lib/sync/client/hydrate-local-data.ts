@@ -26,8 +26,23 @@
  * was never added here, so a second device (or a reinstall) would never
  * actually see an existing account's purchase lists. Both `purchaseList`
  * and the new `purchaseListItem` are wired in below.
+ *
+ * Resumable (2026-10-04): this used to restart from cursor 0 on every call
+ * and stop after 10 pages of 100 changes. Every dose created, taken or
+ * skipped adds to the change feed, so a regular user passes 1,000 entries
+ * within months — after which a new device or reinstall would restore
+ * only the OLDEST 1,000 changes and silently miss their most recent
+ * medications and doses, and every visit to Today/Medications re-pulled
+ * the whole prefix. Given a `profileId`, it now resumes from a persisted
+ * per-profile cursor, saves progress after each applied page, and keeps
+ * going until caught up (a generous per-call page bound only spreads a
+ * huge first restore across calls; it never drops data). Re-applying a
+ * page is harmless — `applyRemote` is idempotent, which the old
+ * replay-from-0 behaviour already relied on.
  */
 import { pullChanges } from "@/lib/sync/client/api";
+import { notifyLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
+import { DexieSyncPullCursorRepository } from "@/lib/db-client/sync-pull-cursor-repository";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
@@ -59,9 +74,33 @@ export interface HydrateLocalDataDeps {
   purchaseListItem?: DexiePurchaseListItemRepository;
   /** Injectable for tests — defaults to the real `pullChanges` (which calls the network). */
   pullChanges?: typeof pullChanges;
+  /**
+   * The signed-in profile. When given, the pull resumes from (and saves to)
+   * that profile's persisted cursor. Without it, the pull starts from 0 and
+   * nothing is persisted.
+   */
+  profileId?: string;
+  cursorStore?: DexieSyncPullCursorRepository;
 }
 
-export async function hydrateLocalDataFromServer(deps: HydrateLocalDataDeps = {}): Promise<void> {
+/** Upper bound on pages per call — only spreads a very large first restore across calls; progress is saved per page, so nothing is skipped. */
+const MAX_PAGES_PER_CALL = 100;
+
+const inFlight = new Map<string, Promise<void>>();
+
+export function hydrateLocalDataFromServer(deps: HydrateLocalDataDeps = {}): Promise<void> {
+  // Several views mount together and each asks for a catch-up; share one
+  // pass per profile instead of racing duplicate pulls of the same pages.
+  const key = deps.profileId;
+  if (!key) return runHydration(deps);
+  const existing = inFlight.get(key);
+  if (existing) return existing;
+  const run = runHydration(deps).finally(() => inFlight.delete(key));
+  inFlight.set(key, run);
+  return run;
+}
+
+async function runHydration(deps: HydrateLocalDataDeps): Promise<void> {
   if (typeof navigator !== "undefined" && navigator.onLine === false) return;
 
   const userMedication = deps.userMedication ?? new DexieUserMedicationRepository();
@@ -74,12 +113,13 @@ export async function hydrateLocalDataFromServer(deps: HydrateLocalDataDeps = {}
   const purchaseList = deps.purchaseList ?? new DexiePurchaseListRepository();
   const purchaseListItem = deps.purchaseListItem ?? new DexiePurchaseListItemRepository();
   const pull = deps.pullChanges ?? pullChanges;
+  const profileId = deps.profileId;
+  const cursorStore = profileId ? (deps.cursorStore ?? new DexieSyncPullCursorRepository()) : null;
+  let applied = 0;
 
   try {
-    let cursor = 0;
-    // Bounded — this is a "catch up this session" pass, not a full
-    // paginated sync loop (Phase 5's outbox worker owns ongoing sync).
-    for (let page = 0; page < 10; page++) {
+    let cursor = cursorStore && profileId ? await cursorStore.get(profileId) : 0;
+    for (let page = 0; page < MAX_PAGES_PER_CALL; page++) {
       const response = await pull(cursor);
       for (const change of response.changes) {
         if (!change.record) continue;
@@ -103,10 +143,16 @@ export async function hydrateLocalDataFromServer(deps: HydrateLocalDataDeps = {}
           await purchaseListItem.applyRemote(change.record as unknown as PurchaseListItemRecord);
         }
       }
+      applied += response.changes.length;
       if (response.nextCursor === cursor || response.changes.length === 0) break;
       cursor = response.nextCursor;
+      // Saved only after the whole page is applied: an interrupted pass
+      // resumes at this page, never past records it didn't store.
+      if (cursorStore && profileId) await cursorStore.set(profileId, cursor);
     }
   } catch (err) {
     logger.warn("sync.hydrate.local_data_failed", { message: (err as Error).message });
   }
+
+  if (applied > 0) notifyLocalDataHydrated();
 }
