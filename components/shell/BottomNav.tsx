@@ -28,7 +28,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Κύρια πλοήγηση"
-      className="grid grid-cols-5 border-t border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950"
+      className="grid grid-cols-5 border-t border-stone-200 bg-background dark:border-stone-800"
     >
       {TABS.map((tab) => {
         const active = pathname === tab.href || pathname?.startsWith(`${tab.href}/`);

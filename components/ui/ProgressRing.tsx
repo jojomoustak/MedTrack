@@ -10,6 +10,7 @@ export function ProgressRing({
   size = 56,
   strokeWidth = 5,
   label,
+  labelClassName = "text-xs font-bold",
 }: {
   value: number;
   total: number;
@@ -17,6 +18,7 @@ export function ProgressRing({
   strokeWidth?: number;
   /** Center text — defaults to a rounded percentage; pass "3/5" etc. for a fraction instead. */
   label?: string;
+  labelClassName?: string;
 }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -27,7 +29,7 @@ export function ProgressRing({
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth={strokeWidth} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeOpacity="0.18" strokeWidth={strokeWidth} />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -41,7 +43,7 @@ export function ProgressRing({
           className="transition-[stroke-dashoffset] duration-500"
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold tabular-nums">{label ?? `${percent}%`}</span>
+      <span className={`absolute inset-0 flex items-center justify-center tabular-nums ${labelClassName}`}>{label ?? `${percent}%`}</span>
     </div>
   );
 }

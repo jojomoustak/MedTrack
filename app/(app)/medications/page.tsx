@@ -13,6 +13,7 @@ import { SegmentedControl, type Segment as SegmentDef } from "@/components/ui/Se
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ButtonLink } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { formatQuantity } from "@/lib/domain/quantity";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
@@ -71,11 +72,16 @@ export default function MedicationsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      {/* UX feedback (2026-09-22): "add" used to also live here, top-right
-          — redundant with `AddMedicationFab` (fixed bottom-right on this
-          same screen) and wrongly placed for a primary action. One add
-          entry point now, in the conventional mobile position. */}
-      <h1 className="text-xl font-semibold">Φάρμακα</h1>
+      {/* The one add entry point (reference mockup, screen 8): a header
+          button, replacing the floating "+ Φάρμακο" button that used to sit
+          over list content on Today/Medications/Lists. */}
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">Φάρμακα</h1>
+        <ButtonLink href="/medications/add" onClick={() => playSound("button")} size="sm">
+          <PlusIcon />
+          Προσθήκη
+        </ButtonLink>
+      </div>
 
       <label className="relative block">
         <span className="sr-only">Αναζήτηση φαρμάκων</span>
@@ -111,10 +117,7 @@ export default function MedicationsPage() {
         </p>
       )}
 
-      {/* UX feedback (2026-09-22): this centered CTA duplicated
-          `AddMedicationFab`, which is always on-screen here (fixed
-          bottom-right) regardless of segment/empty state — one add
-          entry point on this screen is enough. */}
+      {/* No CTA here: the header's "Προσθήκη" is always on-screen. */}
       {status === "ready" && visible.length === 0 && (
         <EmptyState icon={<EmptyMedIcon />} title={normalizedQuery ? "Δεν βρέθηκαν φάρμακα." : EMPTY_SEGMENT_MESSAGE[segment]} />
       )}
@@ -213,6 +216,14 @@ function StarIcon({ filled }: { filled: boolean }) {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
       <path d={path} />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.6">
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
     </svg>
   );
 }

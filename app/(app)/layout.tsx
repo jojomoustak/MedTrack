@@ -8,12 +8,11 @@ import { notifySessionRestored } from "@/lib/auth/client/session-restored-signal
 import { CurrentProfileProvider } from "@/components/shell/CurrentProfileContext";
 import { AppBar } from "@/components/shell/AppBar";
 import { BottomNav } from "@/components/shell/BottomNav";
-import { AddMedicationFab } from "@/components/shell/AddMedicationFab";
 import { OfflineBanner } from "@/components/sync/OfflineBanner";
 
 /**
  * The authenticated app shell (Phase 3 §1): app bar + tab content +
- * persistent bottom nav + FAB. Unauthenticated visits to any tab redirect
+ * persistent bottom nav. Unauthenticated visits to any tab redirect
  * to Login (no login/register UI existed before this task).
  */
 export default function AppShellLayout({ children }: { children: React.ReactNode }) {
@@ -63,7 +62,6 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
         <AppBar />
         <OfflineBanner />
         <div className="flex-1 pb-20">{children}</div>
-        <AddMedicationFab />
         <div className="fixed inset-x-0 bottom-0">
           <BottomNav />
         </div>
