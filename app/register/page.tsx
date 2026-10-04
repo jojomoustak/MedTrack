@@ -1,74 +1,58 @@
 import Link from "next/link";
 import { RegisterForm } from "@/components/auth/RegisterForm";
-import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
-import { OrDivider } from "@/components/auth/OrDivider";
 import { BrandLockup } from "@/components/shell/BrandMark";
-import { mapGoogleAuthError } from "@/lib/auth/client/google-auth-errors";
-
-interface RegisterPageProps {
-  searchParams: Promise<{ error?: string }>;
-}
 
 /**
- * A Google sign-in started from `/register` can still collide with an
- * existing account (ADR-003 addendum A.5) — same rejection, same
- * server-side `error` query param handling as `/login` (see that page's
- * doc comment). `errorCallbackURL` below points back to `/register` (not
- * `/login`) so the message shows on whichever page the user actually
- * started from.
+ * Layout matched to the reference mockup's Register, compared bezel-free
+ * at the same width (2026-10-04): a back arrow to Welcome, centered logo
+ * lockup, LEFT-aligned large heading and subcopy, tall white fields, a
+ * large primary button, the consent line, then a single-line sign-in
+ * prompt. The reference has no social sign-in here — Google sign-in on
+ * Login creates an account too, so nothing is lost by matching that.
  *
- * Design pass (2026-09-28): matches `/login`'s reference-mockup structure
- * (brand header, heading + subcopy, full-width form, divider, social auth)
- * — the same gap the user flagged on Login applied here too, and leaving
- * only one of the pair redone would read as broken rather than finished.
- * Same Apple-omission call as Login (see that page's doc comment).
- *
- * Design pass 2 (2026-09-28, same day — user: "It doesnt look identical.
- * Be more careful"): same `BrandLockup` swap and two-line, non-underlined
- * cross-link fix as Login (see that page's doc comment for how the crop
- * comparison found these).
+ * Two deliberate departures: the reference's consent line also links a
+ * "Terms of Service" page this app doesn't have (so only Privacy is
+ * linked), and its three live password rules become the one this app
+ * actually enforces (see `RegisterForm`).
  */
-export default async function RegisterPage({ searchParams }: RegisterPageProps) {
-  const { error } = await searchParams;
-  const googleError = mapGoogleAuthError(error ?? null);
-
+export default function RegisterPage() {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-stone-50 px-6 py-12 dark:bg-stone-950">
-      <BrandLockup />
+    <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-6 pt-4 dark:bg-stone-950">
+      <div className="mx-auto flex w-full max-w-sm flex-col">
+        <Link
+          href="/welcome"
+          aria-label="Πίσω"
+          className="-ml-3 flex size-11 items-center justify-center rounded-full text-stone-800 dark:text-stone-200"
+        >
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 5 8 12l7 7" />
+          </svg>
+        </Link>
 
-      <div className="flex flex-col items-center gap-1 text-center">
-        <h1 className="text-2xl font-bold">Δημιουργία λογαριασμού</h1>
-        <p className="text-stone-600 dark:text-stone-400">Εγγραφείτε στο MedTrack και αναλάβετε τον έλεγχο της υγείας σας.</p>
-      </div>
+        <BrandLockup iconSize={72} textClassName="text-[30px] leading-none" className="self-center" />
 
-      {googleError && (
-        <p role="alert" className="w-full max-w-sm text-sm text-red-700 dark:text-red-400">
-          {googleError}
+        <h1 className="mt-7 text-[27px] font-bold leading-tight tracking-tight text-stone-900 dark:text-stone-50">Δημιουργία λογαριασμού</h1>
+        <p className="mt-2 text-lg leading-snug text-stone-600 dark:text-stone-400">Εγγραφείτε στο MedTrack και αναλάβετε τον έλεγχο της υγείας σας.</p>
+
+        <div className="mt-6">
+          <RegisterForm />
+        </div>
+
+        <p className="mt-5 text-center text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+          Δημιουργώντας λογαριασμό, συμφωνείτε με την{" "}
+          <Link href="/privacy" className="font-semibold text-accent-700 dark:text-accent-400">
+            Πολιτική Απορρήτου
+          </Link>
+          .
         </p>
-      )}
 
-      <RegisterForm />
-
-      <OrDivider label="ή συνεχίστε με" />
-
-      <div className="w-full max-w-sm">
-        <GoogleAuthButton mode="sign-in" callbackURL="/today" errorCallbackURL="/register" fullWidth />
+        <p className="mt-6 text-center text-[15px] text-stone-600 dark:text-stone-400">
+          Έχετε ήδη λογαριασμό;{" "}
+          <Link href="/login" className="font-semibold text-accent-700 dark:text-accent-400">
+            Σύνδεση
+          </Link>
+        </p>
       </div>
-
-      <p className="text-center text-sm text-stone-600 dark:text-stone-400">
-        Έχετε ήδη λογαριασμό;
-        <br />
-        <Link href="/login" className="font-semibold text-accent-700 dark:text-accent-400">
-          Σύνδεση
-        </Link>
-      </p>
-      <p className="text-xs text-stone-500 dark:text-stone-400">
-        Δημιουργώντας λογαριασμό, συμφωνείτε με την{" "}
-        <Link href="/privacy" className="text-accent-700 underline dark:text-accent-400">
-          Πολιτική Απορρήτου
-        </Link>
-        .
-      </p>
     </main>
   );
 }

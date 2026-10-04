@@ -7,7 +7,7 @@ import { playSound } from "@/lib/sound/client/play-sound";
 import { MedianMobilePlatform } from "@/lib/platform/median-mobile-platform";
 import { MobilePlatformUnavailableError, type MobilePlatform } from "@/lib/platform/mobile-platform";
 import { mapGoogleAuthErrorFromNativeSignIn } from "@/lib/auth/client/google-auth-errors";
-import { Button } from "@/components/ui/Button";
+import { Button, type ButtonSize } from "@/components/ui/Button";
 
 interface GoogleAuthButtonProps {
   /**
@@ -31,6 +31,9 @@ interface GoogleAuthButtonProps {
   /** Test-only injection point — real callers always get `MedianMobilePlatform`. */
   platform?: MobilePlatform;
   fullWidth?: boolean;
+  size?: ButtonSize;
+  /** Extra classes; must not set properties the `secondary` variant already sets (border color, text color). */
+  className?: string;
 }
 
 /**
@@ -57,7 +60,16 @@ interface GoogleAuthButtonProps {
  *   both success and failure, so — unlike the redirect branch — it owns
  *   real loading/error/navigation handling.
  */
-export function GoogleAuthButton({ mode, callbackURL, errorCallbackURL, label, platform = new MedianMobilePlatform(), fullWidth }: GoogleAuthButtonProps) {
+export function GoogleAuthButton({
+  mode,
+  callbackURL,
+  errorCallbackURL,
+  label,
+  platform = new MedianMobilePlatform(),
+  fullWidth,
+  size,
+  className,
+}: GoogleAuthButtonProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [nativeError, setNativeError] = useState<string | null>(null);
@@ -108,7 +120,15 @@ export function GoogleAuthButton({ mode, callbackURL, errorCallbackURL, label, p
 
   return (
     <div className="flex flex-col gap-2">
-      <Button variant="secondary" fullWidth={fullWidth} onClick={handleClick} disabled={pending} aria-busy={pending}>
+      <Button
+        variant="secondary"
+        size={size}
+        fullWidth={fullWidth}
+        className={className}
+        onClick={handleClick}
+        disabled={pending}
+        aria-busy={pending}
+      >
         <GoogleGlyph />
         {label ?? (mode === "sign-in" ? "Σύνδεση με Google" : "Σύνδεση λογαριασμού Google")}
       </Button>

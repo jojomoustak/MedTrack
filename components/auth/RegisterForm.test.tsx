@@ -24,7 +24,7 @@ describe("RegisterForm", () => {
     const { RegisterForm } = await import("@/components/auth/RegisterForm");
     render(<RegisterForm />);
 
-    fireEvent.change(screen.getByLabelText("Όνομα"), { target: { value: "Νίκος" } });
+    fireEvent.change(screen.getByLabelText("Ονοματεπώνυμο"), { target: { value: "Νίκος" } });
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "nikos@example.com" } });
     fireEvent.change(screen.getByLabelText("Κωδικός πρόσβασης"), { target: { value: "correct-horse-battery" } });
     fireEvent.click(screen.getByRole("button", { name: /δημιουργία λογαριασμού/i }));

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/auth/field-styles";
 import { Button } from "@/components/ui/Button";
 
 /**
@@ -42,9 +43,9 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4" noValidate>
-      <label className="flex flex-col gap-1">
-        <span className="font-medium">Email</span>
+    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4" noValidate>
+      <label className={FIELD_WRAPPER}>
+        <span className={FIELD_LABEL}>Email</span>
         <input
           type="email"
           required
@@ -53,7 +54,7 @@ export function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           aria-label="Email"
-          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+          className={`${FIELD_INPUT} pr-4`}
         />
       </label>
 
@@ -69,7 +70,7 @@ export function LoginForm() {
       <Link
         href="/forgot-password"
         onClick={() => playSound("button")}
-        className="self-end text-sm font-medium text-accent-700 underline dark:text-accent-400"
+        className="-mt-1 self-end text-[15px] font-semibold text-accent-700 dark:text-accent-400"
       >
         Ξεχάσατε τον κωδικό;
       </Link>
@@ -80,7 +81,7 @@ export function LoginForm() {
         </p>
       )}
 
-      <Button type="submit" fullWidth disabled={submitting} aria-busy={submitting}>
+      <Button type="submit" size="lg" fullWidth disabled={submitting} aria-busy={submitting} className="mt-2">
         {submitting ? "Σύνδεση…" : "Σύνδεση"}
       </Button>
     </form>

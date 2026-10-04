@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/auth/field-styles";
 import { Button } from "@/components/ui/Button";
+
+const MIN_PASSWORD_LENGTH = 8;
 
 /**
  * Phase 3 §2.1 "Register". Calls Better Auth's client SDK (ADR-003) —
@@ -34,21 +37,22 @@ export function RegisterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4" noValidate>
-      <label className="flex flex-col gap-1">
-        <span className="font-medium">Όνομα</span>
+    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4" noValidate>
+      <label className={FIELD_WRAPPER}>
+        <span className={FIELD_LABEL}>Ονοματεπώνυμο</span>
         <input
           type="text"
           autoComplete="name"
+          placeholder="π.χ. Μαρία Παπαδοπούλου"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          aria-label="Όνομα"
-          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+          aria-label="Ονοματεπώνυμο"
+          className={`${FIELD_INPUT} pr-4`}
         />
       </label>
 
-      <label className="flex flex-col gap-1">
-        <span className="font-medium">Email</span>
+      <label className={FIELD_WRAPPER}>
+        <span className={FIELD_LABEL}>Email</span>
         <input
           type="email"
           required
@@ -57,7 +61,7 @@ export function RegisterForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           aria-label="Email"
-          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+          className={`${FIELD_INPUT} pr-4`}
         />
       </label>
 
@@ -67,9 +71,15 @@ export function RegisterForm() {
         onChange={setPassword}
         autoComplete="new-password"
         required
-        minLength={8}
+        minLength={MIN_PASSWORD_LENGTH}
         ariaLabel="Κωδικός πρόσβασης"
       />
+
+      {/* The reference lists three live password rules; this app only
+          enforces one (length — Better Auth's server-side minimum), so
+          only that one is shown. Listing rules the server doesn't check
+          would tell users their password has to meet a bar it doesn't. */}
+      <PasswordRule met={password.length >= MIN_PASSWORD_LENGTH} label={`Τουλάχιστον ${MIN_PASSWORD_LENGTH} χαρακτήρες`} />
 
       {error && (
         <p role="alert" className="text-sm text-red-700 dark:text-red-400">
@@ -77,10 +87,29 @@ export function RegisterForm() {
         </p>
       )}
 
-      <Button type="submit" fullWidth disabled={submitting} aria-busy={submitting}>
+      <Button type="submit" size="lg" fullWidth disabled={submitting} aria-busy={submitting} className="mt-2">
         {submitting ? "Δημιουργία λογαριασμού…" : "Δημιουργία λογαριασμού"}
       </Button>
     </form>
+  );
+}
+
+function PasswordRule({ met, label }: { met: boolean; label: string }) {
+  return (
+    <p className="-mt-1 flex items-center gap-2.5 text-[15px] text-stone-600 dark:text-stone-400">
+      <span
+        aria-hidden="true"
+        className={`flex size-5 shrink-0 items-center justify-center rounded-full ${met ? "bg-accent-700 text-white dark:bg-accent-500" : "border-2 border-stone-300 dark:border-stone-600"}`}
+      >
+        {met && (
+          <svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2.5 6.2 5 8.6 9.5 3.6" />
+          </svg>
+        )}
+      </span>
+      {label}
+      <span className="sr-only">{met ? " — εντάξει" : " — δεν πληρείται ακόμα"}</span>
+    </p>
   );
 }
 

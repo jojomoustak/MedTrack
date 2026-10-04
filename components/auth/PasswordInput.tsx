@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/auth/field-styles";
 
 /**
  * Shared by Login/Register/Reset — a "show password" toggle (UX feedback,
@@ -28,8 +29,8 @@ export function PasswordInput({
   const [visible, setVisible] = useState(false);
 
   return (
-    <label className="flex flex-col gap-1">
-      <span className="font-medium">{label}</span>
+    <label className={FIELD_WRAPPER}>
+      <span className={FIELD_LABEL}>{label}</span>
       <div className="relative">
         <input
           type={visible ? "text" : "password"}
@@ -39,7 +40,7 @@ export function PasswordInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           aria-label={ariaLabel}
-          className="min-h-12 w-full rounded-lg border border-stone-300 px-3 py-2 pr-12 dark:border-stone-700 dark:bg-stone-900"
+          className={`${FIELD_INPUT} pr-12`}
         />
         <button
           type="button"

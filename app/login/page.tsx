@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
-import { OrDivider } from "@/components/auth/OrDivider";
 import { BrandLockup } from "@/components/shell/BrandMark";
 import { mapGoogleAuthError, mapSessionExpiredReason } from "@/lib/auth/client/google-auth-errors";
 
@@ -18,21 +17,14 @@ interface LoginPageProps {
  * a second, independent source of a `/login` message: `app/(app)/layout.tsx`
  * sets it when `lib/auth/client/session-expired-signal.ts` fires.
  *
- * Design pass (2026-09-28, reference mockup comparison — user flagged this
- * screen specifically): the reference's Login is brand header + "Welcome
- * back" + subcopy + full-width form + a divider + social auth, not a bare
- * `<h1>Σύνδεση</h1>` over the form. Matched here, with one deliberate
- * departure: the reference shows Google *and* Apple side by side — Apple
- * Sign-In isn't a real provider this app supports (CLAUDE.md rule 4, no
- * unavailable integration), so only Google renders, full-width rather than
- * left orphaned at half-width next to a button that would go nowhere.
- *
- * Design pass 2 (2026-09-28, same day — user: "It doesnt look identical.
- * Be more careful"): cropping and upscaling the reference showed the brand
- * mark here is the bigger stacked lockup used on every entry screen
- * (`BrandLockup`, icon-above-wordmark, colored green), not the compact
- * inline header mark — and the bottom cross-link is two stacked lines
- * with a bold, non-underlined colored link, not one underlined line.
+ * Layout matched to the reference mockup's Login, compared bezel-free at
+ * the same width (2026-10-04): centered logo lockup, then a LEFT-aligned
+ * large heading and subcopy, tall white fields, a large primary button,
+ * plain "or continue with" text (no rules), a white card button for
+ * Google, and a single-line sign-up prompt. One deliberate departure: the
+ * reference shows Google *and* Apple side by side — Apple Sign-In isn't a
+ * provider this app supports (CLAUDE.md rule 4), so only Google renders,
+ * full-width rather than half-width next to a button that would go nowhere.
  */
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { error, reason } = await searchParams;
@@ -41,35 +33,43 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const message = googleError ?? sessionExpiredMessage;
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-stone-50 px-6 py-12 dark:bg-stone-950">
-      <BrandLockup />
+    <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-5 pt-6 dark:bg-stone-950">
+      <div className="mx-auto flex w-full max-w-sm flex-col">
+        <BrandLockup iconSize={72} textClassName="text-[30px] leading-none" className="self-center" />
 
-      <div className="flex flex-col items-center gap-1 text-center">
-        <h1 className="text-2xl font-bold">Καλώς ήρθατε ξανά</h1>
-        <p className="text-stone-600 dark:text-stone-400">Συνδεθείτε για να συνεχίσετε στο MedTrack.</p>
-      </div>
+        <h1 className="mt-7 text-[34px] font-bold leading-tight tracking-tight text-stone-900 dark:text-stone-50">Καλώς ήρθατε ξανά</h1>
+        <p className="mt-2 text-lg leading-snug text-stone-600 dark:text-stone-400">Συνδεθείτε για να συνεχίσετε στο MedTrack.</p>
 
-      {message && (
-        <p role="alert" className="w-full max-w-sm text-sm text-red-700 dark:text-red-400">
-          {message}
+        {message && (
+          <p role="alert" className="mt-4 text-sm text-red-700 dark:text-red-400">
+            {message}
+          </p>
+        )}
+
+        <div className="mt-6">
+          <LoginForm />
+        </div>
+
+        <p className="mt-6 text-center text-base text-stone-500 dark:text-stone-400">ή συνεχίστε με</p>
+
+        <div className="mt-4">
+          <GoogleAuthButton
+            mode="sign-in"
+            callbackURL="/today"
+            errorCallbackURL="/login"
+            size="lg"
+            fullWidth
+            className="bg-white shadow-[0_1px_3px_rgba(28,25,23,0.06)] dark:bg-stone-900"
+          />
+        </div>
+
+        <p className="mt-6 text-center text-[15px] text-stone-600 dark:text-stone-400">
+          Δεν έχετε λογαριασμό;{" "}
+          <Link href="/register" className="font-semibold text-accent-700 dark:text-accent-400">
+            Εγγραφή
+          </Link>
         </p>
-      )}
-
-      <LoginForm />
-
-      <OrDivider label="ή συνεχίστε με" />
-
-      <div className="w-full max-w-sm">
-        <GoogleAuthButton mode="sign-in" callbackURL="/today" errorCallbackURL="/login" fullWidth />
       </div>
-
-      <p className="text-center text-sm text-stone-600 dark:text-stone-400">
-        Δεν έχετε λογαριασμό;
-        <br />
-        <Link href="/register" className="font-semibold text-accent-700 dark:text-accent-400">
-          Δημιουργία λογαριασμού
-        </Link>
-      </p>
     </main>
   );
 }
