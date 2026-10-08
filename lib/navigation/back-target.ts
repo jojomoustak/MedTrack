@@ -12,10 +12,11 @@
  */
 export type BackTarget = { kind: "none" } | { kind: "parent"; href: string } | { kind: "history"; fallback: string };
 
-const ROOT_PATHS = new Set(["/today", "/medications", "/calendar", "/calendar/month", "/lists", "/profile"]);
+const ROOT_PATHS = new Set(["/today", "/medications", "/calendar", "/lists", "/profile"]);
 
 const RULES: [RegExp, (match: RegExpMatchArray) => BackTarget][] = [
   [/^\/calendar\/dose\/[^/]+$/, () => ({ kind: "history", fallback: "/today" })],
+  [/^\/calendar\/day$/, () => ({ kind: "parent", href: "/calendar" })],
   [/^\/medications\/add$/, () => ({ kind: "parent", href: "/medications" })],
   [/^\/medications\/([^/]+)\/(?:edit|photo|inventory\/correct|packages\/add)$/, (m) => ({ kind: "parent", href: `/medications/${m[1]}` })],
   [/^\/medications\/[^/]+$/, () => ({ kind: "parent", href: "/medications" })],

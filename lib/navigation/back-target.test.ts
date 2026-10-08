@@ -3,7 +3,7 @@ import { backTarget } from "@/lib/navigation/back-target";
 
 describe("backTarget", () => {
   it("offers no back on the root tabs", () => {
-    for (const path of ["/today", "/medications", "/calendar", "/calendar/month", "/lists", "/profile", "/medications/"]) {
+    for (const path of ["/today", "/medications", "/calendar", "/lists", "/profile", "/medications/"]) {
       expect(backTarget(path)).toEqual({ kind: "none" });
     }
   });
@@ -17,6 +17,7 @@ describe("backTarget", () => {
     expect(backTarget("/medications/abc/packages/add")).toEqual({ kind: "parent", href: "/medications/abc" });
     expect(backTarget("/lists/xyz")).toEqual({ kind: "parent", href: "/lists" });
     expect(backTarget("/profile/delete")).toEqual({ kind: "parent", href: "/profile" });
+    expect(backTarget("/calendar/day")).toEqual({ kind: "parent", href: "/calendar" });
   });
 
   it("returns to wherever Dose Detail was opened from", () => {

@@ -12,7 +12,7 @@ import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
 import { useLowStockMedicationIds } from "@/lib/inventory/client/use-low-stock-medications";
 import { useTodayDoseEvents, allTodayDosesResolved } from "@/components/today/use-today-dose-events";
-import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
+import { isDoseTaken } from "@/lib/domain/dose-event";
 import { isDoseActionable, recordAllDosesTaken, recordDoseTaken, recordDoseTakenLate } from "@/lib/doses/client/dose-actions";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -146,10 +146,11 @@ export default function TodayPage() {
   }
 
   const total = todayDoses.length;
-  const resolvedCount = todayDoses.filter((d) => isTerminalDoseEventStatus(d.status)).length;
+  // Progress counts doses actually taken — a missed or skipped dose is recorded, not completed.
+  const takenCount = todayDoses.filter((d) => isDoseTaken(d.status)).length;
   const allResolved = total > 0 && allTodayDosesResolved(todayDoses);
   const hasActionableDose = todayDoses.some(isDoseActionable);
-  const percent = total > 0 ? Math.round((resolvedCount / total) * 100) : 0;
+  const percent = total > 0 ? Math.round((takenCount / total) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-6 px-5 pt-1 pb-6">
@@ -187,12 +188,12 @@ export default function TodayPage() {
                 ? "Καμία προγραμματισμένη δόση σήμερα."
                 : allResolved
                   ? "Όλες οι δόσεις καταγράφηκαν."
-                  : `${resolvedCount} από ${total} ολοκληρώθηκαν`}
+                  : `${takenCount} από ${total} ελήφθησαν`}
             </p>
           </div>
           {total > 0 && (
             <div aria-hidden="true" className="text-accent-700 dark:text-accent-400">
-              <ProgressRing value={resolvedCount} total={total} size={92} strokeWidth={9} label={`${percent}%`} labelClassName="text-[19px] font-bold text-stone-900 dark:text-stone-50" />
+              <ProgressRing value={takenCount} total={total} size={92} strokeWidth={9} label={`${percent}%`} labelClassName="text-[19px] font-bold text-stone-900 dark:text-stone-50" />
             </div>
           )}
         </div>

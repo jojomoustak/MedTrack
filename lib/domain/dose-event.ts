@@ -18,6 +18,11 @@ export function isTerminalDoseEventStatus(status: DoseEventStatus): boolean {
   return TERMINAL_DOSE_EVENT_STATUSES.includes(status);
 }
 
+/** Actually taken (on time or late) — what progress and encouragement count. A missed or skipped dose is recorded, not "completed". */
+export function isDoseTaken(status: DoseEventStatus): boolean {
+  return status === "taken" || status === "taken_late";
+}
+
 /**
  * Whether a transition from `from` to `to` is ever allowed. A plain
  * `isTerminalDoseEventStatus(from)` check alone would make `taken_late`

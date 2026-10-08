@@ -8,14 +8,17 @@ import { useMedicationsList } from "@/components/medications/use-medications-lis
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
 import { useDoseEventsForRange } from "@/components/calendar/use-dose-events-for-range";
-import { CalendarSegmentedNav } from "@/components/calendar/CalendarSegmentedNav";
-import { DateNavigator } from "@/components/calendar/DateNavigator";
-import { DoseCard } from "@/components/today/DoseCard";
+import { useDoseSummaryForMonth, daySummaryToMarkerKind, type DaySummary } from "@/components/calendar/use-dose-summary-for-month";
+import { DoseStatusGlyph, DOSE_MARKER_LABEL } from "@/components/calendar/DoseStatusGlyph";
+import { ChevronIcon } from "@/components/calendar/ChevronIcon";
+import { ChevronIcon as RowChevron } from "@/components/ui/ChevronIcon";
 import { ProjectedDoseRow } from "@/components/calendar/ProjectedDoseRow";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { BrandMark } from "@/components/shell/BrandMark";
+import { TodayDoseRow } from "@/components/today/TodayDoseRow";
 import { dateToParam, paramToDate } from "@/components/calendar/date-param";
-import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
+import { playSound } from "@/lib/sound/client/play-sound";
+
+/** Monday-first, the way a Greek week reads. */
+const WEEKDAY_HEADERS = ["Δευ", "Τρί", "Τετ", "Πέμ", "Παρ", "Σάβ", "Κυρ"];
 
 function isSameLocalDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -33,31 +36,37 @@ function endOfLocalDay(date: Date): Date {
   return d;
 }
 
-function EmptyDayIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3.5" y="4.5" width="17" height="16" rx="3" />
-      <path d="M3.5 9.5h17M8 3v3M16 3v3" />
-    </svg>
-  );
+/** The month's days, Monday-first, with `null` padding before the 1st so each weekday lines up under its header. */
+function buildMonthCells(monthDate: Date): (Date | null)[] {
+  const first = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+  const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+  const leading = (first.getDay() + 6) % 7;
+  const cells: (Date | null)[] = Array.from({ length: leading }, () => null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(monthDate.getFullYear(), monthDate.getMonth(), d));
+  return cells;
+}
+
+/** Marker tint on an unselected day — the marker's shape already states the status; color only reinforces it. */
+function markerTint(kind: string): string {
+  if (kind === "missed") return "text-amber-600 dark:text-amber-400";
+  if (kind === "taken" || kind === "taken_late") return "text-accent-600 dark:text-accent-400";
+  return "text-stone-400 dark:text-stone-500";
+}
+
+function dayAriaLabel(date: Date, summary: DaySummary | undefined): string {
+  const dateLabel = date.toLocaleDateString("el-GR", { weekday: "long", day: "numeric", month: "long" });
+  if (!summary) return `${dateLabel}, χωρίς δόσεις`;
+  if (summary.kind === "projected") return `${dateLabel}, προγραμματισμένες δόσεις`;
+  return `${dateLabel}, ${summary.doseCount} δόσεις, ${DOSE_MARKER_LABEL[summary.worstStatus!]}`;
 }
 
 /**
- * Calendar day view (Phase 3 §2.6, ADR-014) — chronological, cross-
- * medication list for one selected day, mixing real `DoseCard`s (tappable,
- * a real `id` exists) with lighter `ProjectedDoseRow`s for anything beyond
- * the materialization horizon (never tappable — no `id` exists yet).
- *
- * Design pass (2026-09-27): this used to be split across two separate
- * views — Day (real doses only, via `useDoseEventsForDate`) and a third
- * "Χρονολόγιο"/Timeline tab that additionally showed projected doses. User
- * feedback on the redesign mockup: the two views looked almost identical
- * (one dashed row was the only visible difference) and read as "why does
- * this exist as a separate tab" rather than an obviously distinct view —
- * merged here, absorbing Timeline's real+projected chronological merge
- * into Day directly, and `CalendarSegmentedNav` dropped to two segments
- * (Μήνας/Ημέρα). `use-dose-events-for-date.ts` and the `/calendar/timeline`
- * route are now dead and were deleted rather than left as unused code.
+ * Calendar (Phase 3 §2.6, ADR-014), laid out after the reference mockup's
+ * screen 17: a month grid — selected day solid green, a small status marker
+ * under days with doses (shape, not color alone) — and the selected day's
+ * doses listed beneath. The day's heading opens its timeline
+ * (`/calendar/day`). Display only: doses are recorded from Today or a
+ * dose's own screen, never by browsing another day here.
  */
 export default function CalendarPage() {
   const profileId = useProfileId();
@@ -65,90 +74,144 @@ export default function CalendarPage() {
   const searchParams = useSearchParams();
   const date = paramToDate(searchParams.get("date"));
   const dateParam = dateToParam(date);
-  const { status: medsStatus, medications } = useMedicationsList(profileId);
+  const today = useMemo(() => new Date(), []);
+
+  const { byDay } = useDoseSummaryForMonth(profileId, date);
+  const cells = useMemo(() => buildMonthCells(date), [date]);
+  const monthLabel = date.toLocaleDateString("el-GR", { month: "long", year: "numeric" });
+
+  const { medications } = useMedicationsList(profileId);
   const names = useDisplayNames(medications);
   const strengths = useMedicationStrengths(medications);
   const { status: dosesStatus, doses, projected } = useDoseEventsForRange(profileId, startOfLocalDay(date), endOfLocalDay(date));
 
-  // Real and projected doses can share a single day right at the
-  // materialization-horizon boundary — merge and sort chronologically
-  // rather than rendering two separate blocks, so the day stays truly
-  // chronological even on that boundary day.
+  // Real and projected doses can share a day right at the materialization
+  // horizon — one chronological list either way.
   const dayItems = useMemo(() => {
-    const items: ({ kind: "real"; scheduledAt: string } & { dose: (typeof doses)[number] })[] = doses
-      .filter((d) => d.scheduledAt !== null)
-      .map((dose) => ({ kind: "real" as const, scheduledAt: dose.scheduledAt!, dose }));
-    const projectedItems = projected.map((instant) => ({ kind: "projected" as const, scheduledAt: instant.scheduledAt, instant }));
-    return [...items, ...projectedItems].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+    const real = doses.filter((d) => d.scheduledAt !== null).map((dose) => ({ kind: "real" as const, scheduledAt: dose.scheduledAt!, dose }));
+    const proj = projected.map((instant) => ({ kind: "projected" as const, scheduledAt: instant.scheduledAt, instant }));
+    return [...real, ...proj].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
   }, [doses, projected]);
 
-  function navigateToDate(next: Date) {
-    router.replace(`/calendar?date=${dateToParam(next)}`);
+  function select(day: Date) {
+    router.replace(`/calendar?date=${dateToParam(day)}`);
   }
 
-  function shiftDay(deltaDays: number) {
-    const next = new Date(date);
-    next.setDate(next.getDate() + deltaDays);
-    navigateToDate(next);
+  function shiftMonth(delta: number) {
+    playSound("button");
+    const next = new Date(date.getFullYear(), date.getMonth() + delta, 1);
+    // Landing on the current month selects today, any other month its 1st.
+    select(next.getFullYear() === today.getFullYear() && next.getMonth() === today.getMonth() ? today : next);
   }
 
-  const isLoading = medsStatus === "loading" || dosesStatus === "loading";
-  const isEmpty = dosesStatus === "ready" && doses.length === 0 && projected.length === 0;
-
-  // Encouragement card (reference mockup comparison, 2026-09-28) — same
-  // quiet, honest "X of Y" restatement Today shows, but only when this
-  // view is actually showing today: the copy says "today", so it must not
-  // render while browsing a past/future day.
-  const isToday = isSameLocalDay(date, new Date());
-  const resolvedCount = doses.filter((d) => isTerminalDoseEventStatus(d.status)).length;
-  const allResolved = doses.length > 0 && resolvedCount === doses.length && projected.length === 0;
+  const selectedLabel = date.toLocaleDateString("el-GR", { weekday: "long", day: "numeric", month: "long" });
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <h1 className="text-xl font-semibold">Ημερολόγιο</h1>
+    <div className="flex flex-col gap-5 px-5 pt-1 pb-6">
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => shiftMonth(-1)}
+          aria-label="Προηγούμενος μήνας"
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-stone-700 active:scale-95 dark:text-stone-300"
+        >
+          <ChevronIcon direction="left" />
+        </button>
+        <h1 className="text-[22px] font-bold tracking-tight text-stone-900 capitalize dark:text-stone-50">{monthLabel}</h1>
+        <button
+          type="button"
+          onClick={() => shiftMonth(1)}
+          aria-label="Επόμενος μήνας"
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-stone-700 active:scale-95 dark:text-stone-300"
+        >
+          <ChevronIcon direction="right" />
+        </button>
+      </div>
 
-      <CalendarSegmentedNav active="day" dateParam={dateParam} />
+      <div>
+        <div className="grid grid-cols-7 text-center text-[13px] font-medium text-stone-500 dark:text-stone-400" aria-hidden="true">
+          {WEEKDAY_HEADERS.map((d) => (
+            <span key={d} className="py-1">
+              {d}
+            </span>
+          ))}
+        </div>
+        <div className="mt-1 grid grid-cols-7 gap-y-1" role="grid" aria-label={monthLabel}>
+          {cells.map((cellDate, i) => {
+            if (!cellDate) return <span key={`pad-${i}`} aria-hidden="true" />;
+            const summary = byDay.get(cellDate.toDateString());
+            const markerKind = summary ? daySummaryToMarkerKind(summary) : null;
+            const isSelected = isSameLocalDay(cellDate, date);
+            const isToday = isSameLocalDay(cellDate, today);
+            return (
+              <button
+                key={cellDate.toISOString()}
+                type="button"
+                aria-label={dayAriaLabel(cellDate, summary)}
+                aria-current={isToday ? "date" : undefined}
+                aria-pressed={isSelected}
+                onClick={() => {
+                  playSound("button");
+                  select(cellDate);
+                }}
+                data-day-kind={summary?.kind ?? "empty"}
+                className={`mx-auto flex h-12 w-11 flex-col items-center justify-center gap-0.5 rounded-xl text-base tabular-nums transition-colors ${
+                  isSelected
+                    ? "bg-accent-700 font-bold text-white dark:bg-accent-500 dark:text-stone-950"
+                    : isToday
+                      ? "font-bold text-accent-700 dark:text-accent-400"
+                      : "text-stone-800 dark:text-stone-200"
+                }`}
+              >
+                {cellDate.getDate()}
+                {markerKind && <DoseStatusGlyph kind={markerKind} className={`h-2.5 w-2.5 ${isSelected ? "text-white dark:text-stone-950" : markerTint(markerKind)}`} />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-      <DateNavigator date={date} onPrevDay={() => shiftDay(-1)} onNextDay={() => shiftDay(1)} onToday={() => navigateToDate(new Date())} />
+      <section className="flex flex-col gap-3" aria-labelledby="selected-day-heading">
+        <Link
+          href={`/calendar/day?date=${dateParam}`}
+          onClick={() => playSound("button")}
+          className="flex min-h-11 items-center justify-between gap-2"
+        >
+          <h2 id="selected-day-heading" className="text-[19px] font-bold text-stone-900 first-letter:uppercase dark:text-stone-50">
+            {selectedLabel}
+          </h2>
+          <RowChevron />
+        </Link>
 
-      {isLoading && (
-        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
-          Φόρτωση…
-        </p>
-      )}
-
-      {isEmpty && <EmptyState icon={<EmptyDayIcon />} title="Δεν υπάρχουν δόσεις για αυτή την ημέρα" />}
-
-      {dosesStatus === "ready" && dayItems.length > 0 && (
-        <div className="flex flex-col gap-2" aria-label="Δόσεις ημέρας">
-          {dayItems.map((item, i) =>
-            item.kind === "real" ? (
-              <Link key={item.dose.id} href={`/calendar/dose/${item.dose.id}`} className="block">
-                <DoseCard
+        {dosesStatus === "loading" ? (
+          <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+            Φόρτωση…
+          </p>
+        ) : dayItems.length === 0 ? (
+          <p className="text-[15px] text-stone-600 dark:text-stone-400">Καμία δόση αυτή την ημέρα.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {dayItems.map((item, i) =>
+              item.kind === "real" ? (
+                <TodayDoseRow
+                  key={item.dose.id}
                   dose={item.dose}
                   medicationName={names.get(item.dose.userMedicationId) ?? "…"}
                   medicationStrength={strengths.get(item.dose.userMedicationId)}
-                  actionable={false}
-                  onTaken={() => {}}
-                  onSkipped={() => {}}
-                  onSnoozed={() => {}}
+                  onTake={() => {}}
+                  readOnly
                 />
-              </Link>
-            ) : (
-              <ProjectedDoseRow key={`${item.instant.scheduleId}-${i}`} medicationName={names.get(item.instant.userMedicationId) ?? "…"} scheduledAt={item.instant.scheduledAt} />
-            ),
-          )}
-        </div>
-      )}
-
-      {isToday && !allResolved && resolvedCount > 0 && (
-        <div className="flex items-center gap-3 rounded-2xl border border-accent-100 bg-accent-50 p-4 dark:border-accent-900 dark:bg-accent-950">
-          <BrandMark size={20} className="shrink-0 text-accent-700 dark:text-accent-400" />
-          <p className="text-sm font-medium text-accent-800 dark:text-accent-400">
-            Συνεχίστε έτσι! {resolvedCount} από {doses.length} δόσεις ολοκληρώθηκαν σήμερα.
-          </p>
-        </div>
-      )}
+              ) : (
+                <ProjectedDoseRow
+                  key={`${item.instant.scheduleId}-${i}`}
+                  medicationName={names.get(item.instant.userMedicationId) ?? "…"}
+                  scheduledAt={item.instant.scheduledAt}
+                />
+              ),
+            )}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

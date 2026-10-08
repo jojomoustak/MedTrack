@@ -126,7 +126,7 @@ export async function reconcileDoseEventsForSchedule(
 }
 
 /**
- * App-foreground/cold-start tick: extends every one of this profile's active schedules' materialized horizon.
+ * App-foreground/cold-start tick: extends every one of this profile's active schedules' materialized horizon. Returns how many doses it created.
  *
  * `activeMedicationIds`, when given, limits that to schedules of
  * medications the user is still taking — a paused/completed/discontinued
@@ -140,12 +140,14 @@ export async function topUpDoseEventWindow(
   now: Date = new Date(),
   horizonMs: number = GENERATION_HORIZON_MS,
   activeMedicationIds?: ReadonlySet<string>,
-): Promise<void> {
+): Promise<number> {
   const activeSchedules = await schedules.list(profileId);
+  let created = 0;
   for (const schedule of activeSchedules) {
     if (activeMedicationIds && !activeMedicationIds.has(schedule.userMedicationId)) continue;
-    await generateDoseEventsForSchedule(schedule, doseEvents, now, horizonMs);
+    created += (await generateDoseEventsForSchedule(schedule, doseEvents, now, horizonMs)).created;
   }
+  return created;
 }
 
 /**

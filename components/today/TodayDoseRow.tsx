@@ -21,6 +21,8 @@ export interface TodayDoseRowProps {
   onTake: (doseId: string, kind: "taken" | "taken_late") => void;
   /** Whether a missed dose may be recorded as "taken late" from this row (Today's "needs attention" list). */
   allowTakenLate?: boolean;
+  /** Display only (Calendar): no tap-to-take — a dose on another day must not be recorded from a browsing view. */
+  readOnly?: boolean;
 }
 
 /**
@@ -36,7 +38,7 @@ export interface TodayDoseRowProps {
  * window (the user navigates away), the action is committed rather than
  * dropped: the user meant it and never pressed Undo.
  */
-export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake, allowTakenLate = false }: TodayDoseRowProps) {
+export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake, allowTakenLate = false, readOnly = false }: TodayDoseRowProps) {
   const [pending, setPending] = useState<"taken" | "taken_late" | null>(null);
   const [pendingAt, setPendingAt] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,7 +56,7 @@ export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake,
 
   const canTake = isDoseActionable(dose);
   const canTakeLate = allowTakenLate && dose.status === "missed";
-  const tappable = !pending && (canTake || canTakeLate);
+  const tappable = !readOnly && !pending && (canTake || canTakeLate);
 
   function start() {
     const kind = canTake ? "taken" : "taken_late";

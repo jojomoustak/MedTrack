@@ -56,6 +56,7 @@ import { createApplyResult } from "@/lib/sync/client/apply-result";
 import { drainOutboxFully, type DrainSummary } from "@/lib/sync/client/worker";
 import { createNetworkMonitor, type NetworkMonitor, type NetworkState } from "@/lib/sync/client/network";
 import { onOutboxWrite } from "@/lib/sync/client/outbox-signal";
+import { notifyLocalDataHydrated, onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
 import { onSessionRestored } from "@/lib/auth/client/session-restored-signal";
 import { syncOfflineIndex, type SyncOfflineIndexOutcome } from "@/lib/catalog/client/sync-offline-index";
 import { syncLearnedMappings, type SyncLearnedMappingsOutcome } from "@/lib/catalog/client/sync-learned-mappings";
@@ -129,6 +130,8 @@ export function createSyncManager(): SyncManager {
   let syncingLearnedMappings = false;
   let drainingPhotoOutbox = false;
   let runningSchedulingTick = false;
+  let schedulingTickRequested = false;
+  let unsubscribeLocalData: (() => void) | undefined;
   let unsubscribeNetwork: (() => void) | undefined;
   let unsubscribeOutbox: (() => void) | undefined;
   let unsubscribePhotoOutbox: (() => void) | undefined;
@@ -198,7 +201,13 @@ export function createSyncManager(): SyncManager {
   }
 
   async function runSchedulingTickNow(): Promise<void> {
-    if (runningSchedulingTick) return;
+    if (runningSchedulingTick) {
+      // Don't drop it: the data that prompted this request (e.g. a pull
+      // that just restored schedules) may have arrived after the running
+      // tick read its inputs.
+      schedulingTickRequested = true;
+      return;
+    }
     const profileId = getCachedProfileId();
     if (!profileId) return; // no-op before first login, same as every other tick here
     runningSchedulingTick = true;
@@ -207,11 +216,12 @@ export function createSyncManager(): SyncManager {
       // schedules must not keep generating doses and reminders.
       const medications = await new DexieUserMedicationRepository().list(profileId);
       const activeMedicationIds = new Set(medications.filter((m) => m.treatmentState === "active").map((m) => m.id));
-      await topUpDoseEventWindow(profileId, medicationSchedule, doseEvent, undefined, undefined, activeMedicationIds);
+      const created = await topUpDoseEventWindow(profileId, medicationSchedule, doseEvent, undefined, undefined, activeMedicationIds);
       const missed = await sweepMissedDoseEvents(profileId, doseEvent);
       if (missed > 0) {
         logger.info("sync.manager.doses_swept_missed", { count: missed });
       }
+      if (created > 0 || missed > 0) notifyLocalDataHydrated("scheduling");
       // Phase 11: reconcile native reminders against whatever the two
       // steps above just produced (new dose events to schedule, missed
       // ones to cancel) — a no-op outside the native shell.
@@ -226,6 +236,10 @@ export function createSyncManager(): SyncManager {
       logger.warn("sync.manager.scheduling_tick_failed", { message: err instanceof Error ? err.message : String(err) });
     } finally {
       runningSchedulingTick = false;
+      if (schedulingTickRequested) {
+        schedulingTickRequested = false;
+        void runSchedulingTickNow();
+      }
     }
   }
 
@@ -243,6 +257,12 @@ export function createSyncManager(): SyncManager {
       unsubscribeOutbox = onOutboxWrite(() => void drainNow());
       unsubscribePhotoOutbox = onPhotoOutboxWrite(() => void drainPhotoOutboxNow());
       unsubscribeSessionRestored = onSessionRestored(() => void drainNow());
+      // A pull that restored schedules (fresh install, new device, another
+      // device's edits) must generate their upcoming doses — and native
+      // reminders — now, not at the next periodic tick up to 45 min later.
+      unsubscribeLocalData = onLocalDataHydrated((source) => {
+        if (source === "pull") void runSchedulingTickNow();
+      });
       network.start();
       void drainNow();
       void syncOfflineIndexNow();
@@ -257,6 +277,7 @@ export function createSyncManager(): SyncManager {
       unsubscribeOutbox?.();
       unsubscribePhotoOutbox?.();
       unsubscribeSessionRestored?.();
+      unsubscribeLocalData?.();
       if (schedulingTickTimer) clearInterval(schedulingTickTimer);
     },
     drainNow,
