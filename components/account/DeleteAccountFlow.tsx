@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { Button } from "@/components/ui/Button";
+import { FIELD_INPUT } from "@/components/ui/field-styles";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
 import { clearAllLocalProfileData } from "@/lib/db-client/clear-local-profile-data";
 import { createNetworkMonitor } from "@/lib/sync/client/network";
@@ -128,109 +129,140 @@ export function DeleteAccountFlow() {
     }
   }
 
+  const headerBlock = (
+    <>
+      <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Διαγραφή λογαριασμού</h1>
+      <div className="flex flex-col items-center gap-4 text-center">
+        <span aria-hidden="true" className="flex size-24 items-center justify-center rounded-3xl bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+            <path d="M12 3.5 2.5 20h19Z" />
+            <path d="M12 10v4.5" strokeLinecap="round" />
+            <circle cx="12" cy="17.2" r="0.9" fill="currentColor" stroke="none" />
+          </svg>
+        </span>
+        <div>
+          <p className="text-[19px] leading-snug font-bold text-stone-900 dark:text-stone-50">Θα διαγραφούν οριστικά ο λογαριασμός σας και όλα τα δεδομένα σας.</p>
+          <p className="mt-1 text-[15px] text-stone-600 dark:text-stone-400">Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.</p>
+        </div>
+      </div>
+    </>
+  );
+
+  /** What goes — the reference's red list; with real counts once they've been fetched. */
+  function dangerList(counts: DeletionSummary | null) {
+    const rows = [
+      { label: "Όλα τα φάρμακα και τα προγράμματά τους", count: counts ? `${counts.medications}` : null },
+      { label: "Όλο το ιστορικό δόσεων και το απόθεμα", count: counts ? `${counts.doseEvents} δόσεις` : null },
+      { label: "Οι λίστες αγορών", count: counts ? `${counts.lists}` : null },
+      { label: "Τα στοιχεία του προφίλ σας", count: null },
+    ];
+    return (
+      <ul className="flex flex-col gap-3 rounded-2xl bg-red-50 p-4 dark:bg-red-950/50" aria-label="Τι θα διαγραφεί">
+        {rows.map((row) => (
+          <li key={row.label} className="flex items-center gap-3 text-[15px] font-medium text-red-800 dark:text-red-300">
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.8" className="shrink-0">
+              <rect x="3.5" y="3.5" width="13" height="13" rx="3" />
+              <path d="M7 10h6" strokeLinecap="round" />
+            </svg>
+            <span className="flex-1">{row.label}</span>
+            {row.count && <span className="font-bold tabular-nums">{row.count}</span>}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  const actions = (onContinue: () => void, continueLabel: string, disabled = false) => (
+    <div className="flex flex-col gap-2">
+      <Button variant="danger" size="lg" fullWidth onClick={onContinue} disabled={disabled}>
+        {continueLabel}
+      </Button>
+      <Button variant="secondary" size="lg" fullWidth onClick={handleCancel}>
+        Άκυρο
+      </Button>
+    </div>
+  );
+
   if (step === "explain") {
     return (
-      <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 p-6">
-        <h1 className="text-xl font-semibold text-red-800 dark:text-red-400">Διαγραφή λογαριασμού</h1>
-        <div className="flex flex-col gap-3 text-sm text-stone-700 dark:text-stone-300">
-          <p>
-            Αυτό είναι διαφορετικό από τον καθαρισμό της προσωρινής μνήμης της εφαρμογής. Η διαγραφή είναι{" "}
-            <strong>μόνιμη</strong> και πραγματοποιείται στον διακομιστή — δεν αφορά μόνο αυτή τη συσκευή.
-          </p>
-          <p>Περιλαμβάνει όλα τα δεδομένα του λογαριασμού σας: φάρμακα, προγράμματα λήψης, ιστορικό δόσεων, απόθεμα και λίστες αγορών.</p>
-          <p>Μόλις ολοκληρωθεί, αυτά τα δεδομένα δεν μπορούν να ανακτηθούν.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={handleCancel}>
-            Άκυρο
-          </Button>
-          <Button variant="danger" onClick={goToSummary}>
-            Συνέχεια
-          </Button>
-        </div>
+      <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 px-5 pt-1 pb-6 outline-none">
+        {headerBlock}
+        {dangerList(null)}
+        {/* CLAUDE.md rule 9: this is not clearing the app's storage. */}
+        <p className="text-[15px] text-stone-600 dark:text-stone-400">
+          Αυτό είναι διαφορετικό από τον καθαρισμό της προσωρινής μνήμης της εφαρμογής: η διαγραφή γίνεται στον διακομιστή και αφορά όλες τις συσκευές σας,
+          όχι μόνο αυτή.
+        </p>
         {summaryError && (
-          <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+          <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
             {summaryError}
           </p>
         )}
+        {actions(goToSummary, "Συνέχεια")}
       </div>
     );
   }
 
   if (step === "summary" && summary) {
     return (
-      <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 p-6">
-        <h1 className="text-xl font-semibold text-red-800 dark:text-red-400">Αυτά θα χάσετε</h1>
-        <ul className="flex flex-col gap-2 text-sm text-stone-700 dark:text-stone-300">
-          <li>{summary.medications} φάρμακα</li>
-          <li>{summary.doseEvents} καταγεγραμμένες δόσεις</li>
-          <li>{summary.lists} λίστες</li>
-        </ul>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={handleCancel}>
-            Άκυρο
-          </Button>
-          <Button variant="danger" onClick={goToConfirm}>
-            Συνέχεια
-          </Button>
-        </div>
+      <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 px-5 pt-1 pb-6 outline-none">
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Αυτά θα χάσετε</h1>
+        {dangerList(summary)}
+        {actions(goToConfirm, "Συνέχεια")}
       </div>
     );
   }
 
   if (step === "confirm") {
     return (
-      <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 p-6">
-        <h1 className="text-xl font-semibold text-red-800 dark:text-red-400">Επιβεβαίωση διαγραφής</h1>
+      <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 px-5 pt-1 pb-6 outline-none">
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Επιβεβαίωση διαγραφής</h1>
 
         {offline && (
-          <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+          <p role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-[15px] text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
             Η διαγραφή λογαριασμού απαιτεί σύνδεση στο διαδίκτυο — δεν είναι τοπική ενέργεια. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.
           </p>
         )}
 
-        <p className="text-sm text-stone-700 dark:text-stone-300">
-          Για να επιβεβαιώσετε, πληκτρολογήστε <strong>{CONFIRM_PHRASE}</strong> παρακάτω.
-        </p>
-        <input
-          type="text"
-          value={confirmText}
-          onChange={(e) => setConfirmText(e.target.value)}
-          aria-label={`Πληκτρολογήστε ${CONFIRM_PHRASE} για επιβεβαίωση`}
-          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
-        />
+        <label className="flex flex-col gap-2">
+          <span className="text-[17px] text-stone-800 dark:text-stone-200">
+            Για να επιβεβαιώσετε, πληκτρολογήστε <strong>{CONFIRM_PHRASE}</strong>.
+          </span>
+          <input
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            aria-label={`Πληκτρολογήστε ${CONFIRM_PHRASE} για επιβεβαίωση`}
+            autoCapitalize="characters"
+            className={`${FIELD_INPUT} pr-4`}
+          />
+        </label>
 
         {submitError && (
-          <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+          <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
             {submitError}
           </p>
         )}
 
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={handleCancel}>
-            Άκυρο
-          </Button>
-          <Button variant="danger" onClick={handleDelete} disabled={offline || confirmText !== CONFIRM_PHRASE}>
-            Οριστική διαγραφή λογαριασμού
-          </Button>
-        </div>
+        {actions(handleDelete, "Οριστική διαγραφή λογαριασμού", offline || confirmText !== CONFIRM_PHRASE)}
       </div>
     );
   }
 
   if (step === "in-progress") {
     return (
-      <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col items-center justify-center gap-4 p-6 text-center" role="status" aria-live="polite">
-        <p className="text-lg font-medium">Διαγραφή σε εξέλιξη…</p>
-        <p className="text-sm text-stone-600 dark:text-stone-400">Μην κλείσετε ή ανανεώσετε αυτή τη σελίδα.</p>
+      <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col items-center justify-center gap-4 px-5 py-16 text-center outline-none" role="status" aria-live="polite">
+        <span aria-hidden="true" className="size-10 animate-spin rounded-full border-4 border-red-200 border-t-red-600" />
+        <p className="text-[19px] font-semibold">Διαγραφή σε εξέλιξη…</p>
+        <p className="text-[15px] text-stone-600 dark:text-stone-400">Μην κλείσετε ή ανανεώσετε αυτή τη σελίδα.</p>
       </div>
     );
   }
 
   // step === "done"
   return (
-    <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col items-center justify-center gap-4 p-6 text-center" role="status" aria-live="polite">
-      <p className="text-lg font-medium">Ο λογαριασμός σας διαγράφηκε.</p>
+    <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col items-center justify-center gap-4 px-5 py-16 text-center outline-none" role="status" aria-live="polite">
+      <p className="text-[19px] font-semibold">Ο λογαριασμός σας διαγράφηκε.</p>
     </div>
   );
 }
