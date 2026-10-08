@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AddMedicationFlow } from "@/components/medications/AddMedicationFlow";
 import { OfflineBanner } from "@/components/sync/OfflineBanner";
-import { ButtonLink } from "@/components/ui/Button";
+import { ScreenHeader } from "@/components/shell/ScreenHeader";
 import { useCurrentProfile } from "@/lib/auth/client/use-current-profile";
 
 /**
@@ -22,16 +22,12 @@ export default function AddMedicationPage() {
   }, [session.status, router]);
 
   return (
-    <main className="min-h-dvh bg-stone-50 dark:bg-stone-950">
+    <main className="min-h-dvh bg-background pb-8">
+      <ScreenHeader />
       <OfflineBanner />
-      <div className="mx-auto flex max-w-md items-center gap-3 px-4 py-4">
-        <ButtonLink href="/medications" aria-label="Πίσω στα φάρμακα" variant="tertiary" className="px-0 underline">
-          ← Πίσω
-        </ButtonLink>
-        <h1 className="text-xl font-semibold">Προσθήκη φαρμάκου</h1>
-      </div>
+      <h1 className="mx-auto max-w-md px-5 pt-1 pb-5 text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Προσθήκη φαρμάκου</h1>
       {session.status === "loading" && (
-        <p role="status" className="px-4 text-sm text-stone-600 dark:text-stone-400">
+        <p role="status" className="px-5 text-sm text-stone-600 dark:text-stone-400">
           Φόρτωση…
         </p>
       )}

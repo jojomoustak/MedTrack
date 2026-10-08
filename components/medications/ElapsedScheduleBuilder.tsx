@@ -4,6 +4,7 @@ import { useState } from "react";
 import { zonedWallClockToUtc } from "@/lib/domain/dose-event-generation";
 import { Button } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { FIELD_INPUT } from "@/components/ui/field-styles";
 
 export interface ElapsedScheduleValues {
   intervalHours: number;
@@ -47,10 +48,10 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold">Κάθε πόσες ώρες</h2>
+      <h2 className="text-[22px] font-bold tracking-tight text-stone-900 dark:text-stone-50">Κάθε πόσες ώρες</h2>
 
       <label className="flex flex-col gap-1">
-        <span className="font-medium">Κάθε πόσες ώρες;</span>
+        <span className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Κάθε πόσες ώρες;</span>
         <input
           type="number"
           inputMode="numeric"
@@ -59,35 +60,35 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
           value={intervalHours}
           onChange={(e) => setIntervalHours(e.target.value)}
           aria-label="Διάστημα σε ώρες"
-          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+          className={`${FIELD_INPUT} pr-4`}
         />
       </label>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="font-medium">Πρώτη δόση</legend>
+        <legend className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Πρώτη δόση</legend>
         <div className="flex gap-2">
           <input
             type="date"
             value={anchorDate}
             onChange={(e) => setAnchorDate(e.target.value)}
             aria-label="Ημερομηνία πρώτης δόσης"
-            className="min-h-12 flex-1 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+            className={`${FIELD_INPUT} flex-1 pr-4`}
           />
           <input
             type="time"
             value={anchorTime}
             onChange={(e) => setAnchorTime(e.target.value)}
             aria-label="Ώρα πρώτης δόσης"
-            className="min-h-12 flex-1 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+            className={`${FIELD_INPUT} flex-1 pr-4`}
           />
         </div>
-        <p className="text-sm text-stone-600 dark:text-stone-400">
+        <p className="text-[15px] text-stone-600 dark:text-stone-400">
           Το διάστημα υπολογίζεται από την πρώτη δόση και δεν αλλάζει με την αλλαγή ώρας (π.χ. καλοκαιρινή/χειμερινή ώρα).
         </p>
       </fieldset>
 
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
           {error}
         </p>
       )}
@@ -99,11 +100,12 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
             playSound("button");
             onBack();
           }}
+          size="lg"
           className="flex-1"
         >
           Πίσω
         </Button>
-        <Button type="submit" className="flex-1">
+        <Button type="submit" size="lg" className="flex-1">
           Συνέχεια
         </Button>
       </div>

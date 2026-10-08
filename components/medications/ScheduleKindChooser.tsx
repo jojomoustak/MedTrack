@@ -28,17 +28,17 @@ export function ScheduleKindChooser({ onChoose, onSkip, onBack }: ScheduleKindCh
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold">Πρόγραμμα δόσεων</h2>
+      <h2 className="text-[22px] font-bold tracking-tight text-stone-900 dark:text-stone-50">Πρόγραμμα δόσεων</h2>
       <div className="flex flex-col gap-3" role="group" aria-label="Πώς παίρνετε αυτό το φάρμακο;">
         <Card
           as="button"
           type="button"
           onClick={() => handleChoose("wall_clock")}
-          className="flex min-h-12 items-center px-4 py-3 text-left transition-transform duration-150 active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900"
+          className="flex min-h-20 items-center text-left transition-transform duration-150 active:scale-[0.98]"
         >
           <span>
-            <span className="block font-medium">Σταθερές ώρες</span>
-            <span className="block text-sm text-stone-600 dark:text-stone-400">Παίρνετε το φάρμακο σε συγκεκριμένες ώρες κάθε μέρα</span>
+            <span className="block text-[17px] font-bold text-stone-900 dark:text-stone-50">Σταθερές ώρες</span>
+            <span className="block text-[15px] text-stone-600 dark:text-stone-400">Παίρνετε το φάρμακο σε συγκεκριμένες ώρες κάθε μέρα</span>
           </span>
         </Card>
 
@@ -46,11 +46,11 @@ export function ScheduleKindChooser({ onChoose, onSkip, onBack }: ScheduleKindCh
           as="button"
           type="button"
           onClick={() => handleChoose("elapsed")}
-          className="flex min-h-12 items-center px-4 py-3 text-left transition-transform duration-150 active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900"
+          className="flex min-h-20 items-center text-left transition-transform duration-150 active:scale-[0.98]"
         >
           <span>
-            <span className="block font-medium">Κάθε πόσες ώρες</span>
-            <span className="block text-sm text-stone-600 dark:text-stone-400">Π.χ. κάθε 8 ώρες, ανεξαρτήτως ώρας ημέρας</span>
+            <span className="block text-[17px] font-bold text-stone-900 dark:text-stone-50">Κάθε πόσες ώρες</span>
+            <span className="block text-[15px] text-stone-600 dark:text-stone-400">Π.χ. κάθε 8 ώρες, ανεξαρτήτως ώρας ημέρας</span>
           </span>
         </Card>
 
@@ -58,11 +58,11 @@ export function ScheduleKindChooser({ onChoose, onSkip, onBack }: ScheduleKindCh
           as="button"
           type="button"
           onClick={() => handleChoose("prn")}
-          className="flex min-h-12 items-center px-4 py-3 text-left transition-transform duration-150 active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900"
+          className="flex min-h-20 items-center text-left transition-transform duration-150 active:scale-[0.98]"
         >
           <span>
-            <span className="block font-medium">Όποτε χρειάζεται</span>
-            <span className="block text-sm text-stone-600 dark:text-stone-400">Χωρίς σταθερό πρόγραμμα</span>
+            <span className="block text-[17px] font-bold text-stone-900 dark:text-stone-50">Όποτε χρειάζεται</span>
+            <span className="block text-[15px] text-stone-600 dark:text-stone-400">Χωρίς σταθερό πρόγραμμα</span>
           </span>
         </Card>
       </div>
@@ -71,7 +71,7 @@ export function ScheduleKindChooser({ onChoose, onSkip, onBack }: ScheduleKindCh
         Παράλειψη — θα προσθέσω πρόγραμμα αργότερα
       </Button>
 
-      <Button variant="secondary" onClick={() => { playSound("button"); onBack(); }} className="self-start">
+      <Button variant="secondary" onClick={() => { playSound("button"); onBack(); }} size="lg" className="self-start">
         Πίσω
       </Button>
     </div>

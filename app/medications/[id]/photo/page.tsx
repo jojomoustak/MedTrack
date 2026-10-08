@@ -4,24 +4,23 @@ import { useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { MedicationPhotoAttach } from "@/components/medications/MedicationPhotoAttach";
 import { OfflineBanner } from "@/components/sync/OfflineBanner";
-import { Button, ButtonLink } from "@/components/ui/Button";
 import { useCurrentProfile } from "@/lib/auth/client/use-current-profile";
+import { useReturnTo } from "@/lib/navigation/client/use-return-to";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 /**
- * Minimal, single-purpose photo surface for one `UserMedication` — NOT a
- * general medication detail/edit page (out of scope for the photo task;
- * see `docs/mobile/phase-3-ux-information-architecture.md` for when a
- * real detail page eventually lands). Reached two ways:
- *   1. Right after "Add Medication" finishes (`?new=1` — the offer is
- *      explicitly optional/skippable here, the medication itself is
- *      already fully saved before this screen ever renders).
- *   2. From the medications list, to view/replace/remove an existing
- *      photo later.
+ * A medication's photo (reference mockup, screen 13): a dark, camera-style
+ * screen — the photo or a framed placeholder, then cancel / shutter /
+ * gallery. The shutter opens the device camera; the photo is optional.
+ * Reached two ways:
+ *   1. Right after "Add Medication" finishes (`?new=1`) — optional, the
+ *      medication is already fully saved; leaving goes on to Today.
+ *   2. From the medication's detail screen, to take, replace or remove it.
  */
 export default function MedicationPhotoPage() {
   const session = useCurrentProfile();
   const router = useRouter();
+  const returnTo = useReturnTo();
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const isNew = searchParams.get("new") === "1";
@@ -30,46 +29,46 @@ export default function MedicationPhotoPage() {
     if (session.status === "signed-out") router.replace("/login");
   }, [session.status, router]);
 
+  function leave() {
+    playSound("button");
+    // Phase 3 §3 Journey 1 ends onboarding on Today ("first dose now visible").
+    if (isNew) router.push("/today");
+    else returnTo(`/medications/${params.id}`);
+  }
+
+  const leaveButton = (
+    <button type="button" onClick={leave} className="min-h-12 px-2 text-[17px] font-semibold text-white">
+      {isNew ? "Ολοκλήρωση" : "Κλείσιμο"}
+    </button>
+  );
+
   return (
-    <main className="min-h-dvh bg-stone-50 dark:bg-stone-950">
+    <main className="flex min-h-dvh flex-col bg-black text-white">
       <OfflineBanner />
-      <div className="mx-auto flex max-w-md items-center gap-3 px-4 py-4">
-        <ButtonLink href="/medications" aria-label="Πίσω στα φάρμακα" variant="tertiary" className="px-0 underline">
-          ← Πίσω
-        </ButtonLink>
-        <h1 className="text-xl font-semibold">Φωτογραφία φαρμάκου</h1>
+      <div className="mx-auto flex w-full max-w-md items-center justify-between px-2 pt-2">
+        <button type="button" onClick={leave} aria-label="Κλείσιμο" className="flex size-12 items-center justify-center rounded-full active:bg-white/10">
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="m6 6 12 12M18 6 6 18" />
+          </svg>
+        </button>
+        <h1 className="text-[17px] font-semibold">Φωτογραφία φαρμάκου</h1>
+        <span className="size-12" aria-hidden="true" />
       </div>
 
-      <div className="mx-auto flex max-w-md flex-col gap-4 p-4">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-5 pt-3 pb-8">
         {isNew && (
-          <p className="text-sm text-stone-600 dark:text-stone-400">
-            Το φάρμακο προστέθηκε. Μπορείτε προαιρετικά να προσθέσετε μια φωτογραφία της συσκευασίας — ή να το παραλείψετε τώρα.
+          <p className="text-center text-[15px] text-stone-300">
+            Το φάρμακο προστέθηκε. Μπορείτε προαιρετικά να προσθέσετε μια φωτογραφία της συσκευασίας — ή να το παραλείψετε.
           </p>
         )}
 
         {session.status === "loading" && (
-          <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+          <p role="status" className="text-[15px] text-stone-300">
             Φόρτωση…
           </p>
         )}
 
-        {session.status === "ready" && <MedicationPhotoAttach userMedicationId={params.id} />}
-
-        {isNew && (
-          <Button
-            onClick={() => {
-              playSound("button");
-              // UX audit (2026-09-18): Phase 3 §3 Journey 1 ends onboarding
-              // on Today ("first dose now visible") — this used to route
-              // to the medications list instead, so a first-time user
-              // never saw the reassuring payoff the product's own
-              // information architecture is built around.
-              router.push("/today");
-            }}
-          >
-            Ολοκλήρωση
-          </Button>
-        )}
+        {session.status === "ready" && <MedicationPhotoAttach userMedicationId={params.id} leading={leaveButton} className="flex-1 justify-between" />}
       </div>
     </main>
   );

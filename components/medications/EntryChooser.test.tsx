@@ -41,7 +41,9 @@ describe("EntryChooser (Phase 3 §2.4 entry chooser)", () => {
   it("every option is at least a 48px (min-h-12) touch target (building-accessible-mobile-ui)", () => {
     render(<EntryChooser onChoose={vi.fn()} scanAvailable={false} />);
     for (const button of screen.getAllByRole("button")) {
-      expect(button.className).toMatch(/min-h-12/);
+      // min-h-12 (48px) or taller — Tailwind spacing units are 4px each.
+      const minHeight = Number(button.className.match(/\bmin-h-(\d+)\b/)?.[1] ?? 0);
+      expect(minHeight).toBeGreaterThanOrEqual(12);
     }
   });
 });

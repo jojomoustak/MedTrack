@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { ButtonLink } from "@/components/ui/Button";
 import { AddPackageForm, type AddPackageValues } from "@/components/medications/AddPackageForm";
@@ -10,12 +10,14 @@ import { DexieMedicationPackageRepository } from "@/lib/db-client/medication-pac
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import { newId } from "@/lib/domain/ids";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { MedicationHeader } from "@/components/medications/MedicationHeader";
+import { useReturnTo } from "@/lib/navigation/client/use-return-to";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
 export default function AddPackagePage() {
   const profileId = useProfileId();
   const params = useParams<{ id: string }>();
-  const router = useRouter();
+  const returnTo = useReturnTo();
   const [medication, setMedication] = useState<UserMedicationRecord | null | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export default function AddPackagePage() {
       }
 
       playSound("success");
-      router.push(`/medications/${params.id}`);
+      returnTo(`/medications/${params.id}`);
     } catch {
       setError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
     } finally {
@@ -98,8 +100,9 @@ export default function AddPackagePage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-6 p-4">
-      <h1 className="text-xl font-semibold">Προσθήκη συσκευασίας</h1>
+    <div className="mx-auto flex max-w-md flex-col gap-6 px-5 pt-1 pb-6">
+      <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Νέα συσκευασία</h1>
+      <MedicationHeader medication={medication} />
 
       <AddPackageForm defaultUnit={medication.inventoryUnit} onSubmit={(values) => void handleSubmit(values)} submitting={submitting} error={error} />
     </div>

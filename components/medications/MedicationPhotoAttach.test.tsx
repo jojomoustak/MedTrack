@@ -175,7 +175,9 @@ describe("MedicationPhotoAttach", () => {
     fireEvent.change(input, { target: { files: [file] } });
 
     await waitFor(() => expect(screen.getByRole("img", { name: /φωτογραφία φαρμάκου/i })).toBeTruthy());
-    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    // The cached copy can render before the server re-fetch (cache-first by
+    // design), so wait for the re-fetch itself rather than assume ordering.
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(3));
     const uploadCall = fetchImpl.mock.calls[1];
     expect(uploadCall[1].method).toBe("POST");
   });

@@ -1,6 +1,5 @@
 "use client";
 
-import { Card } from "@/components/ui/Card";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 export type EntryChoice = "scan" | "search" | "manual";
@@ -26,6 +25,71 @@ export interface EntryChooserProps {
  * reflects live platform availability, not a "coming soon" placeholder
  * anymore.
  */
+const ICONS: Record<EntryChoice, React.ReactNode> = {
+  scan: (
+    <>
+      <path d="M4 9V7.5A2.5 2.5 0 0 1 6.5 5h2l1.5-2h4l1.5 2h2A2.5 2.5 0 0 1 20 7.5V9" />
+      <rect x="4" y="5" width="16" height="14" rx="2.5" />
+      <circle cx="12" cy="12" r="3.5" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="10.5" cy="10.5" r="6" />
+      <path d="m15 15 5 5" />
+    </>
+  ),
+  manual: (
+    <>
+      <rect x="5" y="4" width="14" height="17" rx="2.5" />
+      <path d="M9 4V3h6v1M8.5 10h7M8.5 14h7M8.5 18h4" />
+    </>
+  ),
+};
+
+function ChoiceCard({
+  choice,
+  title,
+  description,
+  disabled = false,
+  label,
+  onChoose,
+}: {
+  choice: EntryChoice;
+  title: string;
+  description: string;
+  disabled?: boolean;
+  label?: string;
+  onChoose: (choice: EntryChoice) => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-disabled={disabled}
+      aria-label={label}
+      onClick={disabled ? undefined : () => onChoose(choice)}
+      className={`surface-card flex min-h-24 w-full items-center gap-4 p-4 text-left transition-transform duration-150 ${disabled ? "opacity-60" : "active:scale-[0.98]"}`}
+    >
+      <span aria-hidden="true" className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-accent-100 text-accent-700 dark:bg-accent-950 dark:text-accent-400">
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          {ICONS[choice]}
+        </svg>
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[19px] font-bold text-stone-900 dark:text-stone-50">{title}</span>
+        <span className="block text-base text-stone-600 dark:text-stone-400">{description}</span>
+      </span>
+    </button>
+  );
+}
+
+/**
+ * Phase 3 §2.4 "Add Medication — entry chooser" (reference mockup, screen
+ * 14): Scan / Search / Manual as three equal cards. Scan is wired to the
+ * real `MobilePlatform.scanBarcode()` flow — enabled only when the native
+ * scanner is reachable, but never hidden.
+ */
 export function EntryChooser({ onChoose, scanAvailable }: EntryChooserProps) {
   function handleChoose(choice: EntryChoice) {
     playSound("button");
@@ -33,49 +97,17 @@ export function EntryChooser({ onChoose, scanAvailable }: EntryChooserProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3" role="group" aria-label="Πώς θέλετε να προσθέσετε το φάρμακο;">
-      <Card
-        as="button"
-        type="button"
+    <div className="flex flex-col gap-4" role="group" aria-label="Πώς θέλετε να προσθέσετε το φάρμακο;">
+      <ChoiceCard
+        choice="scan"
+        title="Σάρωση συσκευασίας"
+        description={scanAvailable ? "Σαρώστε το barcode της συσκευασίας και τα στοιχεία συμπληρώνονται." : "Διαθέσιμο μόνο στην εφαρμογή για κινητά."}
         disabled={!scanAvailable}
-        aria-disabled={!scanAvailable}
-        aria-label={scanAvailable ? "Σάρωση barcode" : "Σάρωση barcode — διαθέσιμο μόνο στην εφαρμογή για κινητά"}
-        onClick={scanAvailable ? () => handleChoose("scan") : undefined}
-        className={`flex min-h-12 items-center px-4 py-3 text-left transition-transform duration-150 ${
-          scanAvailable ? "active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900" : "text-stone-400 dark:text-stone-600"
-        }`}
-      >
-        <span>
-          <span className="block font-medium">Σάρωση barcode</span>
-          <span className="block text-sm">
-            {scanAvailable ? "Σαρώστε τη συσκευασία του φαρμάκου" : "Διαθέσιμο μόνο στην εφαρμογή για κινητά"}
-          </span>
-        </span>
-      </Card>
-
-      <Card
-        as="button"
-        type="button"
-        onClick={() => handleChoose("search")}
-        className="flex min-h-12 items-center px-4 py-3 text-left transition-transform duration-150 active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900"
-      >
-        <span>
-          <span className="block font-medium">Αναζήτηση</span>
-          <span className="block text-sm text-stone-600 dark:text-stone-400">Βρείτε το φάρμακο στον κατάλογο</span>
-        </span>
-      </Card>
-
-      <Card
-        as="button"
-        type="button"
-        onClick={() => handleChoose("manual")}
-        className="flex min-h-12 items-center px-4 py-3 text-left transition-transform duration-150 active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900"
-      >
-        <span>
-          <span className="block font-medium">Χειροκίνητη καταχώριση</span>
-          <span className="block text-sm text-stone-600 dark:text-stone-400">Εισαγάγετε τα στοιχεία με το χέρι</span>
-        </span>
-      </Card>
+        label={scanAvailable ? "Σάρωση συσκευασίας" : "Σάρωση συσκευασίας — διαθέσιμο μόνο στην εφαρμογή για κινητά"}
+        onChoose={handleChoose}
+      />
+      <ChoiceCard choice="search" title="Αναζήτηση στον κατάλογο" description="Βρείτε το φάρμακό σας στον κατάλογο φαρμάκων." onChoose={handleChoose} />
+      <ChoiceCard choice="manual" title="Χειροκίνητη καταχώριση" description="Συμπληρώστε τα στοιχεία μόνοι σας." onChoose={handleChoose} />
     </div>
   );
 }

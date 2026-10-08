@@ -32,6 +32,7 @@ import type {
 import type { MedicationForm, UserMedicationRecord } from "@/lib/domain/user-medication";
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import type { MobilePlatform } from "@/lib/platform/mobile-platform";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
 type FlowStep = "entry" | "scan" | "search" | "manual" | "details" | "schedule" | "review";
 
@@ -300,8 +301,24 @@ export function AddMedicationFlow({
   const displayName = catalogProduct?.name ?? manualName ?? "";
 
   return (
-    <div ref={stepContainerRef} tabIndex={-1} className="mx-auto flex max-w-md flex-col gap-6 p-4">
+    <div ref={stepContainerRef} tabIndex={-1} className="mx-auto flex max-w-md flex-col gap-6 px-5 pb-4 outline-none">
       {step === "entry" && <EntryChooser onChoose={handleEntryChoice} scanAvailable={scanAvailable} />}
+      {/* Switch method without going back (reference mockup, screen 15). */}
+      {(step === "manual" || step === "search") && (
+        <SegmentedControl
+          label="Τρόπος προσθήκης"
+          value={step}
+          onChange={(next) => {
+            playSound("button");
+            handleEntryChoice(next);
+          }}
+          segments={[
+            { value: "manual", label: "Χειροκίνητα" },
+            { value: "search", label: "Αναζήτηση" },
+            ...(scanAvailable ? [{ value: "scan" as const, label: "Σάρωση" }] : []),
+          ]}
+        />
+      )}
       {step === "scan" && (
         <ScanStep
           profileId={profileId}

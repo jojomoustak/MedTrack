@@ -252,7 +252,7 @@ export function ScanStep({
   if (view.phase === "scanning" || view.phase === "looking-up") {
     return (
       <div className="flex flex-col items-center gap-3 py-8">
-        <p role="status" aria-live="polite" className="text-sm text-stone-600 dark:text-stone-400">
+        <p role="status" aria-live="polite" className="text-[15px] text-stone-600 dark:text-stone-400">
           {view.phase === "scanning" ? "Άνοιγμα κάμερας…" : "Αναζήτηση φαρμάκου…"}
         </p>
         <Button variant="tertiary" onClick={() => { playSound("button"); onCancel(); }} className="px-0 underline">
@@ -283,7 +283,7 @@ export function ScanStep({
   if (view.phase === "error") {
     return (
       <div className="flex flex-col gap-4">
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
           {view.message}
         </p>
         <Button

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { ButtonLink } from "@/components/ui/Button";
 import { InventoryCorrectionForm, type InventoryCorrectionValues } from "@/components/medications/InventoryCorrectionForm";
@@ -10,7 +10,8 @@ import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-r
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
 import { newId } from "@/lib/domain/ids";
 import { playSound } from "@/lib/sound/client/play-sound";
-import { FORM_LABELS } from "@/components/medications/DetailsStep";
+import { MedicationHeader } from "@/components/medications/MedicationHeader";
+import { useReturnTo } from "@/lib/navigation/client/use-return-to";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
 /**
@@ -24,7 +25,7 @@ import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 export default function InventoryCorrectionPage() {
   const profileId = useProfileId();
   const params = useParams<{ id: string }>();
-  const router = useRouter();
+  const returnTo = useReturnTo();
   const [medication, setMedication] = useState<UserMedicationRecord | null | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +61,7 @@ export default function InventoryCorrectionPage() {
         note: values.note,
       });
       playSound("success");
-      router.push(`/medications/${params.id}`);
+      returnTo(`/medications/${params.id}`);
     } catch {
       setError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
     } finally {
@@ -88,8 +89,9 @@ export default function InventoryCorrectionPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-6 p-4">
-      <h1 className="text-xl font-semibold">Διόρθωση αποθέματος</h1>
+    <div className="mx-auto flex max-w-md flex-col gap-6 px-5 pt-1 pb-6">
+      <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Διόρθωση αποθέματος</h1>
+      <MedicationHeader medication={medication} />
 
       {inventory.status === "loading" ? (
         <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
@@ -98,7 +100,7 @@ export default function InventoryCorrectionPage() {
       ) : (
         <InventoryCorrectionForm
           currentStock={inventory.currentStock}
-          quantityUnit={FORM_LABELS[medication.inventoryUnit]}
+          quantityUnit={medication.inventoryUnit}
           onSubmit={(values) => void handleSubmit(values)}
           submitting={submitting}
           error={error}

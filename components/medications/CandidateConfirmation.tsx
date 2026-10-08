@@ -40,8 +40,8 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
       </Button>
 
       <Card>
-        <h2 className="text-lg font-semibold">{product.name}</h2>
-        {product.manufacturer && <p className="text-sm text-stone-600 dark:text-stone-400">{product.manufacturer}</p>}
+        <h2 className="text-[22px] font-bold tracking-tight text-stone-900 dark:text-stone-50">{product.name}</h2>
+        {product.manufacturer && <p className="text-[15px] text-stone-600 dark:text-stone-400">{product.manufacturer}</p>}
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           {product.activeIngredient && (
             <>

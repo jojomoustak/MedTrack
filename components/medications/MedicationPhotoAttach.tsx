@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Button, buttonClasses } from "@/components/ui/Button";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexiePhotoCacheRepository } from "@/lib/medications/client/photo-cache-repository";
 import { DexiePhotoOutboxRepository } from "@/lib/medications/client/photo-outbox-repository";
@@ -31,6 +30,8 @@ export interface MedicationPhotoAttachProps {
   /** Test/DI seam — defaults to a real Dexie-backed queue for offline upload/delete. */
   photoOutbox?: PhotoOutboxRepository;
   className?: string;
+  /** The bottom bar's left slot (reference mockup's "Cancel") — the page decides what leaving means. */
+  leading?: React.ReactNode;
 }
 
 type PhotoStatus = "checking" | "present" | "absent";
@@ -76,7 +77,7 @@ function isOfflineError(err: unknown): boolean {
  * `designing-offline-sync` rule: a critical change must never disappear
  * from the UI, or claim success, silently).
  */
-export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl, photoCache, photoOutbox, className }: MedicationPhotoAttachProps) {
+export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl, photoCache, photoOutbox, className, leading }: MedicationPhotoAttachProps) {
   const repo = repository ?? new DexieUserMedicationRepository();
   const fetcher = fetchImpl ?? fetch;
   const cache = photoCache ?? new DexiePhotoCacheRepository();
@@ -270,22 +271,22 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     return (
       <div className={className}>
         {pollExhausted ? (
-          <div className="flex flex-col gap-2 text-sm text-stone-600 dark:text-stone-400">
+          <div className="flex flex-col gap-3 text-[15px] text-stone-300">
             <p>Το φάρμακο δεν έχει συγχρονιστεί ακόμα, οπότε δεν μπορείτε να προσθέσετε φωτογραφία αυτή τη στιγμή.</p>
-            <Button
-              variant="secondary"
+            <button
+              type="button"
               onClick={() => {
                 playSound("button");
                 setPollExhausted(false);
                 setPollNonce((n) => n + 1);
               }}
-              className="self-start"
+              className="min-h-12 self-start rounded-xl border border-white/40 px-5 font-semibold text-white"
             >
               Δοκιμή ξανά
-            </Button>
+            </button>
           </div>
         ) : (
-          <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+          <p role="status" className="text-[15px] text-stone-300">
             Αναμονή συγχρονισμού πριν την προσθήκη φωτογραφίας…
           </p>
         )}
@@ -293,78 +294,119 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     );
   }
 
-  return (
-    <div className={className}>
-      <div className="flex flex-col gap-3">
-        {photoStatus === "present" && photoUrl && (
-          // eslint-disable-next-line @next/next/no-img-element -- `photoUrl` is a local `blob:` object URL from an authenticated fetch (or a locally-cached/queued copy), never a remote asset `next/image` can optimize.
-          <img
-            src={photoUrl}
-            alt="Φωτογραφία φαρμάκου"
-            className="max-h-64 w-full rounded-xl shadow-sm shadow-stone-300/40 dark:border dark:border-stone-800 object-contain"
-          />
-        )}
+  const picker = (capture: boolean) => (
+    <input
+      type="file"
+      accept="image/*"
+      {...(capture ? { capture: "environment" as const } : {})}
+      className="sr-only"
+      disabled={busy}
+      onChange={(event) => {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (file) void handleFileSelected(file);
+      }}
+    />
+  );
 
+  return (
+    <div className={`flex flex-col gap-5 ${className ?? ""}`}>
+      {/* The viewer (reference mockup, screen 13): the photo, or a framed
+          placeholder showing what to capture. */}
+      <div className="relative flex aspect-3/4 w-full items-center justify-center overflow-hidden rounded-3xl bg-stone-900">
+        {photoStatus === "present" && photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- `photoUrl` is a local `blob:` object URL from an authenticated fetch (or a locally-cached/queued copy), never a remote asset `next/image` can optimize.
+          <img src={photoUrl} alt="Φωτογραφία φαρμάκου" className="h-full w-full object-contain" />
+        ) : (
+          <div className="flex flex-col items-center gap-4 px-8 text-center text-stone-400">
+            <svg viewBox="0 0 64 64" width="72" height="72" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round">
+              <path d="M10 22 32 12l22 10v24L32 56 10 46Z" />
+              <path d="M10 22 32 32l22-10M32 32v24" />
+            </svg>
+            <p className="text-[17px] font-medium text-stone-300">{photoStatus === "checking" ? "Φόρτωση…" : "Φωτογραφίστε τη συσκευασία του φαρμάκου"}</p>
+          </div>
+        )}
+        {/* Corner guides, as on a camera viewfinder. */}
+        <span aria-hidden="true" className="pointer-events-none absolute inset-5 rounded-2xl border-2 border-dashed border-white/15" />
+      </div>
+
+      <div className="flex min-h-6 flex-col items-center gap-1 text-center text-[15px]">
         {pendingOp === "upload" && (
-          <p role="status" className="text-sm text-amber-700 dark:text-amber-400">
+          <p role="status" className="text-amber-300">
             Θα μεταφορτωθεί μόλις επανασυνδεθείτε στο διαδίκτυο.
           </p>
         )}
         {pendingOp === "delete" && (
-          <p role="status" className="text-sm text-amber-700 dark:text-amber-400">
+          <p role="status" className="text-amber-300">
             Θα αφαιρεθεί μόλις επανασυνδεθείτε στο διαδίκτυο.
           </p>
         )}
         {offlineNote && !pendingOp && (
-          <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+          <p role="status" className="text-stone-400">
             Δεν ήταν δυνατή η σύνδεση για έλεγχο φωτογραφίας.
           </p>
         )}
-
         {error && (
-          <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+          <p role="alert" className="text-red-300">
             {error}
           </p>
         )}
-
-        <div className="flex gap-2">
-          <label
+        {photoStatus === "present" && (
+          <button
+            type="button"
             onClick={() => {
-              if (!busy) playSound("button");
+              playSound("button");
+              void handleRemove();
             }}
-            className={buttonClasses("secondary", "md", `flex-1 cursor-pointer ${busy ? "opacity-60" : ""}`)}
+            disabled={busy}
+            aria-busy={busy}
+            className="min-h-11 px-3 font-semibold text-red-300 disabled:opacity-50"
           >
-            {busy ? "Μεταφόρτωση…" : photoStatus === "present" ? "Αλλαγή φωτογραφίας" : "Προσθήκη φωτογραφίας (προαιρετικό)"}
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="sr-only"
-              disabled={busy}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.target.value = "";
-                if (file) {
-                  void handleFileSelected(file);
-                }
-              }}
-            />
-          </label>
+            Αφαίρεση φωτογραφίας
+          </button>
+        )}
+      </div>
 
-          {photoStatus === "present" && (
-            <Button
-              variant="danger-outline"
-              onClick={() => {
-                playSound("button");
-                void handleRemove();
-              }}
-              disabled={busy}
-              aria-busy={busy}
-            >
-              Αφαίρεση
-            </Button>
+      {/* Bottom bar: leave · shutter (device camera) · gallery. */}
+      <div className="grid grid-cols-3 items-center">
+        <div className="justify-self-start">{leading}</div>
+        <label
+          onClick={() => {
+            if (!busy) playSound("button");
+          }}
+          className={`flex flex-col items-center gap-2 justify-self-center ${busy ? "opacity-60" : "cursor-pointer"}`}
+        >
+          <span aria-hidden="true" className="flex size-19 items-center justify-center rounded-full border-4 border-white/90 transition-transform duration-150 active:scale-95">
+            {busy ? (
+              <span className="size-7 animate-spin rounded-full border-3 border-white/30 border-t-white" />
+            ) : (
+              <span className="size-14 rounded-full bg-white" />
+            )}
+          </span>
+          <span className="text-[13px] font-semibold whitespace-nowrap text-white">
+            {busy ? "Μεταφόρτωση…" : photoStatus === "present" ? "Αλλαγή φωτογραφίας" : "Προσθήκη φωτογραφίας"}
+          </span>
+          {picker(true)}
+        </label>
+        <label
+          onClick={() => {
+            if (!busy) playSound("button");
+          }}
+          aria-label="Επιλογή από τη συλλογή"
+          className={`flex size-14 items-center justify-center justify-self-end overflow-hidden rounded-xl border-2 border-white/70 ${busy ? "opacity-60" : "cursor-pointer"}`}
+        >
+          {photoStatus === "present" && photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- local blob: URL, see above.
+            <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="white" strokeWidth="1.7" strokeLinejoin="round">
+              <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+              <circle cx="9" cy="10" r="1.8" />
+              <path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5" strokeLinecap="round" />
+            </svg>
           )}
-        </div>
+          {picker(false)}
+        </label>
       </div>
     </div>
   );

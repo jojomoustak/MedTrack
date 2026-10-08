@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { SelectField } from "@/components/ui/SelectField";
+import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 import { playSound } from "@/lib/sound/client/play-sound";
@@ -69,14 +71,14 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div>
-        <span className="text-sm text-stone-500">Φάρμακο</span>
-        <p className="text-lg font-semibold">{displayName}</p>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <div className="surface-card flex flex-col gap-0.5 p-4">
+        <span className="text-sm font-medium text-stone-500 dark:text-stone-400">Φάρμακο</span>
+        <p className="text-[19px] font-bold text-stone-900 dark:text-stone-50">{displayName}</p>
       </div>
 
-      <fieldset className="flex flex-col gap-1">
-        <legend className="font-medium">Μορφή</legend>
+      <fieldset className={FIELD_WRAPPER}>
+        <legend className={`${FIELD_LABEL} mb-2`}>Μορφή</legend>
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Μορφή φαρμάκου">
           {FORM_OPTIONS.map((option) => (
             <button
@@ -88,10 +90,8 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
                 playSound("button");
                 setForm(option);
               }}
-              className={`min-h-12 rounded-full border px-4 py-2 text-sm ${
-                form === option
-                  ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950"
-                  : "border-stone-300 dark:border-stone-700"
+              className={`min-h-12 rounded-xl px-4 py-2 text-[15px] font-semibold transition duration-200 active:scale-95 ${
+                form === option ? "bg-accent-700 text-white dark:bg-accent-500 dark:text-stone-950" : "bg-surface-muted text-stone-700 dark:text-stone-300"
               }`}
             >
               {FORM_LABELS[option]}
@@ -100,47 +100,40 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
         </div>
       </fieldset>
 
-      <div className="flex gap-3">
-        <label className="flex flex-1 flex-col gap-1">
-          <span className="font-medium">Περιεκτικότητα</span>
+      <fieldset className={FIELD_WRAPPER}>
+        <legend className={`${FIELD_LABEL} mb-2`}>Περιεκτικότητα</legend>
+        <div className="flex gap-3">
           <input
             type="text"
             inputMode="decimal"
             value={strengthValue}
             onChange={(e) => setStrengthValue(e.target.value)}
             aria-label="Τιμή περιεκτικότητας"
-            className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+            placeholder="π.χ. 500"
+            className={`${FIELD_INPUT} pr-4`}
           />
-        </label>
-        <label className="flex flex-1 flex-col gap-1">
-          <span className="font-medium">Μονάδα</span>
           <input
             type="text"
             value={strengthUnit}
             onChange={(e) => setStrengthUnit(e.target.value)}
             aria-label="Μονάδα περιεκτικότητας"
-            className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+            placeholder="mg"
+            className={`${FIELD_INPUT} max-w-28 pr-4`}
           />
-        </label>
-      </div>
+        </div>
+      </fieldset>
 
-      <label className="flex flex-col gap-1">
-        <span className="font-medium">Μονάδα αποθέματος</span>
-        <select
-          value={inventoryUnit}
-          onChange={(e) => setInventoryUnit(e.target.value as MedicationForm)}
-          aria-label="Μονάδα αποθέματος"
-          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
-        >
-          {FORM_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {FORM_LABELS[option]}
-            </option>
-          ))}
-        </select>
-      </label>
+      <SelectField label="Μονάδα αποθέματος" value={inventoryUnit} onChange={(e) => setInventoryUnit(e.target.value as MedicationForm)}>
+        {FORM_OPTIONS.map((option) => (
+          <option key={option} value={option}>
+            {FORM_LABELS[option]}
+          </option>
+        ))}
+      </SelectField>
 
-      <Button type="submit">Συνέχεια</Button>
+      <Button type="submit" size="lg" fullWidth>
+        Συνέχεια
+      </Button>
     </form>
   );
 }

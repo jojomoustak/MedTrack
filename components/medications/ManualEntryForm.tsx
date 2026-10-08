@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 
 export interface ManualEntryValues {
   name: string;
@@ -17,7 +18,7 @@ export interface ManualEntryFormProps {
   initialBatch?: string | null;
 }
 
-/** Phase 3 §2.4 "Manual entry form" — the primary, fully-functional path for real users at MVP (per the Phase 6 task directive; the catalog/search path exists to prove the architecture, not to imply real market coverage). */
+/** Phase 3 §2.4 "Manual entry form" (reference mockup, screen 15) — the primary, fully-functional path for real users at MVP (per the Phase 6 task directive; the catalog/search path exists to prove the architecture, not to imply real market coverage). */
 export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch = null }: ManualEntryFormProps) {
   const [name, setName] = useState("");
   const [expiry, setExpiry] = useState(initialExpiry ?? "");
@@ -40,9 +41,9 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-      <label className="flex flex-col gap-1">
-        <span className="font-medium">Όνομα φαρμάκου</span>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
+      <label className={FIELD_WRAPPER}>
+        <span className={FIELD_LABEL}>Όνομα</span>
         <input
           type="text"
           value={name}
@@ -50,43 +51,40 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
           aria-label="Όνομα φαρμάκου"
           aria-invalid={error ? "true" : undefined}
           aria-describedby={error ? "manual-name-error" : undefined}
-          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+          placeholder="Γράψτε το όνομα του φαρμάκου"
+          className={`${FIELD_INPUT} pr-4`}
         />
         {error && (
-          <span id="manual-name-error" role="alert" className="text-sm text-red-700 dark:text-red-400">
+          <span id="manual-name-error" role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
             {error}
           </span>
         )}
       </label>
 
       {(initialExpiry !== null || initialBatch !== null) && (
-        <div className="flex flex-col gap-3 rounded-xl border border-dashed border-stone-300 p-4 dark:border-stone-700">
-          <p className="text-sm text-stone-600 dark:text-stone-400">Αυτά διαβάστηκαν από τη σάρωση — ελέγξτε ή διορθώστε τα.</p>
-          <label className="flex flex-col gap-1">
-            <span className="font-medium">Ημερομηνία λήξης</span>
+        <div className="surface-card flex flex-col gap-4 p-4">
+          <p className="text-[15px] text-stone-600 dark:text-stone-400">Αυτά διαβάστηκαν από τη σάρωση — ελέγξτε ή διορθώστε τα.</p>
+          <label className={FIELD_WRAPPER}>
+            <span className={FIELD_LABEL}>Ημερομηνία λήξης</span>
             <input
               type="text"
               value={expiry}
               onChange={(e) => setExpiry(e.target.value)}
               placeholder="ΕΕΕΕ-ΜΜ-ΗΗ"
               aria-label="Ημερομηνία λήξης"
-              className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+              className={`${FIELD_INPUT} pr-4`}
             />
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="font-medium">Παρτίδα</span>
-            <input
-              type="text"
-              value={batch}
-              onChange={(e) => setBatch(e.target.value)}
-              aria-label="Παρτίδα"
-              className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
-            />
+          <label className={FIELD_WRAPPER}>
+            <span className={FIELD_LABEL}>Παρτίδα</span>
+            <input type="text" value={batch} onChange={(e) => setBatch(e.target.value)} aria-label="Παρτίδα" className={`${FIELD_INPUT} pr-4`} />
           </label>
         </div>
       )}
 
-      <Button type="submit">Συνέχεια</Button>
+      <Button type="submit" size="lg" fullWidth>
+        Συνέχεια
+      </Button>
     </form>
   );
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { formatQuantity } from "@/lib/domain/quantity";
+import { FIELD_INPUT } from "@/components/ui/field-styles";
 
 export interface SearchStepProps {
   onConfirmCandidate: (product: CatalogProduct) => void;
@@ -42,19 +43,19 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
   return (
     <div className="flex flex-col gap-4">
       <label className="flex flex-col gap-1">
-        <span className="font-medium">Αναζήτηση φαρμάκου</span>
+        <span className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Αναζήτηση φαρμάκου</span>
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="π.χ. παρακεταμόλη"
           aria-label="Αναζήτηση φαρμάκου"
-          className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+          className={`${FIELD_INPUT} pr-4`}
         />
       </label>
 
       {status === "loading" && (
-        <p role="status" aria-live="polite" className="text-sm text-stone-600 dark:text-stone-400">
+        <p role="status" aria-live="polite" className="text-[15px] text-stone-600 dark:text-stone-400">
           Αναζήτηση…
         </p>
       )}
@@ -73,10 +74,10 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
                 as="button"
                 type="button"
                 onClick={() => { playSound("button"); setCandidate(product); }}
-                className="flex min-h-12 w-full flex-col items-start px-4 py-3 text-left transition-transform duration-150 active:scale-[0.98] hover:bg-stone-50 dark:hover:bg-stone-900"
+                className="flex min-h-16 w-full flex-col items-start text-left transition-transform duration-150 active:scale-[0.98]"
               >
-                <span className="font-medium">{product.name}</span>
-                <span className="text-sm text-stone-600 dark:text-stone-400">{formatSubtitle(product)}</span>
+                <span className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">{product.name}</span>
+                <span className="text-[15px] text-stone-600 dark:text-stone-400">{formatSubtitle(product)}</span>
               </Card>
             </li>
           ))}

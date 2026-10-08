@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 
 export interface AddPackageValues {
   batchNumber: string | null;
@@ -75,68 +76,67 @@ export function AddPackageForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">Ποσότητα</span>
-        <div className="flex gap-2">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
+      <fieldset className={FIELD_WRAPPER}>
+        <legend className={`${FIELD_LABEL} mb-2`}>Ποσότητα</legend>
+        <div className="flex gap-3">
           <input
-            type="number"
+            type="text"
             inputMode="decimal"
-            min="0"
-            step="any"
             value={quantityValue}
             onChange={(e) => setQuantityValue(e.target.value)}
-            className="min-h-12 w-24 rounded-lg border border-stone-300 px-3 dark:border-stone-700 dark:bg-stone-900"
+            aria-label="Ποσότητα συσκευασίας"
+            className={`${FIELD_INPUT} max-w-28 pr-4 tabular-nums`}
           />
-          <select
-            value={quantityUnit}
-            onChange={(e) => setQuantityUnit(e.target.value)}
-            className="min-h-12 flex-1 rounded-lg border border-stone-300 px-3 dark:border-stone-700 dark:bg-stone-900"
-          >
-            {Object.entries(FORM_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+          <span className="relative block flex-1">
+            <select value={quantityUnit} onChange={(e) => setQuantityUnit(e.target.value)} aria-label="Μονάδα" className={`${FIELD_INPUT} appearance-none pr-11`}>
+              {Object.entries(FORM_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <svg
+              viewBox="0 0 20 20"
+              width="20"
+              height="20"
+              aria-hidden="true"
+              focusable="false"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-stone-600 dark:text-stone-400"
+            >
+              <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
         </div>
+      </fieldset>
+
+      <label className={FIELD_WRAPPER}>
+        <span className={FIELD_LABEL}>Αριθμός παρτίδας</span>
+        <input type="text" value={batchNumber} onChange={(e) => setBatchNumber(e.target.value)} placeholder="Προαιρετικό" className={`${FIELD_INPUT} pr-4`} />
       </label>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">Αριθμός παρτίδας (προαιρετικό)</span>
-        <input
-          type="text"
-          value={batchNumber}
-          onChange={(e) => setBatchNumber(e.target.value)}
-          className="min-h-12 rounded-lg border border-stone-300 px-3 dark:border-stone-700 dark:bg-stone-900"
-        />
+      <label className={FIELD_WRAPPER}>
+        <span className={FIELD_LABEL}>Ημερομηνία λήξης</span>
+        <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className={`${FIELD_INPUT} pr-4`} />
       </label>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">Ημερομηνία λήξης (προαιρετικό)</span>
-        <input
-          type="date"
-          value={expiryDate}
-          onChange={(e) => setExpiryDate(e.target.value)}
-          className="min-h-12 rounded-lg border border-stone-300 px-3 dark:border-stone-700 dark:bg-stone-900"
-        />
-      </label>
-
-      <label className="flex min-h-12 items-center gap-2">
-        <input type="checkbox" checked={openNow} onChange={(e) => setOpenNow(e.target.checked)} className="h-5 w-5" />
-        <span className="text-sm">Άνοιγμα τώρα (μετράει στο τρέχον απόθεμα)</span>
+      <label className="surface-card flex min-h-16 items-center gap-3 px-4 py-3">
+        <input type="checkbox" checked={openNow} onChange={(e) => setOpenNow(e.target.checked)} className="size-5 shrink-0 accent-accent-700" />
+        <span className="text-[17px] text-stone-800 dark:text-stone-200">Άνοιγμα τώρα (μετράει στο τρέχον απόθεμα)</span>
       </label>
 
       {(validationError ?? error) && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
           {validationError ?? error}
         </p>
       )}
 
-      <Button type="submit" disabled={submitting} aria-busy={submitting}>
-        {submitting ? "Αποθήκευση…" : "Προσθήκη"}
+      <Button type="submit" size="lg" fullWidth disabled={submitting} aria-busy={submitting}>
+        {submitting ? "Αποθήκευση…" : "Προσθήκη συσκευασίας"}
       </Button>
     </form>
   );
 }
-

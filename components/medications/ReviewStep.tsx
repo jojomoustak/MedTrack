@@ -7,6 +7,7 @@ import { playSound } from "@/lib/sound/client/play-sound";
 import { formatQuantity } from "@/lib/domain/quantity";
 import type { ScheduleDraft } from "@/lib/domain/schedule-draft";
 import type { MedicationForm } from "@/lib/domain/user-medication";
+import { FIELD_INPUT } from "@/components/ui/field-styles";
 
 export interface ReviewStepProps {
   name: string;
@@ -61,58 +62,58 @@ export function ReviewStep({
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <h2 className="text-lg font-semibold">{name}</h2>
-        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+        <h2 className="text-[22px] font-bold tracking-tight text-stone-900 dark:text-stone-50">{name}</h2>
+        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-base">
           {form && (
             <>
-              <dt className="text-stone-500">Μορφή</dt>
+              <dt className="text-stone-500 dark:text-stone-400">Μορφή</dt>
               <dd>{FORM_LABELS[form as MedicationForm] ?? form}</dd>
             </>
           )}
           {strengthValue && (
             <>
-              <dt className="text-stone-500">Περιεκτικότητα</dt>
+              <dt className="text-stone-500 dark:text-stone-400">Περιεκτικότητα</dt>
               <dd>
                 {formatQuantity(strengthValue)} {strengthUnit}
               </dd>
             </>
           )}
-          <dt className="text-stone-500">Μονάδα αποθέματος</dt>
+          <dt className="text-stone-500 dark:text-stone-400">Μονάδα αποθέματος</dt>
           <dd>{FORM_LABELS[inventoryUnit as MedicationForm] ?? inventoryUnit}</dd>
         </dl>
       </Card>
 
       <Card>
         <div className="flex items-center justify-between">
-          <h3 className="font-medium">Πρόγραμμα δόσεων</h3>
+          <h3 className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Πρόγραμμα δόσεων</h3>
           <Button variant="tertiary" onClick={onEditSchedule} className="px-0 underline">
             {schedule ? "Επεξεργασία" : "Προσθήκη"}
           </Button>
         </div>
-        <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+        <p className="mt-1 text-base text-stone-600 dark:text-stone-400">
           {schedule ? describeSchedule(schedule) : "Χωρίς πρόγραμμα ακόμα — μπορείτε να προσθέσετε αργότερα."}
         </p>
       </Card>
 
       {hasPackageData && (
         <Card>
-          <h3 className="font-medium">Αρχικό απόθεμα</h3>
-          <dl className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+          <h3 className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Αρχικό απόθεμα</h3>
+          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-base">
             {packageBatch && (
               <>
-                <dt className="text-stone-500">Παρτίδα</dt>
+                <dt className="text-stone-500 dark:text-stone-400">Παρτίδα</dt>
                 <dd>{packageBatch}</dd>
               </>
             )}
             {packageExpiry && (
               <>
-                <dt className="text-stone-500">Λήξη</dt>
+                <dt className="text-stone-500 dark:text-stone-400">Λήξη</dt>
                 <dd>{packageExpiry}</dd>
               </>
             )}
           </dl>
           <label className="mt-3 flex flex-col gap-1">
-            <span className="text-sm font-medium">Πόσα έχετε; (προαιρετικό)</span>
+            <span className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Πόσα έχετε; (προαιρετικό)</span>
             <input
               type="text"
               inputMode="decimal"
@@ -120,7 +121,7 @@ export function ReviewStep({
               onChange={(e) => onInitialQuantityValueChange(e.target.value)}
               placeholder={`π.χ. 30 ${inventoryUnit}`}
               aria-label="Αρχική ποσότητα"
-              className="min-h-12 rounded-lg border border-stone-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900"
+              className={`${FIELD_INPUT} pr-4`}
             />
           </label>
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
@@ -130,7 +131,7 @@ export function ReviewStep({
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
           {error}
         </p>
       )}
@@ -142,6 +143,8 @@ export function ReviewStep({
         }}
         disabled={submitting}
         aria-busy={submitting}
+        size="lg"
+        fullWidth
       >
         {submitting ? "Αποθήκευση…" : "Ολοκλήρωση"}
       </Button>
