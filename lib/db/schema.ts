@@ -882,6 +882,11 @@ export const accountSession = pgTable(
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     lastSeenAt: timestamptz("last_seen_at").notNull().defaultNow(),
     expiresAt: timestamptz("expires_at").notNull(),
+    // To revoke a session, DELETE its row (or also set `expires_at` to now):
+    // only the app's own check (`lib/auth/session.ts`) reads `revoked_at`.
+    // Better Auth's `findSession` ignores it, so a session marked revoked
+    // here alone would still be refreshed and served by `/get-session`
+    // (security review, 2026-10-08).
     revokedAt: timestamptz("revoked_at"),
     revokedReason: text("revoked_reason"),
     ipHash: text("ip_hash"),

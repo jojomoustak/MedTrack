@@ -6,6 +6,7 @@ import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-sc
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import {
   generateDoseEventsForSchedule,
+  BACKFILL_MS,
   cancelFutureDoseEventsForMedication,
   reconcileDoseEventsForSchedule,
   sweepMissedDoseEvents,
@@ -203,5 +204,55 @@ describe("dose-event-generator", () => {
 
     const swept = await sweepMissedDoseEvents(PROFILE_ID, doseEventRepo, now, 60);
     expect(swept).toBe(0);
+  });
+});
+
+describe("dose-event-generator — doses while the app wasn't opened", () => {
+  let db: MedTrackingDexie;
+  let scheduleRepo: DexieMedicationScheduleRepository;
+  let doseEventRepo: DexieDoseEventRepository;
+
+  beforeEach(() => {
+    db = new MedTrackingDexie(`test-generator-backfill-${crypto.randomUUID()}`);
+    const outbox = new DexieOutboxRepository(db);
+    scheduleRepo = new DexieMedicationScheduleRepository(db, outbox);
+    doseEventRepo = new DexieDoseEventRepository(db, outbox);
+  });
+
+  afterEach(async () => {
+    await db.delete();
+  });
+
+  it("fills in the doses of days the app wasn't opened, then the sweep records them as missed", async () => {
+    // Found 2026-10-08: generation only looked forward from "now", so days
+    // without the app open left no dose rows — not even missed ones.
+    const schedule = await scheduleRepo.create(dailyInput({ userMedicationId: "med-1" }));
+    const created = new Date(schedule.createdAt);
+    const fiveDaysLater = new Date(created.getTime() + 5 * 24 * 3_600_000);
+
+    await topUpDoseEventWindow(PROFILE_ID, scheduleRepo, doseEventRepo, fiveDaysLater, 24 * 3_600_000);
+    const events = await doseEventRepo.listByScheduleId(schedule.id);
+    const past = events.filter((e) => new Date(e.scheduledAt!) < fiveDaysLater);
+
+    expect(past.length).toBeGreaterThanOrEqual(4);
+    // …but never invented for before the schedule existed.
+    expect(events.every((e) => new Date(e.scheduledAt!) >= created)).toBe(true);
+
+    await sweepMissedDoseEvents(PROFILE_ID, doseEventRepo, fiveDaysLater, 60);
+    const swept = (await doseEventRepo.listByScheduleId(schedule.id)).filter((e) => new Date(e.scheduledAt!).getTime() < fiveDaysLater.getTime() - 3_600_000);
+    expect(swept.every((e) => e.status === "missed")).toBe(true);
+  });
+
+  it("looks back at most a week", async () => {
+    const schedule = await scheduleRepo.create(dailyInput({ userMedicationId: "med-1" }));
+    const created = new Date(schedule.createdAt);
+    const thirtyDaysLater = new Date(created.getTime() + 30 * 24 * 3_600_000);
+
+    await topUpDoseEventWindow(PROFILE_ID, scheduleRepo, doseEventRepo, thirtyDaysLater, 0);
+    const events = await doseEventRepo.listByScheduleId(schedule.id);
+
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((e) => new Date(e.scheduledAt!).getTime() >= thirtyDaysLater.getTime() - BACKFILL_MS)).toBe(true);
+    expect(events.length).toBeLessThanOrEqual(7);
   });
 });

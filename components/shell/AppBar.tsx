@@ -37,10 +37,10 @@ export function AppBar() {
 
   const trailing =
     summary === "failed" ? (
-      <SyncStatusChip state={summary} onRetry={retrying ? undefined : handleRetry} />
+      <SyncStatusChip state={summary} onRetry={retrying ? undefined : handleRetry} compact />
     ) : summary ? (
       <Link href="/profile" aria-label="Κατάσταση συγχρονισμού">
-        <SyncStatusChip state={summary} />
+        <SyncStatusChip state={summary} compact />
       </Link>
     ) : undefined;
 

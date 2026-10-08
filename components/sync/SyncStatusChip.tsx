@@ -11,6 +11,8 @@ export interface SyncStatusChipProps {
   /** Required when the state is retryable (`conflict`/`failed`) — omitting it on those states is a defect, not a valid "no-op" chip. */
   onRetry?: () => void;
   className?: string;
+  /** Icon only (the full label is still spoken) — for tight spots like list rows and the top bar, where the text label would crowd out the content. */
+  compact?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ export interface SyncStatusChipProps {
  * visual noise"); every other state always shows BOTH an icon and a
  * label (never color-only, Phase 3 §5/§9).
  */
-export function SyncStatusChip({ state, onRetry, className }: SyncStatusChipProps) {
+export function SyncStatusChip({ state, onRetry, className, compact = false }: SyncStatusChipProps) {
   const reducedMotion = useReducedMotion();
   const config = SYNC_STATE_CHIP_CONFIG[state];
 
@@ -28,14 +30,16 @@ export function SyncStatusChip({ state, onRetry, className }: SyncStatusChipProp
   if (!config) return null;
 
   const interactive = config.retryable && Boolean(onRetry);
-  const classes = ["inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium", stateColorClasses(state), interactive ? "cursor-pointer" : "", className]
+  // A compact chip that retries is still a button: keep a 44px touch target.
+  const shape = compact ? `inline-flex ${config.retryable && onRetry ? "size-11" : "size-8"} shrink-0 items-center justify-center rounded-full` : "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium";
+  const classes = [shape, stateColorClasses(state), interactive ? "cursor-pointer" : "", className]
     .filter(Boolean)
     .join(" ");
 
   const content = (
     <>
       <SyncStateIcon shape={config.icon} reducedMotion={reducedMotion} />
-      {config.label ? <span aria-hidden="true">{config.label}</span> : null}
+      {config.label && !compact ? <span aria-hidden="true">{config.label}</span> : null}
     </>
   );
 

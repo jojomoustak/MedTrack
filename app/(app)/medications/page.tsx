@@ -139,7 +139,7 @@ export default function MedicationsPage() {
                       </p>
                     )}
                   </div>
-                  <SyncStatusChip state={med.syncState} />
+                  <SyncStatusChip state={med.syncState} compact />
                   <ChevronIcon />
                 </Link>
               </li>

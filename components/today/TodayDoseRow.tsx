@@ -124,7 +124,7 @@ export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake,
             </p>
           )}
         </div>
-        {!pending && dose.syncState !== "synced" && <SyncStatusChip state={dose.syncState} />}
+        {!pending && dose.syncState !== "synced" && <SyncStatusChip state={dose.syncState} compact />}
         {!pending && <ChevronIcon />}
       </Link>
 

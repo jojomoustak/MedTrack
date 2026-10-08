@@ -37,6 +37,29 @@ export const GENERATION_HORIZON_MS = 72 * 3_600_000;
 /** Grace window before a fired-but-unacted dose is swept to `missed`. A product constant pending real UX validation (data-architect flagged this as a decision for `product-architect`/UX to actually pin down — not derived from any spec today). */
 export const DEFAULT_MISSED_GRACE_MINUTES = 60;
 
+/**
+ * How far back the periodic top-up looks for instants that were never
+ * materialized. Generation only ever looked forward from "now", so any
+ * stretch when the app wasn't opened at all left no dose rows behind —
+ * those doses appeared nowhere, not even as missed (found 2026-10-08). The
+ * top-up now fills them in (bounded, below) and the missed-dose sweep
+ * records them honestly as missed.
+ */
+export const BACKFILL_MS = 7 * 24 * 3_600_000;
+
+/**
+ * Start of a generation window that looks back `backfillMs` — but never to
+ * before the schedule existed (a schedule created today must not invent
+ * yesterday's "missed" doses, nor may one replaced by an edit or a resume
+ * refill the period it was replaced for), and never later than `now`.
+ */
+function backfillStart(schedule: Pick<MedicationScheduleRecord, "createdAt">, now: Date, backfillMs: number): Date {
+  if (backfillMs <= 0) return now;
+  const created = new Date(schedule.createdAt).getTime();
+  const earliest = Math.max(now.getTime() - backfillMs, Number.isFinite(created) ? created : now.getTime());
+  return new Date(Math.min(now.getTime(), earliest));
+}
+
 export interface GenerateForScheduleResult {
   created: number;
 }
@@ -53,6 +76,7 @@ export async function generateDoseEventsForSchedule(
   doseEvents: DoseEventRepository,
   now: Date = new Date(),
   horizonMs: number = GENERATION_HORIZON_MS,
+  backfillMs: number = 0,
 ): Promise<GenerateForScheduleResult> {
   // A soft-deleted schedule must never generate new instances -- only
   // reconcileDoseEventsForSchedule's cancellation loop (which doesn't
@@ -63,7 +87,7 @@ export async function generateDoseEventsForSchedule(
   }
 
   const windowEnd = new Date(now.getTime() + horizonMs);
-  const instants = computeScheduleInstants(schedule, { windowStart: now, windowEnd });
+  const instants = computeScheduleInstants(schedule, { windowStart: backfillStart(schedule, now, backfillMs), windowEnd });
 
   let created = 0;
   for (const instant of instants) {
@@ -126,7 +150,7 @@ export async function reconcileDoseEventsForSchedule(
 }
 
 /**
- * App-foreground/cold-start tick: extends every one of this profile's active schedules' materialized horizon. Returns how many doses it created.
+ * App-foreground/cold-start tick: extends every one of this profile's active schedules' materialized horizon, and fills in up to `BACKFILL_MS` of past instants never materialized while the app wasn't opened. Returns how many doses it created.
  *
  * `activeMedicationIds`, when given, limits that to schedules of
  * medications the user is still taking — a paused/completed/discontinued
@@ -145,7 +169,7 @@ export async function topUpDoseEventWindow(
   let created = 0;
   for (const schedule of activeSchedules) {
     if (activeMedicationIds && !activeMedicationIds.has(schedule.userMedicationId)) continue;
-    created += (await generateDoseEventsForSchedule(schedule, doseEvents, now, horizonMs)).created;
+    created += (await generateDoseEventsForSchedule(schedule, doseEvents, now, horizonMs, BACKFILL_MS)).created;
   }
   return created;
 }
