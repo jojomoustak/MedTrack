@@ -90,6 +90,7 @@ import { hashPassword } from "@/lib/auth/argon2";
 import { clearLockout, verifyPasswordWithLockout } from "@/lib/auth/lockout";
 import { stripOAuthTokens } from "@/lib/auth/oauth-token-strip";
 import { withHashedSessionTokenAdapter } from "@/lib/auth/adr003-adapter";
+import { DISABLED_SESSION_PATHS, stripSessionTokensAfterHook } from "@/lib/auth/session-hardening";
 import { sendEmail } from "@/lib/email/server/resend-client";
 import {
   passwordResetBlockedPendingVerificationEmail,
@@ -191,6 +192,10 @@ function buildAuth() {
     trustedOrigins: env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((origin) => origin.trim()),
 
     database: adapter,
+
+    // Security review (2026-10-08) — see lib/auth/session-hardening.ts.
+    disabledPaths: DISABLED_SESSION_PATHS,
+    hooks: { after: stripSessionTokensAfterHook },
 
     advanced: {
       database: {

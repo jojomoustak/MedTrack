@@ -60,18 +60,74 @@ export function hashSessionToken(raw: string): string {
   return createHash("sha256").update(raw, "utf8").digest("hex");
 }
 
+/** Operators that make sense against a stored hash: exact (in)equality only. */
+const TOKEN_OPERATORS = new Set(["eq", "ne", "in", "not_in"]);
+
+function hashTokenValue(value: unknown): unknown {
+  if (typeof value === "string") return hashSessionToken(value);
+  if (Array.isArray(value)) return value.map((v) => (typeof v === "string" ? hashSessionToken(v) : v));
+  return value;
+}
+
 function convertWhere(model: string, where: Where[] | undefined): Where[] | undefined {
-  if (!where) return where;
-  return where.map((clause) =>
-    model === SESSION_MODEL && clause.field === TOKEN_FIELD && typeof clause.value === "string"
-      ? { ...clause, value: hashSessionToken(clause.value) }
-      : clause,
-  );
+  if (!where || model !== SESSION_MODEL) return where;
+  return where.map((clause) => {
+    if (clause.field !== TOKEN_FIELD) return clause;
+    // `contains`, `starts_with`, `lt`, … can't be expressed against a hash —
+    // fail loudly rather than run a query that silently means something else.
+    if (clause.operator !== undefined && !TOKEN_OPERATORS.has(clause.operator)) {
+      throw new Error(`Unsupported operator "${clause.operator}" on session token`);
+    }
+    return { ...clause, value: hashTokenValue(clause.value) as Where["value"] };
+  });
+}
+
+/** A `token` inside write data (create/update) — stored hashed, never raw. */
+function hashTokenInData<D>(model: string, data: D): D {
+  if (model !== SESSION_MODEL || !data || typeof data !== "object" || typeof (data as Record<string, unknown>)[TOKEN_FIELD] !== "string") return data;
+  return { ...(data as Record<string, unknown>), [TOKEN_FIELD]: hashSessionToken((data as Record<string, string>)[TOKEN_FIELD]) } as D;
+}
+
+/** Raw token candidates for restoring onto a session result: an `eq` lookup value, and a raw token being written. */
+function rawTokensOf(model: string, where: Where[] | undefined, data?: unknown): string[] {
+  if (model !== SESSION_MODEL) return [];
+  const raws: string[] = [];
+  for (const c of where ?? []) {
+    if (c.field === TOKEN_FIELD && typeof c.value === "string" && (c.operator === undefined || c.operator === "eq")) raws.push(c.value);
+  }
+  const written = data && typeof data === "object" ? (data as Record<string, unknown>)[TOKEN_FIELD] : undefined;
+  if (typeof written === "string") raws.push(written);
+  return raws;
+}
+
+/**
+ * A session row read back from the database carries the stored HASH in its
+ * `token` field. Better Auth treats that field as the raw token — it hands
+ * it straight back to `updateSession(token)` during the daily session
+ * refresh (where it would be hashed a second time and match nothing) and
+ * writes it into the session cookie. When the caller supplied the raw
+ * token, put it back — but only onto a row whose stored hash IS that
+ * token's hash, so a raw token can never be copied onto another row
+ * (whatever shape the `where` had).
+ *
+ * Real bug (2026-10-08): every session older than `updateAge` (1 day) hit
+ * this on its next `get-session` — the refresh "failed", Better Auth
+ * deleted the cookie and answered 401, and the user was signed out.
+ *
+ * Deliberately NOT done the other way round (treating a hash-shaped value
+ * in a `where` as already hashed): that would make a stored hash work as a
+ * credential, defeating ADR-003's point of storing only hashes.
+ */
+function withRawToken<R>(result: R, raws: string[]): R {
+  if (raws.length === 0 || !result || typeof result !== "object") return result;
+  const stored = (result as Record<string, unknown>)[TOKEN_FIELD];
+  const raw = raws.find((r) => hashSessionToken(r) === stored);
+  return raw ? ({ ...(result as Record<string, unknown>), [TOKEN_FIELD]: raw } as R) : result;
 }
 
 type MinimalAdapterSurface = Pick<
   DBAdapter,
-  "create" | "findOne" | "findMany" | "update" | "updateMany" | "delete" | "deleteMany" | "count"
+  "create" | "findOne" | "findMany" | "update" | "updateMany" | "delete" | "deleteMany" | "count" | "consumeOne" | "incrementOne"
 >;
 
 /**
@@ -84,29 +140,28 @@ type MinimalAdapterSurface = Pick<
 function wrapAdapterSurface<T extends MinimalAdapterSurface>(inner: T): T {
   return {
     ...inner,
-    create: (data) => {
-      if (data.model === SESSION_MODEL) {
-        const raw = (data.data as Record<string, unknown>)[TOKEN_FIELD];
-        if (typeof raw === "string") {
-          const hashedData = { ...data.data, [TOKEN_FIELD]: hashSessionToken(raw) };
-          return inner.create({ ...data, data: hashedData }).then((created) => ({
-            // Better Auth uses the RETURNED object to set the session
-            // cookie — restore the raw token here; the DB row itself
-            // only ever held the hash.
-            ...(created as Record<string, unknown>),
-            [TOKEN_FIELD]: raw,
-          })) as ReturnType<T["create"]>;
-        }
-      }
-      return inner.create(data);
-    },
-    findOne: (data) => inner.findOne({ ...data, where: convertWhere(data.model, data.where) ?? data.where }),
-    findMany: (data) => inner.findMany({ ...data, where: convertWhere(data.model, data.where) }),
-    update: (data) => inner.update({ ...data, where: convertWhere(data.model, data.where) ?? data.where }),
-    updateMany: (data) => inner.updateMany({ ...data, where: convertWhere(data.model, data.where) ?? data.where }),
-    delete: (data) => inner.delete({ ...data, where: convertWhere(data.model, data.where) ?? data.where }),
-    deleteMany: (data) => inner.deleteMany({ ...data, where: convertWhere(data.model, data.where) ?? data.where }),
-    count: (data) => inner.count({ ...data, where: convertWhere(data.model, data.where) }),
+    // Better Auth uses the RETURNED object to set the session cookie, so
+    // results get the raw token back; the DB row only ever holds the hash.
+    create: async (data) =>
+      inner
+        .create({ ...data, data: hashTokenInData(data.model, data.data) })
+        .then((created) => withRawToken(created, rawTokensOf(data.model, undefined, data.data))) as ReturnType<T["create"]>,
+    findOne: async (data) =>
+      inner
+        .findOne({ ...data, where: convertWhere(data.model, data.where) ?? data.where })
+        .then((found) => withRawToken(found, rawTokensOf(data.model, data.where))) as ReturnType<T["findOne"]>,
+    findMany: async (data) => inner.findMany({ ...data, where: convertWhere(data.model, data.where) }),
+    update: async (data) =>
+      inner
+        .update({ ...data, where: convertWhere(data.model, data.where) ?? data.where, update: hashTokenInData(data.model, data.update) })
+        .then((updated) => withRawToken(updated, rawTokensOf(data.model, data.where, data.update))) as ReturnType<T["update"]>,
+    updateMany: async (data) => inner.updateMany({ ...data, where: convertWhere(data.model, data.where) ?? data.where, update: hashTokenInData(data.model, data.update) }),
+    delete: async (data) => inner.delete({ ...data, where: convertWhere(data.model, data.where) ?? data.where }),
+    deleteMany: async (data) => inner.deleteMany({ ...data, where: convertWhere(data.model, data.where) ?? data.where }),
+    count: async (data) => inner.count({ ...data, where: convertWhere(data.model, data.where) }),
+    consumeOne: async (data) => inner.consumeOne({ ...data, where: convertWhere(data.model, data.where) ?? data.where }),
+    incrementOne: async (data) =>
+      inner.incrementOne({ ...data, where: convertWhere(data.model, data.where) ?? data.where, set: hashTokenInData(data.model, data.set) }),
   };
 }
 

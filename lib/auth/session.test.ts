@@ -1,5 +1,14 @@
+import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { extractSessionToken } from "@/lib/auth/session";
+
+const SECRET = "unit-test-secret-at-least-32-characters";
+
+/** A cookie value exactly as Better Auth sets it: `<token>.<base64 HMAC-SHA256(secret, token)>`, URL-encoded. */
+function signed(token: string, secret = SECRET): string {
+  const signature = createHmac("sha256", secret).update(token, "utf8").digest("base64");
+  return encodeURIComponent(`${token}.${signature}`);
+}
 
 /**
  * Regression test for a real bug found via a live-site smoke test on the
@@ -16,42 +25,52 @@ import { extractSessionToken } from "@/lib/auth/session";
  */
 describe("extractSessionToken", () => {
   it("finds the token under the unprefixed cookie name (local HTTP dev, BETTER_AUTH_URL without https://)", () => {
-    const cookieHeader = "better-auth.session_token=abc123token.signatureHere; other=irrelevant";
-    expect(extractSessionToken(cookieHeader)).toBe("abc123token");
+    expect(extractSessionToken(`better-auth.session_token=${signed("abc123token")}; other=irrelevant`, SECRET)).toBe("abc123token");
   });
 
   it("finds the token under the __Secure- prefixed cookie name (deployed HTTPS, BETTER_AUTH_URL starting with https://)", () => {
-    const cookieHeader = "__Secure-better-auth.session_token=xyz789token.signatureHere; other=irrelevant";
-    expect(extractSessionToken(cookieHeader)).toBe("xyz789token");
+    expect(extractSessionToken(`__Secure-better-auth.session_token=${signed("xyz789token")}; other=irrelevant`, SECRET)).toBe("xyz789token");
   });
 
   it("prefers the __Secure- form when (implausibly) both are somehow present", () => {
-    const cookieHeader = "__Secure-better-auth.session_token=secureToken.sig; better-auth.session_token=plainToken.sig";
-    expect(extractSessionToken(cookieHeader)).toBe("secureToken");
+    const header = `__Secure-better-auth.session_token=${signed("secureToken")}; better-auth.session_token=${signed("plainToken")}`;
+    expect(extractSessionToken(header, SECRET)).toBe("secureToken");
   });
 
-  it("strips the trailing Better-Auth signature segment (only the token before the first '.' is hashed/looked up)", () => {
-    const cookieHeader = "better-auth.session_token=raw-token-value.some-signature-with.dots-in-it";
-    expect(extractSessionToken(cookieHeader)).toBe("raw-token-value");
+  it("URL-decodes the cookie value before checking the signature", () => {
+    // Base64 signatures contain '+', '/' and '='; Better Auth URL-encodes the whole value.
+    expect(extractSessionToken(`better-auth.session_token=${signed("tok+plus")}`, SECRET)).toBe("tok+plus");
   });
 
-  it("URL-decodes the cookie value before splitting off the signature", () => {
-    // '.' encoded as %2E is unusual but the real cookie value can contain
-    // other percent-encoded characters (Better Auth signs+encodes it) —
-    // confirm decoding still happens via the delegated implementation.
-    const cookieHeader = "better-auth.session_token=tok%2Bplus.sig";
-    expect(extractSessionToken(cookieHeader)).toBe("tok+plus");
+  describe("signature (security review, 2026-10-08)", () => {
+    it("rejects a bare token with no signature — a leaked token alone must not authenticate", () => {
+      expect(extractSessionToken("better-auth.session_token=abc123token", SECRET)).toBeNull();
+    });
+
+    it("rejects a token with a signature that doesn't verify", () => {
+      const forged = encodeURIComponent(`abc123token.${"A".repeat(43)}=`);
+      expect(extractSessionToken(`better-auth.session_token=${forged}`, SECRET)).toBeNull();
+    });
+
+    it("rejects a token signed with a different secret", () => {
+      expect(extractSessionToken(`better-auth.session_token=${signed("abc123token", "some-other-secret-of-32-characters!!")}`, SECRET)).toBeNull();
+    });
+
+    it("rejects another token's signature moved onto this token", () => {
+      const otherSignature = decodeURIComponent(signed("victimToken")).split(".")[1];
+      expect(extractSessionToken(`better-auth.session_token=${encodeURIComponent(`attackerToken.${otherSignature}`)}`, SECRET)).toBeNull();
+    });
   });
 
   it("returns null when the cookie header is null", () => {
-    expect(extractSessionToken(null)).toBeNull();
+    expect(extractSessionToken(null, SECRET)).toBeNull();
   });
 
   it("returns null when no session cookie (prefixed or not) is present", () => {
-    expect(extractSessionToken("some_other_cookie=value; another=thing")).toBeNull();
+    expect(extractSessionToken("some_other_cookie=value; another=thing", SECRET)).toBeNull();
   });
 
   it("returns null for an empty cookie header string", () => {
-    expect(extractSessionToken("")).toBeNull();
+    expect(extractSessionToken("", SECRET)).toBeNull();
   });
 });

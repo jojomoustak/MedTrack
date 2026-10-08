@@ -30,7 +30,9 @@
  * (sign-in/out/refresh, which still go through the catch-all route
  * handler and Better Auth's own logic).
  */
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
+import { getEnv } from "@/lib/config/env";
 import { getDb } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import { hashSessionToken } from "@/lib/auth/adr003-adapter";
@@ -72,19 +74,40 @@ export interface SessionContext {
 }
 
 /**
- * Extracts the raw session token from a `Cookie` request header. Better
- * Auth appends `.<signature>` to the cookie value; only the token portion
- * before the first `.` is ever hashed/looked up (matches Better Auth's
- * own cookie format). Wraps the header string in a `Headers` object
- * purely to match `getSessionCookie`'s `Request | Headers` parameter type
- * — this function's own signature (a raw cookie-header string) is kept
- * stable since nothing else about the caller side needs to change.
+ * Returns the token from a signed session-cookie value — Better Auth's
+ * format, `<token>.<base64 HMAC-SHA256(secret, token)>` (better-call's
+ * `getSignedCookie`) — or null unless the signature verifies.
+ *
+ * Security review (2026-10-08): this module used to take everything before
+ * the first "." and never checked the signature, so a bare session token
+ * (no signature at all) authenticated every health-data route. Better
+ * Auth's own endpoints always verified it. Now a token that leaks on its
+ * own (logs, a response body) is useless without the signed HttpOnly
+ * cookie, matching Better Auth.
  */
-export function extractSessionToken(cookieHeader: string | null): string | null {
+export function verifySignedCookieValue(value: string, secret: string): string | null {
+  const dot = value.lastIndexOf(".");
+  if (dot < 1) return null;
+  const token = value.slice(0, dot);
+  const signature = value.slice(dot + 1);
+  if (signature.length !== 44 || !signature.endsWith("=")) return null;
+  const expected = Buffer.from(createHmac("sha256", secret).update(token, "utf8").digest("base64"));
+  const given = Buffer.from(signature);
+  return given.length === expected.length && timingSafeEqual(given, expected) ? token : null;
+}
+
+/**
+ * Extracts the session token from a `Cookie` request header, if its
+ * signature is valid (`verifySignedCookieValue`). Wraps the header string
+ * in a `Headers` object purely to match `getSessionCookie`'s parameter
+ * type; `getSessionCookie` also URL-decodes the value. `secret` is
+ * injectable for tests.
+ */
+export function extractSessionToken(cookieHeader: string | null, secret: string = getEnv().BETTER_AUTH_SECRET): string | null {
   if (!cookieHeader) return null;
-  const raw = getSessionCookie(new Headers({ cookie: cookieHeader }));
-  if (!raw) return null;
-  return raw.split(".")[0] || null;
+  const value = getSessionCookie(new Headers({ cookie: cookieHeader }));
+  if (!value) return null;
+  return verifySignedCookieValue(value, secret);
 }
 
 /**

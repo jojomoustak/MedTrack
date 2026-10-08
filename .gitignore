@@ -56,3 +56,6 @@ next-env.d.ts
 /public/sw.js.map
 /public/swe-worker-*.js
 /public/swe-worker-*.js.map
+
+# Local one-off scripts (screenshots, test-account seeding) — never committed
+/.scratch-*
