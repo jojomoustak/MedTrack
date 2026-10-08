@@ -13,8 +13,7 @@ describe("InventorySummary", () => {
     render(
       <InventorySummary currentStock="28" quantityUnit="tablet" belowThreshold={false} runningLowSoon={false} projection={NO_PROJECTION} />,
     );
-    expect(screen.getByText(/28/)).toBeInTheDocument();
-    expect(screen.getByText(/Δισκίο/)).toBeInTheDocument();
+    expect(screen.getByText("28 δισκία")).toBeInTheDocument();
   });
 
   it("shows no low-stock cue and no projection line when neither applies", () => {

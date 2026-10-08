@@ -34,8 +34,7 @@ export function DeleteMedicationSection({
   }, [confirming]);
 
   return (
-    <section className="flex flex-col gap-2 rounded-xl border border-red-300 p-4 dark:border-red-900">
-      <h2 className="text-sm font-medium text-red-800 dark:text-red-400">Μη αναστρέψιμη ενέργεια</h2>
+    <section className={confirming ? "surface-card flex flex-col gap-3 p-4" : "flex flex-col"} aria-label="Διαγραφή φαρμάκου">
 
       {!confirming ? (
         <Button
@@ -45,13 +44,15 @@ export function DeleteMedicationSection({
             setConfirming(true);
           }}
           aria-expanded={confirming}
-          className="self-start"
+          size="lg"
+          fullWidth
         >
           Διαγραφή φαρμάκου
         </Button>
       ) : (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-stone-600 dark:text-stone-400">
+          <p className="text-[17px] font-semibold text-red-800 dark:text-red-400">Διαγραφή αυτού του φαρμάκου;</p>
+          <p className="text-[15px] text-stone-600 dark:text-stone-400">
             Το φάρμακο θα σταματήσει να εμφανίζεται και οι υπενθυμίσεις του θα ακυρωθούν. Το ιστορικό δόσεων και αποθέματος διατηρείται.
           </p>
           {error && (
@@ -68,11 +69,12 @@ export function DeleteMedicationSection({
                 setConfirming(false);
               }}
               disabled={deleting}
+              size="lg"
               className="flex-1"
             >
               Άκυρο
             </Button>
-            <Button variant="danger" onClick={onConfirmDelete} disabled={deleting} aria-busy={deleting} className="flex-1">
+            <Button variant="danger" onClick={onConfirmDelete} disabled={deleting} aria-busy={deleting} size="lg" className="flex-1">
               {deleting ? "Διαγραφή…" : "Ναι, διαγραφή"}
             </Button>
           </div>

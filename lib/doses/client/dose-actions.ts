@@ -36,7 +36,7 @@ export function isDoseActionable(dose: Pick<DoseEventRecord, "status">): boolean
  * constructors run synchronously, as call arguments, before
  * `syncNativeRemindersNow`'s own async body starts.
  */
-function pushNativeRemindersAfterTransition(profileId: string | null): void {
+export function refreshNativeReminders(profileId: string | null): void {
   if (!profileId) return;
   try {
     void syncNativeRemindersNow(profileId, {
@@ -66,24 +66,24 @@ async function transitionToTaken(doseId: string, profileId: string, status: "tak
 
 export async function recordDoseTaken(doseId: string, profileId: string): Promise<void> {
   await transitionToTaken(doseId, profileId, "taken");
-  pushNativeRemindersAfterTransition(profileId);
+  refreshNativeReminders(profileId);
 }
 
 /** The one recovery path out of `missed` — "I forgot to log it, but I did take it" (`isDoseEventTransitionAllowed`). A late dose is still a real dose, so it consumes inventory too. */
 export async function recordDoseTakenLate(doseId: string, profileId: string): Promise<void> {
   await transitionToTaken(doseId, profileId, "taken_late");
-  pushNativeRemindersAfterTransition(profileId);
+  refreshNativeReminders(profileId);
 }
 
 export async function recordDoseSkipped(doseId: string, profileId: string): Promise<void> {
   await new DexieDoseEventRepository().transition(doseId, { status: "skipped" }, newId());
-  pushNativeRemindersAfterTransition(profileId);
+  refreshNativeReminders(profileId);
 }
 
 /** The user saying "I didn't take this one" — the same `missed` status the overdue sweep would eventually set, recorded now instead. */
 export async function recordDoseMissed(doseId: string, profileId: string): Promise<void> {
   await new DexieDoseEventRepository().transition(doseId, { status: "missed" }, newId());
-  pushNativeRemindersAfterTransition(profileId);
+  refreshNativeReminders(profileId);
 }
 
 /** Non-terminal and freely repeatable: re-reminds after the user's own default snooze length. */
@@ -92,7 +92,7 @@ export async function snoozeDose(doseId: string, profileId: string, accountId: s
   const snoozeMinutes = preferences?.reminderDefaultSnoozeMinutes ?? 10;
   const reminderAt = new Date(Date.now() + snoozeMinutes * 60_000).toISOString();
   await new DexieDoseEventRepository().transition(doseId, { status: "snoozed", reminderAt }, newId());
-  pushNativeRemindersAfterTransition(profileId);
+  refreshNativeReminders(profileId);
 }
 
 /** Bulk "mark all as taken" — the same per-dose path as `recordDoseTaken`, looped, with one native refresh at the end. */
@@ -100,5 +100,5 @@ export async function recordAllDosesTaken(doses: DoseEventRecord[], profileId: s
   for (const dose of doses.filter(isDoseActionable)) {
     await transitionToTaken(dose.id, profileId, "taken");
   }
-  pushNativeRemindersAfterTransition(profileId);
+  refreshNativeReminders(profileId);
 }

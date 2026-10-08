@@ -15,8 +15,9 @@
  *      so instances the new recurrence no longer produces get cancelled.
  *   3. Schedule soft-delete, or the owning `UserMedication.treatmentState`
  *      leaving `"active"` — cancel every future non-terminal `DoseEvent`
- *      tied to it (not yet wired anywhere; no medication-edit/pause UI
- *      exists yet to trigger it from — flagged here, not solved).
+ *      tied to it (`cancelFutureDoseEventsForMedication`, called by the
+ *      Edit Medication save; `topUpDoseEventWindow` skips such
+ *      medications so no device regenerates them).
  *   4. `applyRemote` on a pulled `MedicationSchedule` (own mutation ack,
  *      or another device's edit) — `lib/sync/client/apply-result.ts`
  *      calls `reconcileDoseEventsForSchedule` here.
@@ -124,18 +125,55 @@ export async function reconcileDoseEventsForSchedule(
   await generateDoseEventsForSchedule(schedule, doseEvents, now, horizonMs);
 }
 
-/** App-foreground/cold-start tick: extends every one of this profile's active schedules' materialized horizon. */
+/**
+ * App-foreground/cold-start tick: extends every one of this profile's active schedules' materialized horizon.
+ *
+ * `activeMedicationIds`, when given, limits that to schedules of
+ * medications the user is still taking — a paused/completed/discontinued
+ * medication's schedule must not keep producing doses (and native
+ * reminders) on this or any other device (trigger #3 above).
+ */
 export async function topUpDoseEventWindow(
   profileId: string,
   schedules: MedicationScheduleRepository,
   doseEvents: DoseEventRepository,
   now: Date = new Date(),
   horizonMs: number = GENERATION_HORIZON_MS,
+  activeMedicationIds?: ReadonlySet<string>,
 ): Promise<void> {
   const activeSchedules = await schedules.list(profileId);
   for (const schedule of activeSchedules) {
+    if (activeMedicationIds && !activeMedicationIds.has(schedule.userMedicationId)) continue;
     await generateDoseEventsForSchedule(schedule, doseEvents, now, horizonMs);
   }
+}
+
+/**
+ * Trigger #3: the medication left "active" (paused, completed or
+ * discontinued). Cancels every FUTURE non-terminal dose of every one of its
+ * schedules — past doses stay as recorded history. Its schedules stay (the
+ * user may resume — `saveMedicationEdits` then replaces them, since a
+ * cancelled dose's id blocks its instant from regenerating), but
+ * `topUpDoseEventWindow` stops extending them.
+ * Returns how many doses were cancelled.
+ */
+export async function cancelFutureDoseEventsForMedication(
+  userMedicationId: string,
+  schedules: Pick<MedicationScheduleRepository, "listByUserMedication">,
+  doseEvents: DoseEventRepository,
+  now: Date = new Date(),
+): Promise<number> {
+  const nowIso = now.toISOString();
+  let cancelled = 0;
+  for (const schedule of await schedules.listByUserMedication(userMedicationId)) {
+    for (const event of await doseEvents.listByScheduleId(schedule.id)) {
+      if (isTerminalDoseEventStatus(event.status)) continue;
+      if (event.scheduledAt === null || isTimestampBefore(event.scheduledAt, nowIso)) continue;
+      await doseEvents.transition(event.id, { status: "cancelled" }, newId());
+      cancelled++;
+    }
+  }
+  return cancelled;
 }
 
 /** Missed-dose sweep: any non-terminal dose whose scheduled instant is more than `graceMinutes` in the past transitions to `missed`. Returns how many were swept. */

@@ -99,12 +99,7 @@ export default function AddPackagePage() {
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 p-4">
-      <div className="flex items-center gap-3">
-        <ButtonLink href={`/medications/${params.id}`} aria-label="Πίσω" variant="tertiary" className="px-0 underline">
-          ← Πίσω
-        </ButtonLink>
-        <h1 className="text-xl font-semibold">Προσθήκη συσκευασίας</h1>
-      </div>
+      <h1 className="text-xl font-semibold">Προσθήκη συσκευασίας</h1>
 
       <AddPackageForm defaultUnit={medication.inventoryUnit} onSubmit={(values) => void handleSubmit(values)} submitting={submitting} error={error} />
     </div>

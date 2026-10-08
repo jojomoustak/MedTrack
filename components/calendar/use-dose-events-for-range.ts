@@ -52,7 +52,8 @@ export function useDoseEventsForRange(profileId: string | null, from: Date, to: 
       const now = new Date();
       const horizonEnd = new Date(now.getTime() + GENERATION_HORIZON_MS);
 
-      const doses = await doseEventRepo.listForProfileInRange(profileId!, startOfLocalDayIso(from), endOfLocalDayIso(to));
+      // Cancelled doses never happen (schedule changed / medication stopped) — not shown.
+      const doses = (await doseEventRepo.listForProfileInRange(profileId!, startOfLocalDayIso(from), endOfLocalDayIso(to))).filter((d) => d.status !== "cancelled");
       doses.sort((a, b) => compareTimestampsAscending(a.scheduledAt ?? "", b.scheduledAt ?? ""));
 
       let projected: ProjectedDoseInstant[] = [];

@@ -5,17 +5,17 @@ import Link from "next/link";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
+import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
+import { useScheduleSummaries } from "@/lib/medications/client/use-schedule-summaries";
 import { useLowStockMedicationIds } from "@/lib/inventory/client/use-low-stock-medications";
-import { useFavoriteMedications } from "@/lib/medications/client/use-favorite-medications";
 import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
-import { MedicationThumbnail } from "@/components/medications/MedicationThumbnail";
-import { SegmentedControl, type Segment as SegmentDef } from "@/components/ui/SegmentedControl";
-import { Badge } from "@/components/ui/Badge";
-import { Card } from "@/components/ui/Card";
+import { MedicationAvatar } from "@/components/medications/MedicationAvatar";
+import { FilterTabs, type FilterTab } from "@/components/ui/FilterTabs";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ButtonLink } from "@/components/ui/Button";
+import { ChevronIcon } from "@/components/ui/ChevronIcon";
 import { playSound } from "@/lib/sound/client/play-sound";
-import { formatQuantity } from "@/lib/domain/quantity";
+import { dosageFormLabel, TREATMENT_STATE_LABELS } from "@/lib/medications/labels";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
 type Segment = "all" | "active" | "inactive";
@@ -27,15 +27,11 @@ const EMPTY_SEGMENT_MESSAGE: Record<Segment, string> = {
 };
 
 /**
- * Phase 3 §2.3 Medications list. Design pass (2026-09-28, reference
- * mockup comparison): segments changed from All/Active/Favorites/Recent
- * to the reference's own All/Active/Inactive model (with counts), plus a
- * real search box. Favorites remains — the per-row ★ toggle still works
- * exactly as before — but is no longer a dedicated filter tab; the
- * reference has no equivalent, and a 4th/5th tab was already the exact
- * "lopsided last tab" layout problem a previous pass fixed for 4. Recent
- * dropped as a tab for the same reason; `useRecentMedications`'s own
- * "viewed" tracking is untouched, this only removes the segment.
+ * Phase 3 §2.3 Medications list, laid out after the reference mockup's
+ * screen 8: title with the one Add entry point, a search field, All /
+ * Active / Inactive filters with counts, and one row per medication — its
+ * tile, name, "strength • form", and how often it's scheduled. The whole
+ * row opens the medication. (The favorite star moved to Medication Detail.)
  */
 export default function MedicationsPage() {
   const profileId = useProfileId();
@@ -43,14 +39,15 @@ export default function MedicationsPage() {
   const [segment, setSegment] = useState<Segment>("all");
   const [query, setQuery] = useState("");
   const names = useDisplayNames(medications);
+  const strengths = useMedicationStrengths(medications);
+  const schedules = useScheduleSummaries(profileId, medications);
   const lowStockIds = useLowStockMedicationIds(profileId, medications);
-  const { favoriteIds, toggleFavorite } = useFavoriteMedications(profileId);
 
   const allCount = medications.length;
   const activeCount = medications.filter((m) => m.treatmentState === "active").length;
   const inactiveCount = allCount - activeCount;
 
-  const segments: SegmentDef<Segment>[] = [
+  const tabs: FilterTab<Segment>[] = [
     { value: "all", label: `Όλα (${allCount})` },
     { value: "active", label: `Ενεργά (${activeCount})` },
     { value: "inactive", label: `Ανενεργά (${inactiveCount})` },
@@ -71,13 +68,10 @@ export default function MedicationsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      {/* The one add entry point (reference mockup, screen 8): a header
-          button, replacing the floating "+ Φάρμακο" button that used to sit
-          over list content on Today/Medications/Lists. */}
+    <div className="flex flex-col gap-5 px-5 pt-1 pb-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Φάρμακα</h1>
-        <ButtonLink href="/medications/add" onClick={() => playSound("button")} size="sm">
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Φάρμακα</h1>
+        <ButtonLink href="/medications/add" onClick={() => playSound("button")}>
           <PlusIcon />
           Προσθήκη
         </ButtonLink>
@@ -85,24 +79,18 @@ export default function MedicationsPage() {
 
       <label className="relative block">
         <span className="sr-only">Αναζήτηση φαρμάκων</span>
-        <SearchIcon className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-stone-400" />
+        <SearchIcon className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-stone-500 dark:text-stone-400" />
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Αναζήτηση φαρμάκων…"
-          className="min-h-12 w-full rounded-xl border border-stone-300 bg-white py-2 pr-4 pl-10 dark:border-stone-700 dark:bg-stone-900"
+          className="min-h-12 w-full rounded-xl bg-surface-muted py-2 pr-4 pl-11 text-base text-stone-900 placeholder:text-stone-500 focus:ring-2 focus:ring-accent-600/25 focus:outline-none dark:text-stone-100 dark:placeholder:text-stone-500"
         />
       </label>
 
-      {/* UX feedback history here: shrinking (flex-1+truncate) clipped
-          labels; scrolling (overflow-x-auto) cut the last tab off at the
-          edge on narrow Android widths; flex-wrap avoided both but left
-          the 4th tab alone on its own row, lower than the rest and visibly
-          lopsided. Three segments fit one row cleanly at real phone
-          widths, unlike the old four. */}
-      <SegmentedControl
-        segments={segments}
+      <FilterTabs
+        tabs={tabs}
         value={segment}
         onChange={(next) => {
           playSound("button");
@@ -117,56 +105,44 @@ export default function MedicationsPage() {
         </p>
       )}
 
-      {/* No CTA here: the header's "Προσθήκη" is always on-screen. */}
       {status === "ready" && visible.length === 0 && (
         <EmptyState icon={<EmptyMedIcon />} title={normalizedQuery ? "Δεν βρέθηκαν φάρμακα." : EMPTY_SEGMENT_MESSAGE[segment]} />
       )}
 
       {status === "ready" && visible.length > 0 && (
-        <ul className="flex flex-col gap-2" aria-label="Λίστα φαρμάκων">
+        <ul className="flex flex-col gap-3" aria-label="Λίστα φαρμάκων">
           {visible.map((med) => {
-            const isFavorite = favoriteIds.has(med.id);
+            const name = names.get(med.id) ?? "…";
+            const detail = [strengths.get(med.id), dosageFormLabel(med.customForm ?? med.inventoryUnit)].filter(Boolean).join(" • ");
+            const frequency = med.treatmentState === "active" ? schedules.get(med.id) : TREATMENT_STATE_LABELS[med.treatmentState];
+            const lowStock = lowStockIds.has(med.id);
             return (
-              <Card as="li" key={med.id} className="flex min-h-16 items-center justify-between gap-3 p-3">
-                {/* A freshly-created medication may not exist on the server
-                    yet (local-first write) — the photo endpoints need a
-                    real server row, so this only appears once synced
-                    (mirrors `MedicationPhotoAttach`'s own gating). */}
-                {med.syncState === "synced" && <MedicationThumbnail userMedicationId={med.id} />}
-                <div className="min-w-0 flex-1">
-                  <Link href={`/medications/${med.id}`} className="font-medium underline-offset-2 hover:underline">
-                    {names.get(med.id) ?? "…"}
-                  </Link>
-                  {lowStockIds.has(med.id) && (
-                    <span className="ml-2 inline-flex">
-                      <Badge tone="warn" icon={<LowStockGlyph />}>
-                        Χαμηλό απόθεμα
-                      </Badge>
-                    </span>
-                  )}
-                  {med.customStrengthValue && (
-                    <p className="text-sm text-stone-600 dark:text-stone-400">
-                      {formatQuantity(med.customStrengthValue)} {med.customStrengthUnit}
-                    </p>
-                  )}
-                </div>
-                {/* UX feedback (2026-09-24): moved from the leading edge to
-                    trail the row, next to the sync chip, alongside the
-                    thumbnail size bump. */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    playSound("button");
-                    toggleFavorite(med.id);
-                  }}
-                  aria-pressed={isFavorite}
-                  aria-label={isFavorite ? `Αφαίρεση ${names.get(med.id) ?? "φαρμάκου"} από τα αγαπημένα` : `Προσθήκη ${names.get(med.id) ?? "φαρμάκου"} στα αγαπημένα`}
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition duration-200 active:scale-90 ${isFavorite ? "text-amber-500" : "text-stone-300 dark:text-stone-600"}`}
+              <li key={med.id}>
+                <Link
+                  href={`/medications/${med.id}`}
+                  onClick={() => playSound("button")}
+                  className="surface-card flex min-h-24 items-center gap-4 py-4 pr-3 pl-3.5 transition-transform duration-150 active:scale-[.99]"
                 >
-                  <StarIcon filled={isFavorite} />
-                </button>
-                <SyncStatusChip state={med.syncState} />
-              </Card>
+                  {/* A freshly-created medication may not exist on the
+                      server yet (local-first write) — the photo endpoint
+                      needs a real server row, so its photo is only looked
+                      up once synced. */}
+                  <MedicationAvatar medicationId={med.id} form={med.customForm ?? med.inventoryUnit} withPhoto={med.syncState === "synced"} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[19px] font-bold text-stone-900 dark:text-stone-50">{name}</p>
+                    {detail && <p className="truncate text-base text-stone-600 dark:text-stone-400">{detail}</p>}
+                    {frequency && <p className="truncate text-base text-stone-600 dark:text-stone-400">{frequency}</p>}
+                    {lowStock && (
+                      <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-amber-700 dark:text-amber-400">
+                        <LowStockGlyph />
+                        Χαμηλό απόθεμα
+                      </p>
+                    )}
+                  </div>
+                  <SyncStatusChip state={med.syncState} />
+                  <ChevronIcon />
+                </Link>
+              </li>
             );
           })}
         </ul>
@@ -177,7 +153,7 @@ export default function MedicationsPage() {
 
 function SearchIcon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" className={className}>
+    <svg viewBox="0 0 20 20" width="19" height="19" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={className}>
       <circle cx="8.5" cy="8.5" r="5.5" />
       <path d="M16 16l-3.5-3.5" />
     </svg>
@@ -186,7 +162,7 @@ function SearchIcon({ className }: { className?: string }) {
 
 function LowStockGlyph() {
   return (
-    <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true" focusable="false" fill="currentColor" className="shrink-0">
+    <svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true" focusable="false" fill="currentColor" className="shrink-0">
       <path d="M10 2 1 18h18L10 2Zm0 5a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm0 8a1.25 1.25 0 1 1 0-2.5A1.25 1.25 0 0 1 10 15Z" />
     </svg>
   );
@@ -203,26 +179,9 @@ function EmptyMedIcon() {
   );
 }
 
-/** Real drawn icon, not the Unicode ★/☆ glyphs this replaced — those render with inconsistent glyph coverage/weight across platforms/fonts. */
-function StarIcon({ filled }: { filled: boolean }) {
-  const path = "M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7Z";
-  if (filled) {
-    return (
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="currentColor">
-        <path d={path} />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
-      <path d={path} />
-    </svg>
-  );
-}
-
 function PlusIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.6">
+    <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.6">
       <path d="M12 5v14M5 12h14" strokeLinecap="round" />
     </svg>
   );

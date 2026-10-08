@@ -1,11 +1,6 @@
 import type { RefillProjection } from "@/lib/domain/inventory-consumption";
-import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { Card } from "@/components/ui/Card";
-import type { MedicationForm } from "@/lib/domain/user-medication";
-
-function unitLabel(unit: string): string {
-  return FORM_LABELS[unit as MedicationForm] ?? unit;
-}
+import { doseQuantityLabel } from "@/lib/medications/dose-quantity-label";
 
 function formatProjectedDate(iso: string): string {
   return new Date(iso + "T00:00:00").toLocaleDateString("el-GR", { day: "numeric", month: "long" });
@@ -38,20 +33,18 @@ export function InventorySummary({
 }) {
   return (
     <Card as="section" className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Απόθεμα</h2>
-      <p className="text-2xl font-semibold">
-        {currentStock} {unitLabel(quantityUnit)}
-      </p>
+      <h2 className="text-[17px] font-semibold text-stone-900 dark:text-stone-100">Απόθεμα</h2>
+      <p className="text-[26px] leading-tight font-bold tabular-nums">{doseQuantityLabel(currentStock, quantityUnit) ?? currentStock}</p>
 
       {(belowThreshold || runningLowSoon) && (
-        <p role="status" className="flex items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-300">
+        <p role="status" className="flex items-center gap-2 text-[15px] font-semibold text-amber-800 dark:text-amber-300">
           <LowStockIcon />
           Χαμηλό απόθεμα
         </p>
       )}
 
       {projection.basis !== "none" && projection.daysRemaining !== null && projection.projectedOutOfStockDate && (
-        <div className="text-sm text-stone-600 dark:text-stone-400">
+        <div className="text-[15px] text-stone-600 dark:text-stone-400">
           <p>
             Εκτίμηση εξάντλησης: {formatProjectedDate(projection.projectedOutOfStockDate)} ({projection.daysRemaining}{" "}
             {projection.daysRemaining === 1 ? "ημέρα" : "ημέρες"})

@@ -3,14 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
-import { BrandMark } from "@/components/shell/BrandMark";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { DayStrip } from "@/components/today/DayStrip";
 import { TodayDoseRow } from "@/components/today/TodayDoseRow";
 import { ProgressRing } from "@/components/ui/ProgressRing";
-import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
-import { useGlobalSyncSummary } from "@/lib/sync/client/use-global-sync-summary";
-import { createSyncManager } from "@/lib/sync/client/sync-manager";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
@@ -57,55 +53,19 @@ function greeting(now: Date): string {
   return now.getHours() < 12 ? "Καλημέρα" : "Καλησπέρα";
 }
 
-/**
- * Today's own header (reference mockup, screen 1): centered wordmark, the
- * sync indicator (mirroring `AppBar`'s retry logic exactly — `AppBar` hides
- * itself on this route so the brand doesn't render twice), then the
- * greeting. Light, on the page background, like every other screen.
- */
-function TodayHeader({ today }: { today: Date }) {
-  const summary = useGlobalSyncSummary();
-  const [retrying, setRetrying] = useState(false);
+/** Today's greeting (reference mockup, screen 1) — the wordmark and sync indicator above it come from the shared `AppBar`. */
+function TodayGreeting({ today }: { today: Date }) {
   const { data: session } = authClient.useSession();
   const firstName = session?.user?.name?.trim().split(/\s+/)[0];
 
-  async function handleRetry() {
-    if (retrying) return;
-    setRetrying(true);
-    try {
-      await createSyncManager().drainNow();
-    } finally {
-      setRetrying(false);
-    }
-  }
-
   return (
-    <header className="flex flex-col gap-5">
-      <div className="relative flex min-h-10 items-center justify-center">
-        <span className="inline-flex items-center gap-1.5 text-[19px] font-bold tracking-tight text-accent-700 dark:text-accent-400">
-          <BrandMark size={22} />
-          MedTrack
-        </span>
-        <div className="absolute right-0">
-          {summary === "failed" ? (
-            <SyncStatusChip state={summary} onRetry={retrying ? undefined : handleRetry} />
-          ) : (
-            summary && (
-              <Link href="/profile" aria-label="Κατάσταση συγχρονισμού">
-                <SyncStatusChip state={summary} />
-              </Link>
-            )
-          )}
-        </div>
-      </div>
-      <div>
-        <h1 className="text-[30px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">
-          {greeting(today)}
-          {firstName ? `, ${firstName}` : ""}
-        </h1>
-        <p className="mt-1 text-[16px] text-stone-600 dark:text-stone-400">Μείνετε συνεπείς. Τα πάτε καλά!</p>
-      </div>
-    </header>
+    <div>
+      <h1 className="text-[30px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">
+        {greeting(today)}
+        {firstName ? `, ${firstName}` : ""}
+      </h1>
+      <p className="mt-1 text-[16px] text-stone-600 dark:text-stone-400">Μείνετε συνεπείς. Τα πάτε καλά!</p>
+    </div>
   );
 }
 
@@ -172,9 +132,9 @@ export default function TodayPage() {
 
   if (medications.length === 0) {
     return (
-      <div className="flex flex-col gap-6 px-5 pt-3 pb-6">
-        <TodayHeader today={today} />
-        <div className="flex flex-col items-center gap-4 rounded-2xl bg-white px-6 py-8 text-center shadow-[0_1px_2px_rgba(28,25,23,.04),0_2px_8px_rgba(28,25,23,.06)] dark:border dark:border-stone-800 dark:bg-stone-900 dark:shadow-none">
+      <div className="flex flex-col gap-6 px-5 pt-1 pb-6">
+        <TodayGreeting today={today} />
+        <div className="surface-card flex flex-col items-center gap-4 px-6 py-8 text-center">
           <p className="text-[17px] font-semibold">Δεν έχετε προσθέσει ακόμα κανένα φάρμακο.</p>
           <p className="text-[15px] text-stone-600 dark:text-stone-400">Προσθέστε το πρώτο σας φάρμακο και το πρόγραμμά του, για να εμφανίζονται εδώ οι δόσεις της ημέρας.</p>
           <ButtonLink href="/medications/add" onClick={() => playSound("button")} size="lg" fullWidth>
@@ -192,8 +152,8 @@ export default function TodayPage() {
   const percent = total > 0 ? Math.round((resolvedCount / total) * 100) : 0;
 
   return (
-    <div className="flex flex-col gap-6 px-5 pt-3 pb-6">
-      <TodayHeader today={today} />
+    <div className="flex flex-col gap-6 px-5 pt-1 pb-6">
+      <TodayGreeting today={today} />
       <DayStrip today={today} />
 
       {lowStock}

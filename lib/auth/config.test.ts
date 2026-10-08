@@ -45,8 +45,10 @@ describe("lib/auth/config — rate limiting / password-reset / email-verificatio
     // Builds the real, full Better Auth instance (first call in this file
     // pays that one-time cost; every other `it` here reuses the cached
     // `authSingleton`) — generous headroom over the 5s default so this
-    // doesn't flake under a loaded CI/full-suite parallel run.
-    15_000,
+    // doesn't flake under a loaded CI/full-suite parallel run. ~2.7s alone;
+    // 15s still timed out intermittently in full local runs (2026-10-05),
+    // where parallel workers slow every cold import several-fold.
+    45_000,
   );
 
   it("leaves autoSignIn/requireEmailVerification exactly as ADR-003 §5's grace period requires — never reopened by this task", async () => {

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Manrope, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SyncManagerBootstrap } from "@/components/shell/SyncManagerBootstrap";
+import { NavigationTracker } from "@/components/shell/NavigationTracker";
 import { SerwistProvider } from "@serwist/turbopack/react";
 
 // Design pass (2026-09-26): was Inter — itself a fix for an earlier font
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         */}
         <SerwistProvider swUrl="/serwist/sw.js" reloadOnOnline={false} options={{ type: "classic" }}>
           <SyncManagerBootstrap />
+          <NavigationTracker />
           {children}
         </SerwistProvider>
       </body>

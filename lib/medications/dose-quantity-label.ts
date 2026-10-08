@@ -22,7 +22,8 @@ export function doseQuantityLabel(value: string | null, unit: string | null): st
   const amount = formatQuantity(value);
   const forms = unit ? UNIT_FORMS[unit] : undefined;
   if (!forms) return amount;
-  // Greek takes the plural above one; fractions up to 1 read as singular ("0,5 δισκίο").
-  const plural = Number(amount) > 1;
+  // Greek takes the plural above one and for zero ("0 δισκία"); a fraction of one reads as singular ("0.5 δισκίο").
+  const n = Number(amount);
+  const plural = n > 1 || n === 0;
   return `${amount} ${plural ? forms[1] : forms[0]}`;
 }

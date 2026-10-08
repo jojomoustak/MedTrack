@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAccountId, useProfileId } from "@/components/shell/CurrentProfileContext";
-import { BackButton } from "@/components/shell/BackButton";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
@@ -156,8 +155,7 @@ export default function DoseDetailPage() {
   const actionable = dose ? isDoseActionable(dose) : false;
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-5 px-5 pt-2 pb-6">
-      <BackButton fallback="/today" className="-ml-3" />
+    <main className="mx-auto flex max-w-md flex-col gap-5 px-5 pt-1 pb-6">
 
       {dose === undefined && (
         <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
@@ -174,7 +172,7 @@ export default function DoseDetailPage() {
             <p className="mt-1 text-[17px] font-semibold text-stone-700 dark:text-stone-300">{medicationName}</p>
           </div>
 
-          <dl className="divide-y divide-stone-100 rounded-2xl bg-white px-4 py-1 shadow-[0_1px_2px_rgba(28,25,23,.04),0_2px_8px_rgba(28,25,23,.06)] dark:divide-stone-800 dark:border dark:border-stone-800 dark:bg-stone-900 dark:shadow-none">
+          <dl className="surface-card divide-y divide-stone-100 px-4 py-1 dark:divide-stone-800">
             <DetailRow
               label="Ημερομηνία"
               icon={
@@ -258,7 +256,7 @@ export default function DoseDetailPage() {
           )}
 
           {confirming ? (
-            <div className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(28,25,23,.04),0_2px_8px_rgba(28,25,23,.06)] dark:border dark:border-stone-800 dark:bg-stone-900 dark:shadow-none">
+            <div className="surface-card flex flex-col gap-3 p-4">
               <p className="text-[16px] font-semibold text-stone-900 dark:text-stone-100">{CONFIRM_TEXT[confirming].question}</p>
               <div className="flex gap-2">
                 <Button variant="secondary" size="lg" fullWidth onClick={() => setConfirming(null)}>

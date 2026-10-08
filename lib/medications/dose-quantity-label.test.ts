@@ -8,6 +8,10 @@ describe("doseQuantityLabel", () => {
     expect(doseQuantityLabel("3", "capsule")).toBe("3 κάψουλες");
   });
 
+  it("uses the plural for zero", () => {
+    expect(doseQuantityLabel("0", "tablet")).toBe("0 δισκία");
+  });
+
   it("reads a fraction of one as singular", () => {
     expect(doseQuantityLabel("0.500", "tablet")).toBe("0.5 δισκίο");
   });

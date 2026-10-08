@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { playSound } from "@/lib/sound/client/play-sound";
-import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/auth/field-styles";
+import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 
 /**
  * Shared by Login/Register/Reset — a "show password" toggle (UX feedback,

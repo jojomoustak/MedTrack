@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { PasswordInput } from "@/components/auth/PasswordInput";
-import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/auth/field-styles";
+import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import { Button } from "@/components/ui/Button";
 
 /**

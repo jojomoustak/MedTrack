@@ -203,7 +203,11 @@ export function createSyncManager(): SyncManager {
     if (!profileId) return; // no-op before first login, same as every other tick here
     runningSchedulingTick = true;
     try {
-      await topUpDoseEventWindow(profileId, medicationSchedule, doseEvent);
+      // Only medications still being taken: a paused/stopped one's
+      // schedules must not keep generating doses and reminders.
+      const medications = await new DexieUserMedicationRepository().list(profileId);
+      const activeMedicationIds = new Set(medications.filter((m) => m.treatmentState === "active").map((m) => m.id));
+      await topUpDoseEventWindow(profileId, medicationSchedule, doseEvent, undefined, undefined, activeMedicationIds);
       const missed = await sweepMissedDoseEvents(profileId, doseEvent);
       if (missed > 0) {
         logger.info("sync.manager.doses_swept_missed", { count: missed });

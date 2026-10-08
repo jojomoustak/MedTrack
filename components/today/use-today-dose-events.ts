@@ -66,11 +66,15 @@ export function useTodayDoseEvents(profileId: string | null, onNewlyDue?: (dose:
       const now = new Date();
       const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 3_600_000);
 
-      const [todayDoses, recentDoses] = await Promise.all([
+      const [allTodayDoses, recentDoses] = await Promise.all([
         repo.listForProfileInRange(profileId!, startOfLocalDayIso(now), endOfLocalDayIso(now)),
         repo.listForProfileInRange(profileId!, threeDaysAgo.toISOString(), startOfLocalDayIso(now)),
       ]);
       if (cancelled) return;
+      // A cancelled dose never happens (its schedule was changed or the
+      // medication stopped) — it isn't one of today's doses, and must not
+      // count toward today's progress.
+      const todayDoses = allTodayDoses.filter((d) => d.status !== "cancelled");
 
       todayDoses.sort((a, b) => compareTimestampsAscending(a.scheduledAt ?? "", b.scheduledAt ?? ""));
       const needsAttention = recentDoses.filter((d) => d.status === "missed").sort((a, b) => compareTimestampsAscending(a.scheduledAt ?? "", b.scheduledAt ?? ""));

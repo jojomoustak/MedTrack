@@ -130,3 +130,20 @@ describe("useTodayDoseEvents onNewlyDue", () => {
     expect(result.current.todayDoses).toHaveLength(1);
   });
 });
+
+describe("useTodayDoseEvents list", () => {
+  it("leaves out cancelled doses — they never happen and must not count toward today's progress", async () => {
+    // Real bug (2026-10-05): after a schedule edit replaced a medication's
+    // schedule, its old (cancelled) doses showed on Today as "Ακυρώθηκε"
+    // and were counted as completed.
+    const repo = new DexieDoseEventRepository(db);
+    const kept = await repo.createIfMissing(doseInput());
+    const dropped = await repo.createIfMissing(doseInput());
+    await repo.transition(dropped.id, { status: "cancelled" }, crypto.randomUUID());
+
+    const { result } = renderHook(() => useTodayDoseEvents(PROFILE_ID));
+    await flushAsync();
+
+    expect(result.current.todayDoses.map((d) => d.id)).toEqual([kept.id]);
+  });
+});

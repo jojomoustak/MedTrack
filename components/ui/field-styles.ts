@@ -1,6 +1,6 @@
 /**
- * Form field styling shared by the auth screens (Login, Register, Forgot/
- * Reset password), measured from the reference mockup (2026-10-04): bold
+ * Form field styling shared by every form (auth screens, medication
+ * edit/add, stock), measured from the reference mockup (2026-10-04): bold
  * labels above tall white fields with soft corners and a hairline border
  * on the cream page, instead of short transparent inputs.
  */

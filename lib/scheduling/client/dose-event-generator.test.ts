@@ -6,6 +6,7 @@ import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-sc
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import {
   generateDoseEventsForSchedule,
+  cancelFutureDoseEventsForMedication,
   reconcileDoseEventsForSchedule,
   sweepMissedDoseEvents,
   topUpDoseEventWindow,
@@ -147,6 +148,39 @@ describe("dose-event-generator", () => {
     const medB = await doseEventRepo.listByUserMedication("med-b");
     expect(medA.length).toBeGreaterThan(0);
     expect(medB.length).toBeGreaterThan(0);
+  });
+
+  it("topUpDoseEventWindow skips the schedules of medications that are no longer active", async () => {
+    // Safety (2026-10-05): a paused/stopped medication's schedule kept
+    // generating doses — and native reminders — because nothing checked
+    // whether the medication was still being taken.
+    await scheduleRepo.create(dailyInput({ userMedicationId: "med-active" }));
+    await scheduleRepo.create(dailyInput({ userMedicationId: "med-paused" }));
+
+    await topUpDoseEventWindow(PROFILE_ID, scheduleRepo, doseEventRepo, new Date("2026-09-01T00:00:00Z"), 2 * 24 * 3_600_000, new Set(["med-active"]));
+
+    expect((await doseEventRepo.listByUserMedication("med-active")).length).toBeGreaterThan(0);
+    expect(await doseEventRepo.listByUserMedication("med-paused")).toHaveLength(0);
+  });
+
+  it("cancelFutureDoseEventsForMedication cancels only that medication's future, unrecorded doses", async () => {
+    const schedule = await scheduleRepo.create(dailyInput({ userMedicationId: "med-1" }));
+    const other = await scheduleRepo.create(dailyInput({ userMedicationId: "med-2" }));
+    const start = new Date("2026-09-01T00:00:00Z");
+    await generateDoseEventsForSchedule(schedule, doseEventRepo, start, 3 * 24 * 3_600_000);
+    await generateDoseEventsForSchedule(other, doseEventRepo, start, 3 * 24 * 3_600_000);
+    const [past, taken, future] = (await doseEventRepo.listByScheduleId(schedule.id)).sort((a, b) => a.scheduledAt!.localeCompare(b.scheduledAt!));
+    await doseEventRepo.transition(taken.id, { status: "taken", takenAt: taken.scheduledAt! }, crypto.randomUUID());
+
+    // "Now" is after the first dose (Sep 1 08:00 local) and the second (taken early on Sep 2)…
+    const now = new Date("2026-09-02T12:00:00Z");
+    const cancelled = await cancelFutureDoseEventsForMedication("med-1", scheduleRepo, doseEventRepo, now);
+
+    expect(cancelled).toBe(1);
+    expect((await doseEventRepo.get(future.id))?.status).toBe("cancelled");
+    expect((await doseEventRepo.get(taken.id))?.status).toBe("taken"); // recorded history untouched
+    expect((await doseEventRepo.get(past.id))?.status).toBe("scheduled"); // past: the missed-sweep's job, not this
+    expect((await doseEventRepo.listByScheduleId(other.id)).every((e) => e.status === "scheduled")).toBe(true);
   });
 
   it("sweepMissedDoseEvents transitions an overdue non-terminal dose to 'missed'", async () => {

@@ -89,12 +89,7 @@ export default function InventoryCorrectionPage() {
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 p-4">
-      <div className="flex items-center gap-3">
-        <ButtonLink href={`/medications/${params.id}`} aria-label="Πίσω" variant="tertiary" className="px-0 underline">
-          ← Πίσω
-        </ButtonLink>
-        <h1 className="text-xl font-semibold">Διόρθωση αποθέματος</h1>
-      </div>
+      <h1 className="text-xl font-semibold">Διόρθωση αποθέματος</h1>
 
       {inventory.status === "loading" ? (
         <p role="status" className="text-sm text-stone-600 dark:text-stone-400">

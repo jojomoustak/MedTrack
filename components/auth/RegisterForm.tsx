@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PasswordRule } from "@/components/auth/PasswordRule";
-import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/auth/field-styles";
+import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import { Button } from "@/components/ui/Button";
 
 const MIN_PASSWORD_LENGTH = 8;

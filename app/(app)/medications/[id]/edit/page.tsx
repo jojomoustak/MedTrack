@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
@@ -8,18 +8,31 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { EditMedicationForm, EDIT_MEDICATION_FORM_ID, type EditMedicationValues } from "@/components/medications/EditMedicationForm";
 import { DeleteMedicationSection } from "@/components/medications/DeleteMedicationSection";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
+import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
+import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
 import { recordMedicationInteraction } from "@/lib/medications/client/record-interaction";
 import { deleteMedicationWithCascade } from "@/lib/medications/client/delete-medication";
-import { newId } from "@/lib/domain/ids";
+import { saveMedicationEdits, type ScheduleEdit } from "@/lib/medications/client/save-medication-edits";
+import { refreshNativeReminders } from "@/lib/doses/client/dose-actions";
+import { isScheduleCurrent } from "@/lib/medications/schedule-summary";
+import { getPreviousPathname } from "@/lib/navigation/client/previous-path";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { logger } from "@/lib/logging/logger";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
+import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 
-/** `/medications/[id]/edit` — the medication-edit screen (Phase 3, built 2026-09-13). */
+function localToday(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+/** `/medications/[id]/edit` (Phase 3), laid out after the reference mockup's screen 11 — Save in the header. */
 export default function EditMedicationPage() {
   const profileId = useProfileId();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [medication, setMedication] = useState<UserMedicationRecord | null | undefined>(undefined);
+  const [schedule, setSchedule] = useState<MedicationScheduleRecord | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -27,26 +40,50 @@ export default function EditMedicationPage() {
 
   useEffect(() => {
     let cancelled = false;
-    void new DexieUserMedicationRepository().get(params.id).then((med) => {
-      if (!cancelled) setMedication(med);
-    });
+    async function load() {
+      const [med, schedules] = await Promise.all([
+        new DexieUserMedicationRepository().get(params.id),
+        new DexieMedicationScheduleRepository().listByUserMedication(params.id),
+      ]);
+      if (cancelled) return;
+      const today = localToday();
+      const current = schedules.filter((s) => isScheduleCurrent(s, today)).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      setSchedule(current[0] ?? null);
+      setMedication(med);
+    }
+    void load();
     return () => {
       cancelled = true;
     };
   }, [params.id]);
 
-  const names = useDisplayNames(medication ? [medication] : []);
+  // Memoized: the name hook re-resolves whenever this array's identity changes.
+  const medicationList = useMemo(() => (medication ? [medication] : []), [medication]);
+  const names = useDisplayNames(medicationList);
+  const detailPath = `/medications/${params.id}`;
 
-  async function handleSubmit(values: EditMedicationValues) {
+  /** Back to the detail screen — popping history when that's where the user came from, so the device back button doesn't return to this form. */
+  function returnToDetail() {
+    if (getPreviousPathname() === detailPath) router.back();
+    else router.replace(detailPath);
+  }
+
+  async function handleSubmit(values: EditMedicationValues, scheduleEdit: ScheduleEdit | null) {
+    if (!medication) return;
     setSubmitting(true);
     setError(null);
     try {
-      const repo = new DexieUserMedicationRepository();
-      await repo.update(params.id, values, newId());
+      await saveMedicationEdits(medication, values, scheduleEdit, {
+        medications: new DexieUserMedicationRepository(),
+        schedules: new DexieMedicationScheduleRepository(),
+        doseEvents: new DexieDoseEventRepository(),
+      });
+      refreshNativeReminders(profileId);
       recordMedicationInteraction(profileId, params.id, "edited");
       playSound("success");
-      router.push(`/medications/${params.id}`);
-    } catch {
+      returnToDetail();
+    } catch (err) {
+      logger.warn("medications.edit_save_failed", { message: err instanceof Error ? err.message : String(err) });
       setError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
       setSubmitting(false);
     }
@@ -58,7 +95,7 @@ export default function EditMedicationPage() {
     setDeleteError(null);
     try {
       await deleteMedicationWithCascade(profileId, params.id);
-      router.push("/medications");
+      router.replace("/medications");
     } catch {
       setDeleteError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
       setDeleting(false);
@@ -85,27 +122,20 @@ export default function EditMedicationPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-6 p-4">
+    <div className="mx-auto flex max-w-md flex-col gap-6 px-5 pt-1 pb-6">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <ButtonLink href={`/medications/${params.id}`} onClick={() => playSound("button")} aria-label="Πίσω" variant="tertiary" className="px-0 underline">
-            ← Πίσω
-          </ButtonLink>
-          <h1 className="text-xl font-semibold">Επεξεργασία φαρμάκου</h1>
-        </div>
-        {/* Design pass (2026-09-28, reference mockup comparison): Save
-            moved from the bottom of the form to the header, matching the
-            reference — a real HTML `form` attribute submits
-            EditMedicationForm from outside it, no ref/JS wiring needed. */}
-        <Button form={EDIT_MEDICATION_FORM_ID} type="submit" size="sm" disabled={submitting} aria-busy={submitting}>
-          {submitting ? "…" : "Αποθήκευση"}
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Επεξεργασία</h1>
+        {/* A real HTML `form` attribute submits EditMedicationForm from the header, as in the reference. */}
+        <Button form={EDIT_MEDICATION_FORM_ID} type="submit" disabled={submitting} aria-busy={submitting}>
+          {submitting ? "Αποθήκευση…" : "Αποθήκευση"}
         </Button>
       </div>
 
       <EditMedicationForm
         medication={medication}
         displayName={names.get(medication.id) ?? "…"}
-        onSubmit={(values) => void handleSubmit(values)}
+        schedule={schedule}
+        onSubmit={(values, scheduleEdit) => void handleSubmit(values, scheduleEdit)}
         error={error}
       />
 

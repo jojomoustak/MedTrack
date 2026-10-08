@@ -45,10 +45,10 @@ export function DayStrip({ today }: { today: Date }) {
               playSound("button");
               router.push(`/calendar?date=${dateToParam(day)}`);
             }}
-            className={`flex h-[84px] flex-col items-center justify-center gap-1.5 rounded-2xl transition-transform duration-150 ${
+            className={`flex h-21 flex-col items-center justify-center gap-1.5 rounded-2xl transition-transform duration-150 ${
               isToday
                 ? "bg-accent-800 text-white shadow-[0_6px_14px_-6px_rgba(6,95,70,.55)] dark:bg-accent-600"
-                : "bg-white text-stone-800 shadow-[0_1px_2px_rgba(28,25,23,.04),0_2px_8px_rgba(28,25,23,.06)] active:scale-95 dark:border dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100 dark:shadow-none"
+                : "surface-card text-stone-800 active:scale-95 dark:text-stone-100"
             }`}
           >
             <span aria-hidden="true" className={`text-[15px] font-medium ${isToday ? "text-white/85" : "text-stone-500 dark:text-stone-400"}`}>
