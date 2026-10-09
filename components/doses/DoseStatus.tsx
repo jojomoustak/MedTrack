@@ -70,11 +70,11 @@ export function DoseStatusMark({ visual }: { visual: DoseVisual }) {
     );
   }
   if (visual === "missed") {
+    // An X, matching Calendar's missed mark (2026-10-09).
     return (
       <svg {...common}>
         <circle cx="16" cy="16" r="13" fill="none" className="stroke-amber-600 dark:stroke-amber-400" strokeWidth="2.4" />
-        <path d="M16 9.5v8" className="stroke-amber-600 dark:stroke-amber-400" strokeWidth="2.6" strokeLinecap="round" />
-        <circle cx="16" cy="22" r="1.6" className="fill-amber-600 dark:fill-amber-400" />
+        <path d="m11.5 11.5 9 9m0-9-9 9" fill="none" className="stroke-amber-600 dark:stroke-amber-400" strokeWidth="2.6" strokeLinecap="round" />
       </svg>
     );
   }

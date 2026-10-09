@@ -39,9 +39,13 @@ export function DoseStatusGlyph({ kind, className }: DoseStatusGlyphProps) {
 
   switch (kind) {
     case "missed":
+      // An X — the dose wasn't taken (2026-10-09, replaced a warning
+      // triangle). A heavier stroke than the other marks so it still reads
+      // at the month grid's 10px; no circle, so it can't be confused with
+      // `skipped`'s circle-and-slash.
       return (
-        <svg {...common} fill="currentColor" stroke="none">
-          <path d="M12 3 2 20h20L12 3Z" />
+        <svg {...common} fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round">
+          <path d="m6 6 12 12M18 6 6 18" />
         </svg>
       );
     case "skipped":
