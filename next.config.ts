@@ -20,7 +20,8 @@ const SECURITY_HEADERS = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' blob: data:",
+      // Google account photos (Profile avatar, for accounts linked to Google).
+      "img-src 'self' blob: data: https://*.googleusercontent.com",
       "font-src 'self' data:",
       "connect-src 'self'",
       "frame-ancestors 'none'",
@@ -38,6 +39,27 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+  },
+  // Screens keyed by an id are each ONE prebuilt page: the visible address
+  // keeps the id (`/medications/<id>`), the server serves the static page,
+  // and the page reads the id from the address (`usePathId`). Every screen
+  // is then static — no server function per tap (measured 2026-10-08:
+  // ~0.4–1 s per tap on a phone), prefetchable, and available offline.
+  // `afterFiles`: real routes such as `/medications/add` match first.
+  async rewrites() {
+    return {
+      beforeFiles: [],
+      afterFiles: [
+        { source: "/medications/:id/edit", destination: "/medications/item/edit" },
+        { source: "/medications/:id/inventory/correct", destination: "/medications/item/inventory/correct" },
+        { source: "/medications/:id/packages/add", destination: "/medications/item/packages/add" },
+        { source: "/medications/:id/photo", destination: "/medications/item/photo" },
+        { source: "/medications/:id", destination: "/medications/item" },
+        { source: "/lists/:id", destination: "/lists/item" },
+        { source: "/calendar/dose/:id", destination: "/calendar/dose/item" },
+      ],
+      fallback: [],
+    };
   },
 };
 

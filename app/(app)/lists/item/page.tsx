@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { usePurchaseListItems } from "@/lib/lists/client/use-purchase-list-items";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
@@ -18,6 +18,7 @@ import type { PurchaseListRecord, PurchaseListItemRecord } from "@/lib/domain/en
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import { formatCents, fromDecimalEuros, toCents } from "@/lib/domain/money";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { usePathId } from "@/lib/navigation/client/use-path-id";
 
 const MAX_SUGGESTIONS = 6;
 
@@ -113,7 +114,7 @@ function ItemRow({
  * row's "⋯". A bought medication offers "add to stock" (Phase 13).
  */
 export default function PurchaseListDetailPage() {
-  const params = useParams<{ id: string }>();
+  const params = { id: usePathId(2) };
   const listId = params.id;
   const profileId = useProfileId();
   const [list, setList] = useState<PurchaseListRecord | null>(null);

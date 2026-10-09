@@ -54,7 +54,7 @@ function isOfflineError(err: unknown): boolean {
 /**
  * Optional, non-blocking "attach a photo of your own medication package"
  * control (Phase 3-style component, not itself a full screen). Reused
- * both right after creating a medication (`app/medications/[id]/photo/
+ * both right after creating a medication (`app/medications/item/photo/
  * page.tsx`, reached from the Add Medication flow) and from the
  * medications list (same route, no separate detail page exists yet — see
  * that page's own doc comment).

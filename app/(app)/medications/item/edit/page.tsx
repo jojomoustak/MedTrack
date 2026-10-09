@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -20,6 +20,7 @@ import { playSound } from "@/lib/sound/client/play-sound";
 import { logger } from "@/lib/logging/logger";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
+import { usePathId } from "@/lib/navigation/client/use-path-id";
 
 function localToday(): string {
   const now = new Date();
@@ -29,7 +30,7 @@ function localToday(): string {
 /** `/medications/[id]/edit` (Phase 3), laid out after the reference mockup's screen 11 — Save in the header. */
 export default function EditMedicationPage() {
   const profileId = useProfileId();
-  const params = useParams<{ id: string }>();
+  const params = { id: usePathId(2) };
   const router = useRouter();
   const [medication, setMedication] = useState<UserMedicationRecord | null | undefined>(undefined);
   const [schedule, setSchedule] = useState<MedicationScheduleRecord | null>(null);

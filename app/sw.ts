@@ -17,12 +17,14 @@
  * state — CLAUDE.md's priority order (Security -> Privacy) says no. See
  * `NetworkOnly` on `/api/` below — deliberate, not an oversight.
  *
- * Strategy: NetworkFirst for both static assets and page navigations —
- * always prefer a fresh copy when online (this is a personal medication
- * app; correctness beats a few hundred ms of cache-first speed), falling
- * back to the last successfully cached response only when the network
- * genuinely fails. A route only becomes available offline AFTER it has
- * been opened at least once online — first-ever-cold-offline-launch on a
+ * Strategy: NetworkFirst for page navigations — always prefer a fresh
+ * copy when online (this is a personal medication app; correctness beats a
+ * few hundred ms of cache-first speed), falling back to the last
+ * successfully cached response only when the network genuinely fails.
+ * Content-hashed `/_next/static/` files are CacheFirst (they can never be
+ * stale; see their rule below). A route only becomes available offline
+ * AFTER it (or, for id-keyed screens, any one id of it — `SHARED_PAGES`)
+ * has been opened at least once online — first-ever-cold-offline-launch on a
  * brand new install still can't render anything (nothing to fall back to,
  * and no service worker would even be registered yet either) — that's an
  * inherent limit of any offline-caching approach, not something this file
@@ -52,7 +54,7 @@
  * the day it was added, despite every earlier fix in this file's own
  * history being independently correct.
  */
-import { NetworkFirst, NetworkOnly, Serwist } from "serwist";
+import { CacheFirst, ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist } from "serwist";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 
 declare global {
@@ -84,7 +86,40 @@ const APP_SHELL_CACHE = "app-shell";
  * patched — the honest `/offline.html` "connect once to load this page"
  * fallback below is what a never-individually-visited detail route gets
  * offline, same as any other route in this file.
+ *
+ * Superseded (2026-10-08) by `SHARED_PAGES` below, on a premise that now
+ * holds: id-keyed screens no longer have an `[id]` route param at all —
+ * each is one static page that reads its id from the visible address on
+ * the client (`usePathId`), so the cached document carries no
+ * per-medication content to leak. Verified offline: a never-visited
+ * medication's address renders THAT medication.
  */
+
+/**
+ * Screens keyed by an id are one prebuilt page each, rewritten from the
+ * visible address (`next.config.ts`, `usePathId`): `/medications/<id>`
+ * is the same file for every id. Caching them under that shared page's
+ * path means opening ANY medication (or list, or dose) once online makes
+ * every one of them available offline — not just the ids visited.
+ */
+const SHARED_PAGES: [RegExp, string][] = [
+  [/^\/medications\/(?!add$|item$)[^/]+\/(edit|photo|inventory\/correct|packages\/add)$/, "/medications/item/$1"],
+  [/^\/medications\/(?!add$|item$)[^/]+$/, "/medications/item"],
+  [/^\/lists\/(?!item$)[^/]+$/, "/lists/item"],
+  [/^\/calendar\/dose\/(?!item$)[^/]+$/, "/calendar/dose/item"],
+];
+
+function sharedPageCacheKey(request: Request): Request | string {
+  const url = new URL(request.url);
+  for (const [pattern, shared] of SHARED_PAGES) {
+    const match = url.pathname.match(pattern);
+    if (match) {
+      url.pathname = shared.replace("$1", match[1] ?? "");
+      return url.href;
+    }
+  }
+  return request;
+}
 
 const serwist = new Serwist({
   // Populated at request/build time by `createSerwistRoute`
@@ -102,12 +137,18 @@ const serwist = new Serwist({
       matcher: ({ url }) => url.pathname.startsWith("/api/"),
       handler: new NetworkOnly(),
     },
-    // Next.js's own content-hashed static build output — safe to cache
-    // aggressively; a new deploy always ships new filenames, so this can
-    // never serve stale code.
+    // Next.js's own content-hashed static build output — a file at a given
+    // URL never changes (a new deploy ships new filenames), so it's served
+    // from the phone's cache first. It used to be network-first, so every
+    // launch and every first visit to a screen fetched code over the
+    // network that was already on the device (2026-10-08). Old deploys'
+    // files age out instead of piling up.
     {
       matcher: ({ url }) => url.pathname.startsWith("/_next/static/"),
-      handler: new NetworkFirst({ cacheName: "next-static-assets" }),
+      handler: new CacheFirst({
+        cacheName: "next-static-assets",
+        plugins: [new ExpirationPlugin({ maxEntries: 400, maxAgeSeconds: 60 * 24 * 3600, purgeOnQuotaError: true })],
+      }),
     },
     // Page navigations — the actual "app shell" this file exists for.
     // Deliberately NOT gated on `request.mode === "navigate"` (a real
@@ -133,6 +174,7 @@ const serwist = new Serwist({
       handler: new NetworkFirst({
         cacheName: APP_SHELL_CACHE,
         networkTimeoutSeconds: 4,
+        plugins: [{ cacheKeyWillBeUsed: async ({ request }) => sharedPageCacheKey(request) }],
       }),
     },
   ],

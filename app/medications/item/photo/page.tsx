@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MedicationPhotoAttach } from "@/components/medications/MedicationPhotoAttach";
 import { OfflineBanner } from "@/components/sync/OfflineBanner";
 import { useCurrentProfile } from "@/lib/auth/client/use-current-profile";
 import { useReturnTo } from "@/lib/navigation/client/use-return-to";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { usePathId } from "@/lib/navigation/client/use-path-id";
 
 /**
  * A medication's photo (reference mockup, screen 13): a dark, camera-style
@@ -17,11 +18,11 @@ import { playSound } from "@/lib/sound/client/play-sound";
  *      medication is already fully saved; leaving goes on to Today.
  *   2. From the medication's detail screen, to take, replace or remove it.
  */
-export default function MedicationPhotoPage() {
+function PhotoScreen() {
   const session = useCurrentProfile();
   const router = useRouter();
   const returnTo = useReturnTo();
-  const params = useParams<{ id: string }>();
+  const params = { id: usePathId(2) };
   const searchParams = useSearchParams();
   const isNew = searchParams.get("new") === "1";
 
@@ -71,5 +72,14 @@ export default function MedicationPhotoPage() {
         {session.status === "ready" && <MedicationPhotoAttach userMedicationId={params.id} leading={leaveButton} className="flex-1 justify-between" />}
       </div>
     </main>
+  );
+}
+
+/** `useSearchParams` (the `?new=1` flag) needs a Suspense boundary in a prebuilt page; the fallback is the same dark backdrop, so nothing flashes. */
+export default function MedicationPhotoPage() {
+  return (
+    <Suspense fallback={<main className="min-h-dvh bg-black" />}>
+      <PhotoScreen />
+    </Suspense>
   );
 }

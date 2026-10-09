@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
@@ -26,6 +26,7 @@ import { dosageFormLabel, TREATMENT_STATE_LABELS } from "@/lib/medications/label
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
+import { usePathId } from "@/lib/navigation/client/use-path-id";
 
 type DetailTab = "overview" | "schedule" | "history";
 const DETAIL_TABS: FilterTab<DetailTab>[] = [
@@ -133,7 +134,7 @@ function ScheduleFacts({ schedule, strength, onCard = false }: { schedule: Medic
  */
 export default function MedicationDetailPage() {
   const profileId = useProfileId();
-  const params = useParams<{ id: string }>();
+  const params = { id: usePathId(2) };
   const [medication, setMedication] = useState<UserMedicationRecord | null | undefined>(undefined);
   const [schedules, setSchedules] = useState<MedicationScheduleRecord[]>([]);
   const [tab, setTab] = useState<DetailTab>("overview");

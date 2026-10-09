@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+
 import { useAccountId, useProfileId } from "@/components/shell/CurrentProfileContext";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
@@ -22,6 +22,7 @@ import {
 } from "@/lib/doses/client/dose-actions";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { logger } from "@/lib/logging/logger";
+import { usePathId } from "@/lib/navigation/client/use-path-id";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -98,7 +99,7 @@ function DetailRow({ icon, label, children }: { icon: React.ReactNode; label: st
 export default function DoseDetailPage() {
   const profileId = useProfileId();
   const accountId = useAccountId();
-  const params = useParams<{ id: string }>();
+  const params = { id: usePathId(3) };
   const [dose, setDose] = useState<DoseEventRecord | null | undefined>(undefined);
   const [confirming, setConfirming] = useState<FinalAction | null>(null);
   const [busy, setBusy] = useState(false);

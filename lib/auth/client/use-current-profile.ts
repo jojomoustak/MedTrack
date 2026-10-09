@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 export type CurrentProfileState =
   | { status: "loading" }
@@ -29,8 +29,11 @@ type CachedProfile = { profileId: string; accountId: string };
  * Security review, 2026-08-29.
  */
 function readCachedProfile(): CachedProfile | null {
+  return parseCachedProfile(readCachedProfileRaw());
+}
+
+function parseCachedProfile(raw: string | null): CachedProfile | null {
   try {
-    const raw = localStorage.getItem(CACHED_PROFILE_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (
@@ -96,42 +99,72 @@ export function clearCachedProfile(): void {
  * of forcing a logout the user never asked for.
  */
 export function useCurrentProfile(): CurrentProfileState {
-  const [state, setState] = useState<CurrentProfileState>({ status: "loading" });
+  // Start from the last-known profile instead of a full-screen "loading"
+  // for a server round trip on every launch (measured 2026-10-08: the app
+  // shell waited on /api/me, ~0.25 s warm and far more on a cold
+  // function). This is exactly what the offline fallback below already
+  // shows; /api/me still confirms in the background, and a 401 signs out.
+  // Read through `useSyncExternalStore` so hydrating the prebuilt HTML
+  // still starts from "loading" (the server snapshot) and switches on the
+  // very next render.
+  const cachedRaw = useSyncExternalStore(subscribeToStorage, readCachedProfileRaw, () => null);
+  const [answer, setAnswer] = useState<ServerAnswer>({ kind: "pending" });
 
   useEffect(() => {
     let cancelled = false;
-    const cachedProfile = readCachedProfile();
-
     fetch("/api/me", { credentials: "include", cache: "no-store" })
-      .then(async (res) => {
+      .then(async (res): Promise<ServerAnswer> => {
         if (res.ok) {
           const data: CachedProfile = await res.json();
-          return { kind: "ready", data } as const;
+          return { kind: "ready", data };
         }
         if (res.status === 401 || res.status === 403) {
-          return { kind: "unauthenticated" } as const;
+          return { kind: "unauthenticated" };
         }
-        return { kind: "unreachable" } as const;
+        return { kind: "unreachable" };
       })
-      .catch(() => ({ kind: "unreachable" }) as const)
+      .catch((): ServerAnswer => ({ kind: "unreachable" }))
       .then((result) => {
         if (cancelled) return;
-        if (result.kind === "ready") {
-          writeCachedProfile(result.data);
-          setState({ status: "ready", profileId: result.data.profileId, accountId: result.data.accountId });
-        } else if (result.kind === "unauthenticated") {
-          clearCachedProfile();
-          setState({ status: "signed-out" });
-        } else if (cachedProfile) {
-          setState({ status: "ready", profileId: cachedProfile.profileId, accountId: cachedProfile.accountId });
-        } else {
-          setState({ status: "signed-out" });
-        }
+        if (result.kind === "ready") writeCachedProfile(result.data);
+        else if (result.kind === "unauthenticated") clearCachedProfile();
+        setAnswer(result);
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  return state;
+  // The server's answer wins; until it arrives, or when it can't be
+  // reached at all (offline, 5xx), the last-known profile stands in.
+  const cached = useMemo(() => parseCachedProfile(cachedRaw), [cachedRaw]);
+  const profile = answer.kind === "ready" ? answer.data : answer.kind === "unauthenticated" ? null : cached;
+  const profileId = profile?.profileId ?? null;
+  const accountId = profile?.accountId ?? null;
+  const pending = answer.kind === "pending";
+
+  return useMemo<CurrentProfileState>(
+    () => (profileId !== null && accountId !== null ? { status: "ready", profileId, accountId } : { status: pending ? "loading" : "signed-out" }),
+    [profileId, accountId, pending],
+  );
+}
+
+type ServerAnswer =
+  | { kind: "pending" }
+  | { kind: "ready"; data: CachedProfile }
+  | { kind: "unauthenticated" }
+  | { kind: "unreachable" };
+
+function readCachedProfileRaw(): string | null {
+  try {
+    return localStorage.getItem(CACHED_PROFILE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Another tab signing in or out updates this one too. */
+function subscribeToStorage(onChange: () => void): () => void {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
 }

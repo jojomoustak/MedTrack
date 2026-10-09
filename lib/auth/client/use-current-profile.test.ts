@@ -65,3 +65,23 @@ describe("useCurrentProfile — offline session continuity (found via live-devic
     expect(result.current).toMatchObject({ status: "ready", ...PROFILE });
   });
 });
+
+describe("useCurrentProfile — start from the saved profile (2026-10-08)", () => {
+  it("is ready from the cached profile before /api/me answers", async () => {
+    localStorage.setItem("medtrack:last-known-profile", JSON.stringify(PROFILE));
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {}))); // server never answers
+
+    const { result } = renderHook(() => useCurrentProfile());
+    await waitFor(() => expect(result.current).toMatchObject({ status: "ready", ...PROFILE }));
+  });
+
+  it("switches to the profile the server reports when it differs from the cached one", async () => {
+    localStorage.setItem("medtrack:last-known-profile", JSON.stringify(PROFILE));
+    const other = { profileId: "profile-2", accountId: "account-2" };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(other), { status: 200 })));
+
+    const { result } = renderHook(() => useCurrentProfile());
+    await waitFor(() => expect(result.current).toMatchObject({ status: "ready", ...other }));
+    expect(JSON.parse(localStorage.getItem("medtrack:last-known-profile")!)).toEqual(other);
+  });
+});
