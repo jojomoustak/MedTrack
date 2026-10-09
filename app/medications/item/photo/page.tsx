@@ -10,9 +10,12 @@ import { playSound } from "@/lib/sound/client/play-sound";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
 
 /**
- * A medication's photo (reference mockup, screen 13): a dark, camera-style
- * screen — the photo or a framed placeholder, then cancel / shutter /
- * gallery. The shutter opens the device camera; the photo is optional.
+ * A medication's photo (reference mockup, screen 13): a dark camera screen
+ * — the live camera, the photo, or a framed placeholder, then cancel /
+ * shutter / gallery. The viewfinder IS the camera (2026-10-09; it used to
+ * hand off to the phone's camera app, a second camera screen), falling
+ * back to the phone's camera only where the page can't use one. The photo
+ * is optional.
  * Reached two ways:
  *   1. Right after "Add Medication" finishes (`?new=1`) — optional, the
  *      medication is already fully saved; leaving goes on to Today.

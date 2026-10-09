@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexiePhotoCacheRepository } from "@/lib/medications/client/photo-cache-repository";
 import { DexiePhotoOutboxRepository } from "@/lib/medications/client/photo-outbox-repository";
@@ -14,8 +14,11 @@ import {
 } from "@/lib/medications/client/photo-api";
 import { ALLOWED_MEDICATION_PHOTO_CONTENT_TYPES, MAX_MEDICATION_PHOTO_BYTES } from "@/lib/validation/medication-photo";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { browserLiveCamera, stopStream, type LiveCamera } from "@/lib/camera/client/live-camera";
 
 const POLL_INTERVAL_MS = 1500;
+/** The viewfinder's width / height (`aspect-3/4` below) — a captured photo is cropped to exactly this. */
+const VIEWFINDER_ASPECT = 3 / 4;
 /** ~60s of polling before giving up and asking the user to retry manually — a freshly-created medication is expected to sync within a few seconds when online; this is a generous ceiling, not a tight timeout. */
 const MAX_POLL_ATTEMPTS = 40;
 
@@ -29,12 +32,21 @@ export interface MedicationPhotoAttachProps {
   photoCache?: PhotoCacheRepository;
   /** Test/DI seam — defaults to a real Dexie-backed queue for offline upload/delete. */
   photoOutbox?: PhotoOutboxRepository;
+  /** Test/DI seam — defaults to the browser's camera (`getUserMedia`). */
+  camera?: LiveCamera;
   className?: string;
   /** The bottom bar's left slot (reference mockup's "Cancel") — the page decides what leaving means. */
   leading?: React.ReactNode;
 }
 
 type PhotoStatus = "checking" | "present" | "absent";
+
+/**
+ * `off`: can show the camera, not showing it. `live`: the viewfinder is
+ * the camera. `unavailable` / `blocked` (no camera API, or permission
+ * refused): the shutter opens the phone's own camera app instead.
+ */
+type CameraState = "off" | "live" | "unavailable" | "blocked";
 
 function isAllowedClientSide(file: File): string | null {
   if (file.size > MAX_MEDICATION_PHOTO_BYTES) {
@@ -77,11 +89,12 @@ function isOfflineError(err: unknown): boolean {
  * `designing-offline-sync` rule: a critical change must never disappear
  * from the UI, or claim success, silently).
  */
-export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl, photoCache, photoOutbox, className, leading }: MedicationPhotoAttachProps) {
+export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl, photoCache, photoOutbox, camera, className, leading }: MedicationPhotoAttachProps) {
   const repo = repository ?? new DexieUserMedicationRepository();
   const fetcher = fetchImpl ?? fetch;
   const cache = photoCache ?? new DexiePhotoCacheRepository();
   const outbox = photoOutbox ?? new DexiePhotoOutboxRepository();
+  const cam = camera ?? browserLiveCamera;
 
   const [synced, setSynced] = useState(false);
   const [pollExhausted, setPollExhausted] = useState(false);
@@ -96,6 +109,75 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+
+  // Never rendered on the server (the page shows it only once signed in), so reading the browser here is safe.
+  const [cameraState, setCameraState] = useState<CameraState>(() => (cam.supported() ? "off" : "unavailable"));
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const unmountedRef = useRef(false);
+  const autoStartedRef = useRef(false);
+  /** Camera released because the app went to the background — reopened when it's back. */
+  const resumeCameraRef = useRef(false);
+
+  const stopCamera = useCallback(() => {
+    stopStream(streamRef.current);
+    streamRef.current = null;
+    setStream(null);
+    setCameraState((state) => (state === "live" ? "off" : state));
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    try {
+      const opened = await cam.open();
+      if (unmountedRef.current) {
+        stopStream(opened);
+        return;
+      }
+      stopStream(streamRef.current);
+      streamRef.current = opened;
+      setStream(opened);
+      setCameraState("live");
+    } catch (err) {
+      if (unmountedRef.current) return;
+      const refused = err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "SecurityError");
+      setCameraState(refused ? "blocked" : "unavailable");
+    }
+  }, [cam]);
+
+  /** The live stream goes into whichever `<video>` is mounted. */
+  const attachVideo = useCallback(
+    (video: HTMLVideoElement | null) => {
+      videoRef.current = video;
+      if (video && stream && video.srcObject !== stream) {
+        video.srcObject = stream;
+        void Promise.resolve(video.play()).catch(() => {});
+      }
+    },
+    [stream],
+  );
+
+  // Release the camera when leaving the screen, and while the app is in
+  // the background (the camera light must not stay on behind other apps).
+  useEffect(() => {
+    unmountedRef.current = false;
+    function onVisibilityChange() {
+      if (document.visibilityState === "hidden" && streamRef.current) {
+        resumeCameraRef.current = true;
+        stopCamera();
+      } else if (document.visibilityState === "visible" && resumeCameraRef.current) {
+        resumeCameraRef.current = false;
+        void startCamera();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      unmountedRef.current = true;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      stopStream(streamRef.current);
+      streamRef.current = null;
+    };
+  }, [startCamera, stopCamera]);
 
   function showBlob(blob: Blob) {
     const url = URL.createObjectURL(blob);
@@ -209,6 +291,14 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [synced, userMedicationId, refreshNonce]);
 
+  // No photo yet: the screen opens straight into the camera, once — after
+  // that, the shutter reopens it.
+  useEffect(() => {
+    if (!synced || photoStatus !== "absent" || cameraState !== "off" || autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    void startCamera();
+  }, [synced, photoStatus, cameraState, startCamera]);
+
   // Revoke the last object URL on unmount.
   useEffect(() => {
     return () => {
@@ -243,6 +333,22 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     } finally {
       setBusy(false);
     }
+  }
+
+  /** The shutter, while the viewfinder is live: the photo is what's framed, saved through the same path as a picked file. */
+  async function handleCapture() {
+    const video = videoRef.current;
+    if (!video || busy) return;
+    playSound("button");
+    let blob: Blob;
+    try {
+      blob = await cam.capture(video, VIEWFINDER_ASPECT);
+    } catch {
+      setError("Η λήψη δεν ήταν δυνατή. Δοκιμάστε ξανά.");
+      return;
+    }
+    stopCamera();
+    await handleFileSelected(new File([blob], "medication-photo.jpg", { type: "image/jpeg" }));
   }
 
   async function handleRemove() {
@@ -304,17 +410,33 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
       onChange={(event) => {
         const file = event.target.files?.[0];
         event.target.value = "";
-        if (file) void handleFileSelected(file);
+        if (!file) return;
+        stopCamera();
+        void handleFileSelected(file);
       }}
     />
   );
 
+  const live = cameraState === "live" && stream !== null;
+  const shutterLabel = busy ? "Μεταφόρτωση…" : live ? "Λήψη φωτογραφίας" : photoStatus === "present" ? "Νέα φωτογραφία" : "Προσθήκη φωτογραφίας";
+  const shutterFace = (
+    <>
+      <span aria-hidden="true" className="flex size-19 items-center justify-center rounded-full border-4 border-white/90 transition-transform duration-150 active:scale-95">
+        {busy ? <span className="size-7 animate-spin rounded-full border-3 border-white/30 border-t-white" /> : <span className="size-14 rounded-full bg-white" />}
+      </span>
+      <span className="text-[13px] font-semibold whitespace-nowrap text-white">{shutterLabel}</span>
+    </>
+  );
+  const shutterClasses = `flex flex-col items-center gap-2 justify-self-center ${busy ? "opacity-60" : "cursor-pointer"}`;
+
   return (
     <div className={`flex flex-col gap-5 ${className ?? ""}`}>
-      {/* The viewer (reference mockup, screen 13): the photo, or a framed
-          placeholder showing what to capture. */}
+      {/* The viewfinder (reference mockup, screen 13): the live camera, the
+          photo, or a framed placeholder showing what to capture. */}
       <div className="relative flex aspect-3/4 w-full items-center justify-center overflow-hidden rounded-3xl bg-stone-900">
-        {photoStatus === "present" && photoUrl ? (
+        {live ? (
+          <video ref={attachVideo} autoPlay muted playsInline aria-label="Κάμερα" className="h-full w-full object-cover" />
+        ) : photoStatus === "present" && photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- `photoUrl` is a local `blob:` object URL from an authenticated fetch (or a locally-cached/queued copy), never a remote asset `next/image` can optimize.
           <img src={photoUrl} alt="Φωτογραφία φαρμάκου" className="h-full w-full object-contain" />
         ) : (
@@ -346,12 +468,29 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
             Δεν ήταν δυνατή η σύνδεση για έλεγχο φωτογραφίας.
           </p>
         )}
+        {cameraState === "blocked" && (
+          <p role="status" className="text-stone-400">
+            Δεν δόθηκε πρόσβαση στην κάμερα — το κουμπί λήψης ανοίγει την κάμερα του κινητού.
+          </p>
+        )}
         {error && (
           <p role="alert" className="text-red-300">
             {error}
           </p>
         )}
-        {photoStatus === "present" && (
+        {live && photoStatus === "present" && (
+          <button
+            type="button"
+            onClick={() => {
+              playSound("button");
+              stopCamera();
+            }}
+            className="min-h-11 px-3 font-semibold text-white"
+          >
+            Ακύρωση
+          </button>
+        )}
+        {!live && photoStatus === "present" && (
           <button
             type="button"
             onClick={() => {
@@ -367,27 +506,37 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
         )}
       </div>
 
-      {/* Bottom bar: leave · shutter (device camera) · gallery. */}
+      {/* Bottom bar: leave · shutter · gallery. The shutter takes the photo
+          in the viewfinder; where the page can't use the camera it opens
+          the phone's camera app instead. */}
       <div className="grid grid-cols-3 items-center">
         <div className="justify-self-start">{leading}</div>
-        <label
-          onClick={() => {
-            if (!busy) playSound("button");
-          }}
-          className={`flex flex-col items-center gap-2 justify-self-center ${busy ? "opacity-60" : "cursor-pointer"}`}
-        >
-          <span aria-hidden="true" className="flex size-19 items-center justify-center rounded-full border-4 border-white/90 transition-transform duration-150 active:scale-95">
-            {busy ? (
-              <span className="size-7 animate-spin rounded-full border-3 border-white/30 border-t-white" />
-            ) : (
-              <span className="size-14 rounded-full bg-white" />
-            )}
-          </span>
-          <span className="text-[13px] font-semibold whitespace-nowrap text-white">
-            {busy ? "Μεταφόρτωση…" : photoStatus === "present" ? "Αλλαγή φωτογραφίας" : "Προσθήκη φωτογραφίας"}
-          </span>
-          {picker(true)}
-        </label>
+        {live || cameraState === "off" ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              if (live) void handleCapture();
+              else {
+                playSound("button");
+                void startCamera();
+              }
+            }}
+            className={shutterClasses}
+          >
+            {shutterFace}
+          </button>
+        ) : (
+          <label
+            onClick={() => {
+              if (!busy) playSound("button");
+            }}
+            className={shutterClasses}
+          >
+            {shutterFace}
+            {picker(true)}
+          </label>
+        )}
         <label
           onClick={() => {
             if (!busy) playSound("button");

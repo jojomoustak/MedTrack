@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MedicationPhotoAttach } from "@/components/medications/MedicationPhotoAttach";
 import type { PhotoCacheEntry, PhotoCacheRepository, PhotoOutboxEnqueueInput, PhotoOutboxOperation, PhotoOutboxRepository, UserMedicationRepository } from "@/lib/domain/repositories";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
+import type { LiveCamera } from "@/lib/camera/client/live-camera";
 
 afterEach(() => cleanup());
 
@@ -294,5 +295,121 @@ describe("MedicationPhotoAttach", () => {
     expect(await screen.findByText(/θα αφαιρεθεί/i)).toBeTruthy();
     expect(photoOutbox.enqueue).toHaveBeenCalledWith(expect.objectContaining({ userMedicationId: "med-1", operation: "delete" }));
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+/**
+ * The photo screen used to look like a camera but open the phone's camera
+ * app on the shutter — two different camera screens (2026-10-09). The
+ * viewfinder is now the camera itself.
+ */
+describe("MedicationPhotoAttach — live camera in the viewfinder", () => {
+  function makeCamera(open: () => Promise<MediaStream>) {
+    const capture = vi.fn().mockResolvedValue(new Blob(["jpeg-bytes"], { type: "image/jpeg" }));
+    const camera: LiveCamera = { supported: () => true, open: vi.fn(open), capture };
+    return { camera, capture };
+  }
+
+  function makeStream() {
+    const track = { stop: vi.fn() };
+    return { stream: { getTracks: () => [track] } as unknown as MediaStream, track };
+  }
+
+  it("with no photo yet, opens straight into the camera; the shutter takes the photo there and uploads it", async () => {
+    const { stream, track } = makeStream();
+    const { camera, capture } = makeCamera(async () => stream);
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(notFoundFetch())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ uploaded: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Blob(["bytes"], { type: "image/jpeg" }), { status: 200 }));
+
+    render(
+      <MedicationPhotoAttach
+        userMedicationId="med-1"
+        repository={makeRepository(makeRecord())}
+        fetchImpl={fetchImpl}
+        photoCache={makeFakePhotoCache()}
+        photoOutbox={makeFakePhotoOutbox()}
+        camera={camera}
+      />,
+    );
+
+    expect(await screen.findByLabelText("Κάμερα")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /λήψη φωτογραφίας/i }));
+
+    await waitFor(() => expect(capture).toHaveBeenCalledWith(expect.any(HTMLVideoElement), 3 / 4));
+    expect(await screen.findByRole("img", { name: /φωτογραφία φαρμάκου/i })).toBeTruthy();
+    expect(track.stop).toHaveBeenCalled();
+    expect(fetchImpl.mock.calls[1][1].method).toBe("POST");
+    // No file input for the phone's camera app — this screen is the camera.
+    expect(document.querySelector("input[capture]")).toBeNull();
+  });
+
+  it("falls back to the phone's camera app when camera access is refused", async () => {
+    const { camera } = makeCamera(async () => {
+      throw new DOMException("denied", "NotAllowedError");
+    });
+
+    render(
+      <MedicationPhotoAttach
+        userMedicationId="med-1"
+        repository={makeRepository(makeRecord())}
+        fetchImpl={vi.fn().mockResolvedValue(notFoundFetch())}
+        photoCache={makeFakePhotoCache()}
+        photoOutbox={makeFakePhotoOutbox()}
+        camera={camera}
+      />,
+    );
+
+    expect(await screen.findByText(/δεν δόθηκε πρόσβαση στην κάμερα/i)).toBeTruthy();
+    const input = screen.getByLabelText(/προσθήκη φωτογραφίας/i);
+    expect(input.getAttribute("capture")).toBe("environment");
+  });
+
+  it("with a photo already, opens the camera only on 'Νέα φωτογραφία', and Ακύρωση goes back to the photo", async () => {
+    const { stream, track } = makeStream();
+    const { camera } = makeCamera(async () => stream);
+
+    render(
+      <MedicationPhotoAttach
+        userMedicationId="med-1"
+        repository={makeRepository(makeRecord())}
+        fetchImpl={vi.fn().mockResolvedValue(new Response(new Blob(["bytes"], { type: "image/jpeg" }), { status: 200 }))}
+        photoCache={makeFakePhotoCache()}
+        photoOutbox={makeFakePhotoOutbox()}
+        camera={camera}
+      />,
+    );
+
+    expect(await screen.findByRole("img", { name: /φωτογραφία φαρμάκου/i })).toBeTruthy();
+    expect(camera.open).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /νέα φωτογραφία/i }));
+    expect(await screen.findByLabelText("Κάμερα")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /ακύρωση/i }));
+    expect(await screen.findByRole("img", { name: /φωτογραφία φαρμάκου/i })).toBeTruthy();
+    expect(track.stop).toHaveBeenCalled();
+  });
+
+  it("releases the camera when the screen closes", async () => {
+    const { stream, track } = makeStream();
+    const { camera } = makeCamera(async () => stream);
+
+    const { unmount } = render(
+      <MedicationPhotoAttach
+        userMedicationId="med-1"
+        repository={makeRepository(makeRecord())}
+        fetchImpl={vi.fn().mockResolvedValue(notFoundFetch())}
+        photoCache={makeFakePhotoCache()}
+        photoOutbox={makeFakePhotoOutbox()}
+        camera={camera}
+      />,
+    );
+
+    expect(await screen.findByLabelText("Κάμερα")).toBeTruthy();
+    unmount();
+    expect(track.stop).toHaveBeenCalled();
   });
 });
