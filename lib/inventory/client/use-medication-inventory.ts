@@ -8,6 +8,7 @@ import { computeCurrentStock, computeRefillProjection, isBelowLowStockThreshold,
 import type { MedicationPackageRecord } from "@/lib/domain/medication-package";
 import type { InventoryTransactionRecord } from "@/lib/domain/inventory-transaction";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
+import { readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
 
 export interface MedicationInventoryState {
   status: "loading" | "ready";
@@ -19,6 +20,8 @@ export interface MedicationInventoryState {
   runningLowSoon: boolean;
   refresh: () => void;
 }
+
+const NOTHING_LOADED: LoadedData = { packages: [], transactions: [], schedules: [] };
 
 interface LoadedData {
   packages: MedicationPackageRecord[];
@@ -35,8 +38,9 @@ interface LoadedData {
  * tables current, per `designing-offline-sync`).
  */
 export function useMedicationInventory(userMedicationId: string, lowStockThresholdValue: string | null): MedicationInventoryState {
-  const [status, setStatus] = useState<"loading" | "ready">("loading");
-  const [data, setData] = useState<LoadedData>({ packages: [], transactions: [], schedules: [] });
+  // Starts from what it showed last time (`lib/client-cache/snapshot.ts`), then re-reads.
+  const snapshotKey = `inventory:${userMedicationId}`;
+  const [loaded, setLoaded] = useState<LoadedData | null>(() => readSnapshot<LoadedData>(snapshotKey) ?? null);
   const [nonce, setNonce] = useState(0);
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
@@ -52,16 +56,17 @@ export function useMedicationInventory(userMedicationId: string, lowStockThresho
         transactionRepo.listByUserMedication(userMedicationId),
         scheduleRepo.listByUserMedication(userMedicationId),
       ]);
-      if (cancelled) return;
-      setData({ packages, transactions, schedules });
-      setStatus("ready");
+      const settled = refreshSnapshot<LoadedData>(snapshotKey, { packages, transactions, schedules });
+      if (!cancelled) setLoaded(settled);
     }
     void load();
     return () => {
       cancelled = true;
     };
-  }, [userMedicationId, nonce]);
+  }, [userMedicationId, nonce, snapshotKey]);
 
+  const data = loaded ?? NOTHING_LOADED;
+  const status = loaded ? "ready" : "loading";
   const currentStock = computeCurrentStock(data.transactions, userMedicationId);
   const projection = computeRefillProjection(userMedicationId, data.transactions, data.schedules);
   const belowThreshold = isBelowLowStockThreshold(currentStock, lowStockThresholdValue);

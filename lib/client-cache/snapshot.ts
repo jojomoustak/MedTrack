@@ -40,11 +40,11 @@ function forgetSnapshots(prefixes: readonly string[]): void {
  * everything (the safe default for a type added later).
  */
 const AFFECTED_BY: Record<string, readonly string[]> = {
-  doseEvent: ["today-doses:", "dose-range:"],
+  doseEvent: ["today-doses:", "dose-range:", "inventory:"],
   userMedication: ["medications:", "low-stock:", "schedule-summaries:"],
-  medicationSchedule: ["schedules:", "schedule-summaries:", "dose-range:", "today-doses:"],
-  medicationPackage: ["low-stock:"],
-  medicationInventoryTransaction: ["low-stock:"],
+  medicationSchedule: ["schedules:", "schedule-summaries:", "dose-range:", "today-doses:", "inventory:"],
+  medicationPackage: ["low-stock:", "inventory:"],
+  medicationInventoryTransaction: ["low-stock:", "inventory:"],
   purchaseList: ["purchase-lists:", "purchase-list-summaries:"],
   purchaseListItem: ["purchase-list-summaries:"],
   favorite: [],

@@ -40,32 +40,36 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
     if (session.status === "ready") notifySessionRestored();
   }, [session.status]);
 
-  if (session.status === "loading") {
-    return (
-      <main className="flex min-h-dvh items-center justify-center">
-        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
-          Φόρτωση…
-        </p>
-      </main>
-    );
-  }
-
   if (session.status === "signed-out") {
     // Redirect is in flight (see effect above) — render nothing rather
     // than a flash of protected UI.
     return null;
   }
 
+  // The app frame (bar + tabs) is drawn even while the session is still
+  // being confirmed, so it's already in the prebuilt page: a launch shows
+  // the app at first paint instead of a blank "Φόρτωση…" screen until the
+  // scripts start (2026-10-09). Neither part shows any user data. The
+  // offline banner waits for the app itself — it reads the device's
+  // connection, which the prebuilt page can't know.
   return (
-    <CurrentProfileProvider profileId={session.profileId} accountId={session.accountId}>
-      <div className="flex min-h-dvh flex-col">
-        <AppBar />
-        <OfflineBanner />
-        <div className="flex-1 pb-20">{children}</div>
-        <div className="fixed inset-x-0 bottom-0">
-          <BottomNav />
-        </div>
+    <div className="flex min-h-dvh flex-col">
+      <AppBar />
+      {session.status === "ready" && <OfflineBanner />}
+      <div className="flex-1 pb-20">
+        {session.status === "ready" ? (
+          <CurrentProfileProvider profileId={session.profileId} accountId={session.accountId}>
+            {children}
+          </CurrentProfileProvider>
+        ) : (
+          <p role="status" className="p-6 text-sm text-stone-600 dark:text-stone-400">
+            Φόρτωση…
+          </p>
+        )}
       </div>
-    </CurrentProfileProvider>
+      <div className="fixed inset-x-0 bottom-0">
+        <BottomNav />
+      </div>
+    </div>
   );
 }
