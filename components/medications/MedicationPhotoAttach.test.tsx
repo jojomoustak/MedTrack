@@ -63,6 +63,10 @@ function makeFakePhotoCache(): PhotoCacheRepository {
     put: vi.fn(async (entry: PhotoCacheEntry) => {
       store.set(entry.userMedicationId, entry);
     }),
+    putThumbnail: vi.fn(async (id: string, thumbnail: Blob) => {
+      const entry = store.get(id);
+      if (entry) store.set(id, { ...entry, thumbnail });
+    }),
     remove: vi.fn(async (id: string) => {
       store.delete(id);
     }),

@@ -336,6 +336,12 @@ export interface PhotoCacheEntry {
   userMedicationId: string;
   blob: Blob;
   contentType: string;
+  /** A small square JPEG for avatars (`makePhotoThumbnail`) — drawing a full phone photo at 60 px meant decoding all of it on every screen (2026-10-09). Missing on entries cached before then; made on first view. */
+  thumbnail?: Blob | null;
+  /** The server's version of this photo, sent back on the next check so an unchanged photo isn't downloaded again. Unknown right after a local upload. */
+  etag?: string | null;
+  /** When this copy was cached — tells an in-memory thumbnail URL apart from a newer copy's. Set by the repository. */
+  cachedAt?: string;
 }
 
 /**
@@ -353,6 +359,8 @@ export interface PhotoCacheRepository {
   touch(userMedicationId: string): Promise<void>;
   /** Writes/replaces the cached blob and enforces the byte/count budget afterward, evicting the least-recently-viewed entries first. */
   put(entry: PhotoCacheEntry): Promise<void>;
+  /** Adds a thumbnail to an existing entry (one cached before thumbnails existed). */
+  putThumbnail(userMedicationId: string, thumbnail: Blob): Promise<void>;
   remove(userMedicationId: string): Promise<void>;
 }
 

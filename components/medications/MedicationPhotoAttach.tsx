@@ -15,6 +15,8 @@ import {
 import { ALLOWED_MEDICATION_PHOTO_CONTENT_TYPES, MAX_MEDICATION_PHOTO_BYTES } from "@/lib/validation/medication-photo";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { browserLiveCamera, stopStream, type LiveCamera } from "@/lib/camera/client/live-camera";
+import { makePhotoThumbnail, shrinkPhotoForUpload } from "@/lib/medications/client/photo-thumbnail";
+import { forgetPhotoThumbnail } from "@/lib/medications/client/use-medication-photo-thumbnail";
 
 const POLL_INTERVAL_MS = 1500;
 /** The viewfinder's width / height (`aspect-3/4` below) — a captured photo is cropped to exactly this. */
@@ -261,17 +263,22 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
       if (queued) return;
 
       try {
-        const result = await fetchMedicationPhoto(userMedicationId, fetcher);
+        // Sends the cached copy's version: an unchanged photo isn't downloaded again.
+        const result = await fetchMedicationPhoto(userMedicationId, fetcher, { etag: cached?.etag });
         if (cancelled) return;
+        if (result && "notModified" in result) return;
         if (!result) {
           clearBlob();
           setPhotoStatus("absent");
           await cache.remove(userMedicationId);
+          forgetPhotoThumbnail(userMedicationId);
           return;
         }
         showBlob(result.blob);
         setPhotoStatus("present");
-        await cache.put({ userMedicationId, blob: result.blob, contentType: result.blob.type || "application/octet-stream" });
+        const thumbnail = await makePhotoThumbnail(result.blob);
+        await cache.put({ userMedicationId, blob: result.blob, contentType: result.blob.type || "application/octet-stream", thumbnail, etag: result.etag });
+        forgetPhotoThumbnail(userMedicationId);
       } catch (err) {
         if (cancelled) return;
         if (cached) return; // already showing a good cached copy — degrade silently
@@ -306,29 +313,38 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     };
   }, []);
 
-  async function handleFileSelected(file: File) {
-    const clientError = isAllowedClientSide(file);
-    if (clientError) {
-      setError(clientError);
-      return;
-    }
+  async function handleFileSelected(picked: File) {
     setBusy(true);
     setError(null);
     try {
-      await uploadPhotoRequest(userMedicationId, file, fetcher);
-      await cache.put({ userMedicationId, blob: file, contentType: file.type });
-      setPendingOp(null);
-      setRefreshNonce((n) => n + 1);
-    } catch (err) {
-      if (isOfflineError(err)) {
-        await outbox.enqueue({ userMedicationId, operation: "upload", blob: file, contentType: file.type });
-        // Optimistic local display — but the pending badge below is what
-        // keeps this honest rather than silently claiming "saved".
-        await cache.put({ userMedicationId, blob: file, contentType: file.type });
-        setPendingOp("upload");
+      // A gallery photo can be 12 megapixels and several MB: shrunk to what
+      // a package needs before it's stored or sent (2026-10-09) — which also
+      // lets an over-8 MB original through instead of rejecting it.
+      const file = await shrinkPhotoForUpload(picked);
+      const clientError = isAllowedClientSide(file);
+      if (clientError) {
+        setError(clientError);
+        return;
+      }
+      const thumbnail = await makePhotoThumbnail(file);
+      try {
+        const { etag } = await uploadPhotoRequest(userMedicationId, file, fetcher);
+        await cache.put({ userMedicationId, blob: file, contentType: file.type, thumbnail, etag });
+        forgetPhotoThumbnail(userMedicationId);
+        setPendingOp(null);
         setRefreshNonce((n) => n + 1);
-      } else {
-        setError(err instanceof MedicationPhotoApiError ? err.message : "Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+      } catch (err) {
+        if (isOfflineError(err)) {
+          await outbox.enqueue({ userMedicationId, operation: "upload", blob: file, contentType: file.type });
+          // Optimistic local display — but the pending badge below is what
+          // keeps this honest rather than silently claiming "saved".
+          await cache.put({ userMedicationId, blob: file, contentType: file.type, thumbnail });
+          forgetPhotoThumbnail(userMedicationId);
+          setPendingOp("upload");
+          setRefreshNonce((n) => n + 1);
+        } else {
+          setError(err instanceof MedicationPhotoApiError ? err.message : "Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+        }
       }
     } finally {
       setBusy(false);
@@ -357,12 +373,14 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     try {
       await deletePhotoRequest(userMedicationId, fetcher);
       await cache.remove(userMedicationId);
+      forgetPhotoThumbnail(userMedicationId);
       setPendingOp(null);
       setRefreshNonce((n) => n + 1);
     } catch (err) {
       if (isOfflineError(err)) {
         await outbox.enqueue({ userMedicationId, operation: "delete" });
         await cache.remove(userMedicationId);
+        forgetPhotoThumbnail(userMedicationId);
         setPendingOp("delete");
         setRefreshNonce((n) => n + 1);
       } else {

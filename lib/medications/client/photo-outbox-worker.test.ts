@@ -78,6 +78,10 @@ function createFakeCache(): PhotoCacheRepository & { store: Map<string, PhotoCac
     async put(entry) {
       store.set(entry.userMedicationId, entry);
     },
+    async putThumbnail(id, thumbnail) {
+      const entry = store.get(id);
+      if (entry) store.set(id, { ...entry, thumbnail });
+    },
     async remove(id) {
       store.delete(id);
     },

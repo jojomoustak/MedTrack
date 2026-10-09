@@ -68,6 +68,12 @@ export interface MedicationPhotoContent {
   etag: string;
 }
 
+/** The device's copy is still the current one (`ifNoneMatch` matched). */
+export interface MedicationPhotoNotModified {
+  notModified: true;
+  etag: string;
+}
+
 /**
  * Fails closed with a clear, operator-facing error rather than letting
  * `@vercel/blob` throw its own less-obvious "token missing" error deep
@@ -176,7 +182,8 @@ function medicationPhotoPathname(profileId: string, userMedicationId: string): s
  * reference to a blob that's already gone. Deleting the old blob is the
  * LAST step and best-effort (logged, not thrown) for the same reason.
  */
-export async function uploadMedicationPhoto(input: UploadMedicationPhotoInput, dbOverride?: AnyDb): Promise<void> {
+/** Returns the stored photo's ETag, so the device can keep it with its copy and never download the photo it just sent. */
+export async function uploadMedicationPhoto(input: UploadMedicationPhotoInput, dbOverride?: AnyDb): Promise<{ etag: string | null }> {
   const contentType = validateMedicationPhotoUpload({
     contentType: input.file.contentType,
     size: input.file.size,
@@ -211,6 +218,8 @@ export async function uploadMedicationPhoto(input: UploadMedicationPhotoInput, d
       });
     }
   }
+
+  return { etag: uploaded.etag ?? null };
 }
 
 /**
@@ -218,11 +227,16 @@ export async function uploadMedicationPhoto(input: UploadMedicationPhotoInput, d
  * the client). Self-heals a stale DB pointer (blob genuinely missing,
  * e.g. deleted directly in the Vercel dashboard) by clearing it rather
  * than repeating the same failed lookup on every future request.
+ *
+ * `ifNoneMatch`: the ETag of the copy the device already holds — when it's
+ * still current, nothing but "not modified" comes back (2026-10-09; every
+ * check used to re-download the whole photo). Ownership is checked first
+ * either way.
  */
 export async function getMedicationPhoto(
-  params: { profileId: string; userMedicationId: string },
+  params: { profileId: string; userMedicationId: string; ifNoneMatch?: string },
   dbOverride?: AnyDb,
-): Promise<MedicationPhotoContent> {
+): Promise<MedicationPhotoContent | MedicationPhotoNotModified> {
   const db = dbOverride ?? getDb();
   const owned = await getOwnedUserMedication(params.profileId, params.userMedicationId, db);
   if (!owned.photoBlobKey) {
@@ -230,7 +244,8 @@ export async function getMedicationPhoto(
   }
 
   assertBlobConfigured();
-  const result = await get(owned.photoBlobKey, { access: "private" });
+  const result = await get(owned.photoBlobKey, { access: "private", ...(params.ifNoneMatch ? { ifNoneMatch: params.ifNoneMatch } : {}) });
+  if (result?.statusCode === 304) return { notModified: true, etag: result.blob.etag };
   if (!result || result.statusCode !== 200) {
     await setUserMedicationPhotoBlobKey(params.profileId, params.userMedicationId, null, db).catch(() => {
       // Best-effort self-heal only — the NotFoundError below is thrown either way.

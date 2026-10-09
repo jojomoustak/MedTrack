@@ -97,6 +97,10 @@ export interface LocalMedicationPhotoCache {
   cachedAt: string;
   /** Bumped on every local read — the LRU eviction key. */
   lastViewedAt: string;
+  /** Small square JPEG for avatars (2026-10-09); absent on rows cached before then. Not indexed, so no schema version change. */
+  thumbnail?: Blob | null;
+  /** The server's ETag for `blob`, for "not modified" checks. */
+  etag?: string | null;
 }
 
 export type PhotoOutboxOperation = "upload" | "delete";

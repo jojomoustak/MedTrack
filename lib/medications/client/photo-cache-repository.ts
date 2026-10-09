@@ -18,7 +18,7 @@ export class DexiePhotoCacheRepository implements PhotoCacheRepository {
   async get(userMedicationId: string): Promise<PhotoCacheEntry | null> {
     const row = await this.db.medicationPhotoCache.get(userMedicationId);
     if (!row) return null;
-    return { userMedicationId: row.userMedicationId, blob: row.blob, contentType: row.contentType };
+    return { userMedicationId: row.userMedicationId, blob: row.blob, contentType: row.contentType, thumbnail: row.thumbnail ?? null, etag: row.etag ?? null, cachedAt: row.cachedAt };
   }
 
   async touch(userMedicationId: string): Promise<void> {
@@ -31,11 +31,20 @@ export class DexiePhotoCacheRepository implements PhotoCacheRepository {
       userMedicationId: entry.userMedicationId,
       blob: entry.blob,
       contentType: entry.contentType,
-      byteSize: entry.blob.size,
+      byteSize: entry.blob.size + (entry.thumbnail?.size ?? 0),
       cachedAt: now,
       lastViewedAt: now,
+      thumbnail: entry.thumbnail ?? null,
+      etag: entry.etag ?? null,
     });
     await this.enforceBudget();
+  }
+
+  async putThumbnail(userMedicationId: string, thumbnail: Blob): Promise<void> {
+    await this.db.medicationPhotoCache.where("userMedicationId").equals(userMedicationId).modify((row) => {
+      row.thumbnail = thumbnail;
+      row.byteSize = row.blob.size + thumbnail.size;
+    });
   }
 
   async remove(userMedicationId: string): Promise<void> {

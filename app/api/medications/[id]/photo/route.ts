@@ -40,13 +40,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const bytes = new Uint8Array(await file.arrayBuffer());
-    await uploadMedicationPhoto({
+    const { etag } = await uploadMedicationPhoto({
       profileId: session.profileId,
       userMedicationId: id,
       file: { bytes, contentType: file.type, size: file.size },
     });
 
-    return NextResponse.json({ uploaded: true });
+    return NextResponse.json({ uploaded: true, etag });
   } catch (err) {
     return toSafeErrorResponse(err, { route: "medications.photo.upload" });
   }
@@ -57,7 +57,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const session = await requireSessionFromRequest(request);
     const { id } = await params;
 
-    const photo = await getMedicationPhoto({ profileId: session.profileId, userMedicationId: id });
+    const ifNoneMatch = request.headers.get("if-none-match") ?? undefined;
+    const photo = await getMedicationPhoto({ profileId: session.profileId, userMedicationId: id, ifNoneMatch });
+
+    // The device already has this exact photo — answer without the bytes.
+    if ("notModified" in photo) {
+      return new Response(null, { status: 304, headers: { "Cache-Control": "private, max-age=3600, must-revalidate", ETag: photo.etag } });
+    }
 
     return new Response(photo.stream, {
       status: 200,

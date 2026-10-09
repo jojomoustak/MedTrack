@@ -166,7 +166,7 @@ describe("uploadMedicationPhoto", () => {
         { profileId: PROFILE_ID, userMedicationId: MEDICATION_ID, file: { bytes: JPEG_BYTES, contentType: "image/jpeg", size: JPEG_BYTES.length } },
         db,
       ),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ etag: null });
   });
 });
 
@@ -204,11 +204,33 @@ describe("getMedicationPhoto", () => {
     } as never);
 
     const result = await getMedicationPhoto({ profileId: PROFILE_ID, userMedicationId: MEDICATION_ID }, db);
+    if ("notModified" in result) throw new Error("expected the photo itself");
     expect(result.stream).toBe(fakeStream);
     expect(result.contentType).toBe("image/jpeg");
     expect(result.size).toBe(1234);
     expect(result.etag).toBe("abc");
     expect(get).toHaveBeenCalledWith("medication-photos/real", { access: "private" });
+  });
+
+  it("answers 'not modified' without the bytes when the device already has the current photo (2026-10-09)", async () => {
+    const db = buildFakeDb([["set_config_result", selectResult({ id: MEDICATION_ID, photo_blob_key: "medication-photos/real" })]]);
+    vi.mocked(get).mockResolvedValue({
+      statusCode: 304,
+      stream: null,
+      headers: new Headers(),
+      blob: { contentType: null, size: null, etag: '"abc"', url: "u", downloadUrl: "u", pathname: "p", contentDisposition: "inline", uploadedAt: new Date() },
+    } as never);
+
+    const result = await getMedicationPhoto({ profileId: PROFILE_ID, userMedicationId: MEDICATION_ID, ifNoneMatch: '"abc"' }, db);
+
+    expect(result).toEqual({ notModified: true, etag: '"abc"' });
+    expect(get).toHaveBeenCalledWith("medication-photos/real", { access: "private", ifNoneMatch: '"abc"' });
+  });
+
+  it("still checks ownership before answering 'not modified'", async () => {
+    const db = buildFakeDb([["set_config_result", selectResult(null)]]);
+    await expect(getMedicationPhoto({ profileId: PROFILE_ID, userMedicationId: MEDICATION_ID, ifNoneMatch: '"abc"' }, db)).rejects.toBeInstanceOf(NotFoundError);
+    expect(get).not.toHaveBeenCalled();
   });
 });
 

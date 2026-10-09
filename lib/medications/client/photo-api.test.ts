@@ -89,3 +89,33 @@ describe("deleteMedicationPhoto", () => {
     await expect(deleteMedicationPhoto("med-1", fetchImpl)).rejects.toBeInstanceOf(MedicationPhotoApiError);
   });
 });
+
+describe("photo versions — an unchanged photo is never downloaded twice (2026-10-09)", () => {
+  it("an upload reports the stored photo's version", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { uploaded: true, etag: '"v1"' }));
+    await expect(uploadMedicationPhoto("med-1", new File(["b"], "p.jpg", { type: "image/jpeg" }), fetchImpl)).resolves.toEqual({ etag: '"v1"' });
+  });
+
+  it("an upload from an older server (no version) still succeeds", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { uploaded: true }));
+    await expect(uploadMedicationPhoto("med-1", new File(["b"], "p.jpg", { type: "image/jpeg" }), fetchImpl)).resolves.toEqual({ etag: null });
+  });
+
+  it("a download reports the photo's version", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(new Blob(["bytes"]), { status: 200, headers: { ETag: '"v1"' } }));
+    const result = await fetchMedicationPhoto("med-1", fetchImpl);
+    expect(result && "etag" in result ? result.etag : undefined).toBe('"v1"');
+  });
+
+  it("sends the cached version and gets 'not modified' back instead of the bytes", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 304 }));
+    await expect(fetchMedicationPhoto("med-1", fetchImpl, { etag: '"v1"' })).resolves.toEqual({ notModified: true });
+    expect(fetchImpl.mock.calls[0][1].headers).toEqual({ "If-None-Match": '"v1"' });
+  });
+
+  it("without a cached version, asks for the photo itself", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 404 }));
+    await fetchMedicationPhoto("med-1", fetchImpl);
+    expect(fetchImpl.mock.calls[0][1].headers).toBeUndefined();
+  });
+});
