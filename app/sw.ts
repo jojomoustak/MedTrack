@@ -173,7 +173,11 @@ const serwist = new Serwist({
       matcher: ({ url, sameOrigin }) => sameOrigin && !url.pathname.startsWith("/api/") && !url.pathname.startsWith("/serwist/"),
       handler: new NetworkFirst({
         cacheName: APP_SHELL_CACHE,
-        networkTimeoutSeconds: 4,
+        // How long a launch on a weak signal waits for the network before
+        // using the saved copy (was 4 s; 2026-10-09). Network-first stays,
+        // so a new deploy arrives with the next launch as one consistent
+        // version — never old screens mixed with a new server.
+        networkTimeoutSeconds: 2,
         plugins: [{ cacheKeyWillBeUsed: async ({ request }) => sharedPageCacheKey(request) }],
       }),
     },
