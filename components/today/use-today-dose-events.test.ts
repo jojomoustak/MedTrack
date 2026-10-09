@@ -146,4 +146,18 @@ describe("useTodayDoseEvents list", () => {
 
     expect(result.current.todayDoses.map((d) => d.id)).toEqual([kept.id]);
   });
+
+  it("is today's doses only — a dose missed on an earlier day isn't shown on Today (2026-10-09)", async () => {
+    const repo = new DexieDoseEventRepository(db);
+    const today = await repo.createIfMissing(doseInput());
+    const yesterday = new Date(NOON_TODAY.getTime() - 24 * 3_600_000).toISOString();
+    const missedYesterday = await repo.createIfMissing(doseInput({ scheduledAt: yesterday, reminderAt: yesterday }));
+    await repo.transition(missedYesterday.id, { status: "missed" }, crypto.randomUUID());
+
+    const { result } = renderHook(() => useTodayDoseEvents(PROFILE_ID));
+    await flushAsync();
+
+    expect(result.current.todayDoses.map((d) => d.id)).toEqual([today.id]);
+    expect(Object.keys(result.current)).not.toContain("needsAttention");
+  });
 });

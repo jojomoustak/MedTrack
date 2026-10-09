@@ -11,8 +11,6 @@ export interface TodayDoseEventsState {
   status: "loading" | "ready";
   /** Today's dose events, `scheduledAt` ascending. */
   todayDoses: DoseEventRecord[];
-  /** `missed` dose events from the last 3 days — shown in Today's "Χρειάζεται προσοχή" section (ux-accessibility-designer design, 2026-08-30). Oldest first. */
-  needsAttention: DoseEventRecord[];
   refresh: () => void;
 }
 
@@ -46,7 +44,7 @@ function endOfLocalDayIso(date: Date): string {
  * doesn't restart the interval each time.
  */
 export function useTodayDoseEvents(profileId: string | null, onNewlyDue?: (dose: DoseEventRecord) => void): TodayDoseEventsState {
-  const [state, setState] = useState<Omit<TodayDoseEventsState, "refresh">>({ status: "loading", todayDoses: [], needsAttention: [] });
+  const [state, setState] = useState<Omit<TodayDoseEventsState, "refresh">>({ status: "loading", todayDoses: [] });
   const [nonce, setNonce] = useState(0);
   const onNewlyDueRef = useRef(onNewlyDue);
   const previouslyDueIdsRef = useRef<Set<string> | null>(null);
@@ -64,12 +62,12 @@ export function useTodayDoseEvents(profileId: string | null, onNewlyDue?: (dose:
     async function load() {
       const repo = new DexieDoseEventRepository();
       const now = new Date();
-      const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 3_600_000);
-
-      const [allTodayDoses, recentDoses] = await Promise.all([
-        repo.listForProfileInRange(profileId!, startOfLocalDayIso(now), endOfLocalDayIso(now)),
-        repo.listForProfileInRange(profileId!, threeDaysAgo.toISOString(), startOfLocalDayIso(now)),
-      ]);
+      // Today only. Missed doses from earlier days used to be listed above
+      // today's ("Χρειάζεται προσοχή") and were removed at the user's request
+      // (2026-10-09): with a few medications it was a wall of rows pushing
+      // today's doses down. They stay in Calendar, whose dose screen still
+      // records "taken later".
+      const allTodayDoses = await repo.listForProfileInRange(profileId!, startOfLocalDayIso(now), endOfLocalDayIso(now));
       if (cancelled) return;
       // A cancelled dose never happens (its schedule was changed or the
       // medication stopped) — it isn't one of today's doses, and must not
@@ -77,7 +75,6 @@ export function useTodayDoseEvents(profileId: string | null, onNewlyDue?: (dose:
       const todayDoses = allTodayDoses.filter((d) => d.status !== "cancelled");
 
       todayDoses.sort((a, b) => compareTimestampsAscending(a.scheduledAt ?? "", b.scheduledAt ?? ""));
-      const needsAttention = recentDoses.filter((d) => d.status === "missed").sort((a, b) => compareTimestampsAscending(a.scheduledAt ?? "", b.scheduledAt ?? ""));
 
       const nowIso = now.toISOString();
       const currentlyDue = todayDoses.filter(
@@ -95,7 +92,7 @@ export function useTodayDoseEvents(profileId: string | null, onNewlyDue?: (dose:
       }
       previouslyDueIdsRef.current = currentlyDueIds;
 
-      setState({ status: "ready", todayDoses, needsAttention });
+      setState({ status: "ready", todayDoses });
     }
 
     void load();

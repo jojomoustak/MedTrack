@@ -88,7 +88,7 @@ export default function TodayPage() {
   const [lowStockDismissed, setLowStockDismissed] = useState(false);
   // A dose crossed from "not yet due" to "due now" while this page stayed
   // open — the in-app chime, separate from the native reminder (Phase 11).
-  const { status: dosesStatus, todayDoses, needsAttention, refresh } = useTodayDoseEvents(profileId, () => playSound("notification"));
+  const { status: dosesStatus, todayDoses, refresh } = useTodayDoseEvents(profileId, () => playSound("notification"));
   const [confirmingMarkAll, setConfirmingMarkAll] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
 
@@ -158,24 +158,6 @@ export default function TodayPage() {
       <DayStrip today={today} />
 
       {lowStock}
-
-      {needsAttention.length > 0 && (
-        <section className="flex flex-col gap-3" aria-labelledby="needs-attention-heading">
-          <h2 id="needs-attention-heading" className="text-[17px] font-bold text-amber-800 dark:text-amber-300">
-            Χρειάζεται προσοχή
-          </h2>
-          {needsAttention.map((dose) => (
-            <TodayDoseRow
-              key={dose.id}
-              dose={dose}
-              medicationName={names.get(dose.userMedicationId) ?? "…"}
-              medicationStrength={strengths.get(dose.userMedicationId)}
-              onTake={handleTake}
-              allowTakenLate
-            />
-          ))}
-        </section>
-      )}
 
       <section className="flex flex-col gap-3" aria-labelledby="today-doses-heading">
         <div className="flex items-center justify-between gap-4">
