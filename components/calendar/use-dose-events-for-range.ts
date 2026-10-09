@@ -8,6 +8,7 @@ import { projectDoseInstantsForRange, type ProjectedDoseInstant } from "@/lib/do
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { compareTimestampsAscending } from "@/lib/domain/timestamp";
 import { onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
+import { readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
 
 export interface DoseEventsForRangeState {
   status: "loading" | "ready";
@@ -38,9 +39,20 @@ function endOfLocalDayIso(date: Date): string {
  * `projectDoseInstantsForRange`, never persisted, never actionable.
  */
 export function useDoseEventsForRange(profileId: string | null, from: Date, to: Date): DoseEventsForRangeState {
-  const [state, setState] = useState<DoseEventsForRangeState>({ status: "loading", doses: [], projected: [] });
   const fromKey = from.toDateString();
   const toKey = to.toDateString();
+  // A month or day seen before draws at once from what it showed last time (`lib/client-cache/snapshot.ts`), then re-reads.
+  const snapshotKey = `dose-range:${profileId}:${fromKey}:${toKey}`;
+  const [state, setState] = useState<DoseEventsForRangeState>(
+    () => (profileId ? readSnapshot<DoseEventsForRangeState>(snapshotKey) : undefined) ?? { status: "loading", doses: [], projected: [] },
+  );
+  // Another day picked: show it at once if it was seen before, rather than the previous day's list until the read lands.
+  const [shownKey, setShownKey] = useState(snapshotKey);
+  if (shownKey !== snapshotKey) {
+    setShownKey(snapshotKey);
+    const cached = readSnapshot<DoseEventsForRangeState>(snapshotKey);
+    if (cached) setState(cached);
+  }
 
   useEffect(() => {
     if (!profileId) return;
@@ -63,7 +75,8 @@ export function useDoseEventsForRange(profileId: string | null, from: Date, to: 
         projected = projectDoseInstantsForRange(schedules, projectionStart, to);
       }
 
-      if (!cancelled) setState({ status: "ready", doses, projected });
+      const settled = refreshSnapshot<DoseEventsForRangeState>(snapshotKey, { status: "ready", doses, projected });
+      if (!cancelled) setState(settled);
     }
 
     void load();

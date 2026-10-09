@@ -289,7 +289,7 @@ export class MedTrackingDexie extends Dexie {
     // payload carries one, else the signed-in profile at write time.
     this.outbox.hook("creating", (_primKey, obj, transaction) => {
       obj.profileId ??= outboxEntryProfileId(obj) ?? getCachedProfileId() ?? undefined;
-      transaction.on("complete", () => notifyOutboxWrite());
+      transaction.on("complete", () => notifyOutboxWrite(obj.entityType));
     });
 
     // Same choke-point pattern, mirrored for the photo outbox — `put()`

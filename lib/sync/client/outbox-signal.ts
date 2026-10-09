@@ -24,12 +24,13 @@
  * transaction shape triggered it. `sync-manager.ts` subscribes here and
  * requests a drain whenever it fires.
  */
-type Listener = () => void;
+/** `entityType`: what was written (`OutboxEntry.entityType`), so a listener can react only to what concerns it. */
+type Listener = (entityType?: string) => void;
 
 const listeners = new Set<Listener>();
 
-export function notifyOutboxWrite(): void {
-  for (const listener of listeners) listener();
+export function notifyOutboxWrite(entityType?: string): void {
+  for (const listener of listeners) listener(entityType);
 }
 
 export function onOutboxWrite(listener: Listener): () => void {

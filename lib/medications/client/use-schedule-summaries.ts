@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
 import { onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
+import { readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
 import { summarizeSchedules } from "@/lib/medications/schedule-summary";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
@@ -14,7 +15,9 @@ function localToday(): string {
 
 /** Each medication's schedule summary ("2 φορές την ημέρα"), read from local storage — works offline. */
 export function useScheduleSummaries(profileId: string, medications: UserMedicationRecord[]): Map<string, string | null> {
-  const [summaries, setSummaries] = useState<Map<string, string | null>>(new Map());
+  // Starts from what it showed last time (`lib/client-cache/snapshot.ts`) — entries, not a Map, so an unchanged re-read compares equal.
+  const snapshotKey = `schedule-summaries:${profileId}`;
+  const [entries, setEntries] = useState<[string, string | null][]>(() => readSnapshot<[string, string | null][]>(snapshotKey) ?? []);
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => onLocalDataHydrated(() => setNonce((n) => n + 1)), []);
@@ -32,13 +35,14 @@ export function useScheduleSummaries(profileId: string, medications: UserMedicat
       const today = localToday();
       const map = new Map<string, string | null>();
       for (const med of medications) map.set(med.id, summarizeSchedules(byMedication.get(med.id) ?? [], today));
-      if (!cancelled) setSummaries(map);
+      const settled = refreshSnapshot(snapshotKey, [...map.entries()]);
+      if (!cancelled) setEntries(settled);
     }
     void load();
     return () => {
       cancelled = true;
     };
-  }, [profileId, medications, nonce]);
+  }, [profileId, medications, nonce, snapshotKey]);
 
-  return summaries;
+  return useMemo(() => new Map(entries), [entries]);
 }

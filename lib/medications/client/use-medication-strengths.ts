@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
 import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
 import { onOfflineIndexUpdated } from "@/lib/catalog/client/offline-index-signal";
@@ -31,29 +31,62 @@ export async function resolveMedicationStrength(
   return null;
 }
 
+/** Same page-lifetime memory as `useDisplayNames`' (2026-10-09), keyed by everything a strength depends on. */
+const resolvedStrengths = new Map<string, { strength: string | null; fromCatalog: boolean }>();
+
+function strengthKey(med: UserMedicationRecord): string {
+  return `${med.id}|${med.customStrengthValue ?? ""}|${med.customStrengthUnit ?? ""}|${med.catalogProductId ?? ""}`;
+}
+
+function forgetCatalogStrengths(): void {
+  for (const [key, entry] of resolvedStrengths) if (entry.fromCatalog) resolvedStrengths.delete(key);
+}
+
 /** Today's dose cards need the medication's strength (e.g. "500 mg") alongside its name — same resolution shape as `useDisplayNames`, kept separate since not every caller of that hook needs strength too. */
 export function useMedicationStrengths(medications: UserMedicationRecord[]): Map<string, string | null> {
-  const [strengths, setStrengths] = useState<Map<string, string | null>>(new Map());
-  const [refreshNonce, setRefreshNonce] = useState(0);
+  const [version, setVersion] = useState(0);
 
-  useEffect(() => onOfflineIndexUpdated(() => setRefreshNonce((n) => n + 1)), []);
+  useEffect(
+    () =>
+      onOfflineIndexUpdated(() => {
+        forgetCatalogStrengths();
+        setVersion((n) => n + 1);
+      }),
+    [],
+  );
 
   useEffect(() => {
+    const missing = medications.filter((med) => !resolvedStrengths.has(strengthKey(med)));
+    if (missing.length === 0) return;
     let cancelled = false;
-    async function resolve() {
-      const cache = new DexieCatalogCacheRepository();
-      const offlineIndex = new DexieOfflineIndexRepository();
-      const map = new Map<string, string | null>();
-      for (const med of medications) {
-        map.set(med.id, await resolveMedicationStrength(med, cache, offlineIndex));
-      }
-      if (!cancelled) setStrengths(map);
-    }
-    void resolve();
+    const cache = new DexieCatalogCacheRepository();
+    const offlineIndex = new DexieOfflineIndexRepository();
+    Promise.all(
+      missing.map(async (med) => {
+        const strength = await resolveMedicationStrength(med, cache, offlineIndex);
+        resolvedStrengths.set(strengthKey(med), { strength, fromCatalog: !med.customStrengthValue });
+      }),
+    ).then(
+      () => {
+        if (!cancelled) setVersion((n) => n + 1);
+      },
+      () => {
+        // An IndexedDB read failed — retried on the next visit, not on every redraw.
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [medications, refreshNonce]);
+  }, [medications, version]);
 
-  return strengths;
+  return useMemo(() => {
+    const strengths = new Map<string, string | null>();
+    for (const med of medications) {
+      const entry = resolvedStrengths.get(strengthKey(med));
+      if (entry) strengths.set(med.id, entry.strength);
+    }
+    return strengths;
+    // `version` is how this hears that the module-level cache gained strengths.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [medications, version]);
 }

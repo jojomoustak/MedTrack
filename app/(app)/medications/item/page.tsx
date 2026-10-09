@@ -27,6 +27,7 @@ import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
+import { keepIfSame, readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
 
 type DetailTab = "overview" | "schedule" | "history";
 const DETAIL_TABS: FilterTab<DetailTab>[] = [
@@ -135,8 +136,11 @@ function ScheduleFacts({ schedule, strength, onCard = false }: { schedule: Medic
 export default function MedicationDetailPage() {
   const profileId = useProfileId();
   const params = { id: usePathId(2) };
-  const [medication, setMedication] = useState<UserMedicationRecord | null | undefined>(undefined);
-  const [schedules, setSchedules] = useState<MedicationScheduleRecord[]>([]);
+  // Opened from a list, the medication is already in memory (`lib/client-cache/snapshot.ts`) — draw it at once, then re-read.
+  const [medication, setMedication] = useState<UserMedicationRecord | null | undefined>(() =>
+    readSnapshot<UserMedicationRecord[]>(`medications:${profileId}`)?.find((m) => m.id === params.id),
+  );
+  const [schedules, setSchedules] = useState<MedicationScheduleRecord[]>(() => readSnapshot<MedicationScheduleRecord[]>(`schedules:${params.id}`) ?? []);
   const [tab, setTab] = useState<DetailTab>("overview");
   const [doseHistory, setDoseHistory] = useState<DoseEventRecord[] | null>(null);
   const { favoriteIds, toggleFavorite } = useFavoriteMedications(profileId);
@@ -149,8 +153,8 @@ export default function MedicationDetailPage() {
         new DexieMedicationScheduleRepository().listByUserMedication(params.id),
       ]);
       if (cancelled) return;
-      setMedication(med);
-      setSchedules(sched);
+      setMedication((current) => keepIfSame(current ?? undefined, med) ?? null);
+      setSchedules(refreshSnapshot(`schedules:${params.id}`, sched));
     }
     void load();
     return () => {

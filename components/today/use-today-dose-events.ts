@@ -6,6 +6,7 @@ import { onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
 import { compareTimestampsAscending, isTimestampAtOrBefore } from "@/lib/domain/timestamp";
+import { readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
 
 export interface TodayDoseEventsState {
   status: "loading" | "ready";
@@ -16,6 +17,10 @@ export interface TodayDoseEventsState {
 
 /** How often to re-check for a dose crossing into "due now" while Today stays mounted — independent of `refresh()`, which only fires after a user action. */
 const DUE_CHECK_INTERVAL_MS = 30_000;
+
+function todaySnapshotKey(profileId: string, now: Date): string {
+  return `today-doses:${profileId}:${now.toDateString()}`;
+}
 
 function startOfLocalDayIso(date: Date): string {
   const d = new Date(date);
@@ -44,7 +49,11 @@ function endOfLocalDayIso(date: Date): string {
  * doesn't restart the interval each time.
  */
 export function useTodayDoseEvents(profileId: string | null, onNewlyDue?: (dose: DoseEventRecord) => void): TodayDoseEventsState {
-  const [state, setState] = useState<Omit<TodayDoseEventsState, "refresh">>({ status: "loading", todayDoses: [] });
+  // Back on Today: draw what it showed last time, then re-read (`lib/client-cache/snapshot.ts`). Keyed by day, so yesterday's list never stands in for today's.
+  const [state, setState] = useState<Omit<TodayDoseEventsState, "refresh">>(() => {
+    const cached = profileId ? readSnapshot<DoseEventRecord[]>(todaySnapshotKey(profileId, new Date())) : undefined;
+    return cached ? { status: "ready", todayDoses: cached } : { status: "loading", todayDoses: [] };
+  });
   const [nonce, setNonce] = useState(0);
   const onNewlyDueRef = useRef(onNewlyDue);
   const previouslyDueIdsRef = useRef<Set<string> | null>(null);
@@ -92,7 +101,8 @@ export function useTodayDoseEvents(profileId: string | null, onNewlyDue?: (dose:
       }
       previouslyDueIdsRef.current = currentlyDueIds;
 
-      setState({ status: "ready", todayDoses });
+      const settled = refreshSnapshot(todaySnapshotKey(profileId!, now), todayDoses);
+      setState((prev) => (prev.status === "ready" && prev.todayDoses === settled ? prev : { status: "ready", todayDoses: settled }));
     }
 
     void load();

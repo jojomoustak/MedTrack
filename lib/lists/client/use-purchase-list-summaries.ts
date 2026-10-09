@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
 import { DexiePurchaseListItemRepository } from "@/lib/db-client/purchase-list-item-repository";
 import type { PurchaseListRecord } from "@/lib/domain/entities";
 
@@ -22,14 +23,20 @@ export interface PurchaseListSummary {
  * fact actually lives today.
  */
 export function usePurchaseListSummaries(lists: PurchaseListRecord[]): { status: "loading" | "ready"; summaries: Map<string, PurchaseListSummary> } {
-  const [status, setStatus] = useState<"loading" | "ready">("loading");
-  const [summaries, setSummaries] = useState<Map<string, PurchaseListSummary>>(new Map());
   const listIdsKey = lists.map((l) => l.id).join(",");
+  // Starts from what it showed last time (`lib/client-cache/snapshot.ts`) — entries, not a Map, so an unchanged re-read compares equal.
+  const snapshotKey = `purchase-list-summaries:${listIdsKey}`;
+  const [entries, setEntries] = useState<[string, PurchaseListSummary][] | null>(() => readSnapshot<[string, PurchaseListSummary][]>(snapshotKey) ?? null);
+  // A list added or removed: the old summaries no longer describe these lists.
+  const [shownKey, setShownKey] = useState(snapshotKey);
+  if (shownKey !== snapshotKey) {
+    setShownKey(snapshotKey);
+    setEntries(readSnapshot<[string, PurchaseListSummary][]>(snapshotKey) ?? null);
+  }
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      setStatus("loading");
       const repo = new DexiePurchaseListItemRepository();
       const entries = await Promise.all(
         lists.map(async (list) => {
@@ -39,9 +46,8 @@ export function usePurchaseListSummaries(lists: PurchaseListRecord[]): { status:
           return [list.id, { itemCount: notRemoved.length, completed }] as const;
         }),
       );
-      if (cancelled) return;
-      setSummaries(new Map(entries));
-      setStatus("ready");
+      const settled = refreshSnapshot<[string, PurchaseListSummary][]>(snapshotKey, entries.map(([id, summary]) => [id, summary]));
+      if (!cancelled) setEntries(settled);
     }
     void load();
     return () => {
@@ -50,5 +56,6 @@ export function usePurchaseListSummaries(lists: PurchaseListRecord[]): { status:
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-fetches when the actual set of list ids changes (listIdsKey), not on every new `lists` array reference from the parent's own re-renders.
   }, [listIdsKey]);
 
-  return { status, summaries };
+  const summaries = useMemo(() => new Map(entries ?? []), [entries]);
+  return { status: entries ? "ready" : "loading", summaries };
 }

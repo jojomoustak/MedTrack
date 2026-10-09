@@ -16,6 +16,22 @@ export type MedicationPhotoThumbnailStatus = "checking" | "present" | "absent";
  * photo instantly, with the network call only ever revalidating quietly
  * in the background rather than blocking what's on screen.
  */
+/**
+ * How long a server answer stands (2026-10-09). Every avatar on every
+ * screen asked the server again on each visit — four medications on Today
+ * meant four round trips per visit, nearly all answering "no photo".
+ * Photos are added and removed through this app, which updates the local
+ * cache itself, so a recent answer is still right on this device; another
+ * device's change shows up within this window.
+ */
+const SERVER_CHECK_VALID_MS = 10 * 60_000;
+const lastServerCheck = new Map<string, number>();
+
+/** Test seam. */
+export function __resetPhotoChecksForTests(): void {
+  lastServerCheck.clear();
+}
+
 export function useMedicationPhotoThumbnail(userMedicationId: string): { status: MedicationPhotoThumbnailStatus; url: string | null } {
   const [status, setStatus] = useState<MedicationPhotoThumbnailStatus>("checking");
   const [url, setUrl] = useState<string | null>(null);
@@ -34,6 +50,12 @@ export function useMedicationPhotoThumbnail(userMedicationId: string): { status:
         setStatus("present");
       }
 
+      const checkedAt = lastServerCheck.get(userMedicationId);
+      if (checkedAt !== undefined && Date.now() - checkedAt < SERVER_CHECK_VALID_MS) {
+        if (!cached) setStatus("absent");
+        return;
+      }
+
       try {
         const result = await fetchMedicationPhoto(userMedicationId);
         if (cancelled) return;
@@ -43,6 +65,7 @@ export function useMedicationPhotoThumbnail(userMedicationId: string): { status:
           setUrl(null);
           setStatus("absent");
           await cache.remove(userMedicationId);
+          lastServerCheck.set(userMedicationId, Date.now());
           return;
         }
         const fresh = URL.createObjectURL(result.blob);
@@ -51,6 +74,8 @@ export function useMedicationPhotoThumbnail(userMedicationId: string): { status:
         setUrl(fresh);
         setStatus("present");
         await cache.put({ userMedicationId, blob: result.blob, contentType: result.blob.type || "application/octet-stream" });
+        // Only once the local cache agrees with the answer — a later visit trusts the cache instead of asking.
+        lastServerCheck.set(userMedicationId, Date.now());
       } catch {
         if (cancelled) return;
         // Offline/transient failure: keep showing a cached copy if there

@@ -5,6 +5,7 @@ import { newId } from "@/lib/domain/ids";
 import { DexiePurchaseListRepository } from "@/lib/db-client/purchase-list-repository";
 import type { PurchaseListRecord } from "@/lib/domain/entities";
 import { logger } from "@/lib/logging/logger";
+import { readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
 
 export interface PurchaseListsState {
   status: "loading" | "ready";
@@ -14,10 +15,14 @@ export interface PurchaseListsState {
   refresh: () => void;
 }
 
+/** Stable while loading, so nothing keyed on the array recomputes. */
+const NO_LISTS: PurchaseListRecord[] = [];
+
 /** Backs `/lists` (Phase 3 §2.7, Phase 13) — the purchase-lists overview. */
 export function usePurchaseLists(profileId: string | null): PurchaseListsState {
-  const [status, setStatus] = useState<"loading" | "ready">("loading");
-  const [lists, setLists] = useState<PurchaseListRecord[]>([]);
+  // Starts from what it showed last time (`lib/client-cache/snapshot.ts`), then re-reads.
+  const snapshotKey = `purchase-lists:${profileId}`;
+  const [lists, setLists] = useState<PurchaseListRecord[] | null>(() => (profileId ? (readSnapshot<PurchaseListRecord[]>(snapshotKey) ?? null) : null));
   const [nonce, setNonce] = useState(0);
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
@@ -31,15 +36,14 @@ export function usePurchaseLists(profileId: string | null): PurchaseListsState {
       const all = await repo.list(profileId!);
       if (cancelled) return;
       const active = all.filter((l) => !l.isArchived).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      setLists(active);
-      setStatus("ready");
+      setLists(refreshSnapshot(snapshotKey, active));
     }
 
     void load();
     return () => {
       cancelled = true;
     };
-  }, [profileId, nonce]);
+  }, [profileId, nonce, snapshotKey]);
 
   const createList = useCallback(
     async (name: string) => {
@@ -60,5 +64,5 @@ export function usePurchaseLists(profileId: string | null): PurchaseListsState {
     [profileId, refresh],
   );
 
-  return { status, lists, createList, refresh };
+  return { status: lists ? "ready" : "loading", lists: lists ?? NO_LISTS, createList, refresh };
 }

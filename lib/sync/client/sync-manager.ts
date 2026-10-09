@@ -76,6 +76,13 @@ import { logger } from "@/lib/logging/logger";
 /** How often the scheduling tick re-runs while the app stays foregrounded (data-architect design: "every 30-60 min"). */
 const SCHEDULING_TICK_INTERVAL_MS = 45 * 60_000;
 
+/** Once the browser is idle after drawing — at most ~2 s later, so a busy launch can't postpone it indefinitely. */
+function afterFirstPaint(run: () => void): void {
+  if (typeof window === "undefined") return run();
+  if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(run, { timeout: 2000 });
+  else setTimeout(run, 500);
+}
+
 export interface SyncManager {
   network: NetworkMonitor;
   start(): void;
@@ -264,11 +271,19 @@ export function createSyncManager(): SyncManager {
         if (source === "pull") void runSchedulingTickNow();
       });
       network.start();
+      // Unsynced changes go out at once (data integrity); the rest waits
+      // until the first screen is drawn (2026-10-09) — on a cold start it
+      // used to compete with Today for the phone's CPU. The scheduling tick
+      // tells screens when it changed anything (`notifyLocalDataHydrated`),
+      // and the reminders it schedules are minutes to hours away, so a
+      // moment's delay changes nothing the user sees but the launch.
       void drainNow();
-      void syncOfflineIndexNow();
-      void syncLearnedMappingsNow();
-      void drainPhotoOutboxNow();
-      void runSchedulingTickNow();
+      afterFirstPaint(() => {
+        void runSchedulingTickNow();
+        void syncOfflineIndexNow();
+        void syncLearnedMappingsNow();
+        void drainPhotoOutboxNow();
+      });
       schedulingTickTimer = setInterval(() => void runSchedulingTickNow(), SCHEDULING_TICK_INTERVAL_MS);
     },
     stop() {

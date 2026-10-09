@@ -36,6 +36,63 @@ const SOUND_FILES: Record<SoundEffect, string> = {
   notification: "/notification.mp3",
 };
 
+/**
+ * Decoded sounds, played through Web Audio (2026-10-09). Every tap used to
+ * clone an `<audio>` element, and each clone loaded its file again —
+ * visible as two media requests per tap, and on a phone a click that
+ * lagged the tap. Decoded once, a sound starts the instant it's asked for.
+ * The `<audio>` path below stays as the fallback: for the first moments
+ * after launch while the files decode, and where Web Audio isn't
+ * available.
+ */
+let audioContext: AudioContext | null | undefined;
+const decoded = new Map<SoundEffect, AudioBuffer>();
+const decoding = new Map<SoundEffect, Promise<void>>();
+
+function getAudioContext(): AudioContext | null {
+  if (audioContext !== undefined) return audioContext;
+  const Context = typeof window === "undefined" ? undefined : (window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+  try {
+    audioContext = Context ? new Context() : null;
+  } catch {
+    audioContext = null;
+  }
+  return audioContext;
+}
+
+function decode(effect: SoundEffect): void {
+  const context = getAudioContext();
+  if (!context || decoded.has(effect) || decoding.has(effect)) return;
+  const run = fetch(SOUND_FILES[effect])
+    .then((response) => response.arrayBuffer())
+    .then((data) => context.decodeAudioData(data))
+    .then((buffer) => {
+      decoded.set(effect, buffer);
+    })
+    .catch(() => {
+      // Ignored — the `<audio>` fallback keeps working; a later call retries.
+    })
+    .finally(() => decoding.delete(effect));
+  decoding.set(effect, run);
+}
+
+/** True if the sound was started through Web Audio. */
+function playDecoded(effect: SoundEffect): boolean {
+  const context = getAudioContext();
+  const buffer = decoded.get(effect);
+  if (!context || !buffer) return false;
+  try {
+    if (context.state === "suspended") void context.resume().catch(() => {});
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(context.destination);
+    source.start();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const baseAudioCache = new Map<SoundEffect, HTMLAudioElement>();
 let activeUnlockHandler: (() => void) | null = null;
 
@@ -61,7 +118,12 @@ function registerAutoplayUnlock(): void {
 
   const unlock = () => {
     unregisterAutoplayUnlock();
+    // The first real tap is also the gesture Web Audio needs to start, and
+    // the moment to decode every sound for the rest of the session.
+    const context = getAudioContext();
+    if (context?.state === "suspended") void context.resume().catch(() => {});
     for (const effect of Object.keys(SOUND_FILES) as SoundEffect[]) {
+      decode(effect);
       try {
         const base = getOrCreateBase(effect);
         const result = base.play();
@@ -80,7 +142,10 @@ function registerAutoplayUnlock(): void {
 }
 
 export function playSound(effect: SoundEffect): void {
-  if (typeof window === "undefined" || typeof Audio === "undefined") return;
+  if (typeof window === "undefined") return;
+  if (playDecoded(effect)) return;
+  decode(effect);
+  if (typeof Audio === "undefined") return;
 
   try {
     const base = getOrCreateBase(effect);
@@ -100,9 +165,12 @@ if (typeof window !== "undefined") {
   registerAutoplayUnlock();
 }
 
-/** Test-only: clears the cached base `Audio` elements and re-arms a fresh autoplay-unlock listener (tearing down any previous one first), so a test that stubs `window.Audio` isn't defeated by a previous test's cached instance or dangling listener surviving into it. */
+/** Test-only: clears the cached base `Audio` elements and decoded sounds, and re-arms a fresh autoplay-unlock listener (tearing down any previous one first), so a test that stubs `window.Audio` isn't defeated by a previous test's cached instance or dangling listener surviving into it. */
 export function __resetSoundCacheForTests(): void {
   baseAudioCache.clear();
+  decoded.clear();
+  decoding.clear();
+  audioContext = undefined;
   unregisterAutoplayUnlock();
   if (typeof window !== "undefined") {
     registerAutoplayUnlock();

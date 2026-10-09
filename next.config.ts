@@ -37,6 +37,15 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Every screen is prebuilt and only changes with a deploy, so a screen
+    // prefetched once stays usable for 30 minutes instead of the default 5
+    // — the first tap after a short break no longer waits on the network
+    // (2026-10-09). A new deploy still arrives with the next launch (the
+    // app shell is fetched network-first, `app/sw.ts`); until then the
+    // running version keeps using its own, consistent set of screens.
+    staleTimes: { static: 1800 },
+  },
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },

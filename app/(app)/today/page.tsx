@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
-import { authClient } from "@/lib/auth/client/auth-client";
+import { useFirstName } from "@/lib/auth/client/use-first-name";
 import { DayStrip } from "@/components/today/DayStrip";
 import { TodayDoseRow } from "@/components/today/TodayDoseRow";
 import { ProgressRing } from "@/components/ui/ProgressRing";
@@ -55,8 +55,7 @@ function greeting(now: Date): string {
 
 /** Today's greeting (reference mockup, screen 1) — the wordmark and sync indicator above it come from the shared `AppBar`. */
 function TodayGreeting({ today }: { today: Date }) {
-  const { data: session } = authClient.useSession();
-  const firstName = session?.user?.name?.trim().split(/\s+/)[0];
+  const firstName = useFirstName();
 
   return (
     <div>

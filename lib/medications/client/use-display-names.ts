@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
 import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
 import { onOfflineIndexUpdated } from "@/lib/catalog/client/offline-index-signal";
@@ -54,14 +54,36 @@ async function resolveCatalogName(
 }
 
 /**
+ * Resolved names, remembered for the life of the page and keyed by
+ * everything a name depends on (a rename or a different catalog product is
+ * a different key). Every screen used to resolve every name again on
+ * every visit, one IndexedDB read after another, showing "…" meanwhile
+ * (2026-10-09); now a name resolved once is there on the first frame.
+ * Catalog names are forgotten when the offline index updates (see below).
+ */
+const resolvedNames = new Map<string, { name: string; fromCatalog: boolean }>();
+
+function nameKey(med: UserMedicationRecord, full: boolean): string {
+  return `${full ? "full" : "short"}|${med.id}|${med.customName ?? ""}|${med.catalogProductId ?? ""}`;
+}
+
+function forgetCatalogNames(): void {
+  for (const [key, entry] of resolvedNames) if (entry.fromCatalog) resolvedNames.delete(key);
+}
+
+/** Test seam. */
+export function __clearResolvedNamesForTests(): void {
+  resolvedNames.clear();
+}
+
+/**
  * Extracted from `app/(app)/medications/page.tsx` (2026-08-30, Phase 10)
  * — was a module-local, unexported hook; Today's dose cards need the
  * exact same medication-name resolution, so this is the shared home for
  * it rather than a second, drifting copy.
  */
 export function useDisplayNames(medications: UserMedicationRecord[], { full = false }: { full?: boolean } = {}): Map<string, string> {
-  const [names, setNames] = useState<Map<string, string>>(new Map());
-  const [refreshNonce, setRefreshNonce] = useState(0);
+  const [version, setVersion] = useState(0);
 
   // Real bug (2026-08-28, see offline-index-signal.ts's doc): re-resolves
   // when the offline index finishes syncing in the background, not just
@@ -69,25 +91,47 @@ export function useDisplayNames(medications: UserMedicationRecord[], { full = fa
   // that sync completed (the common case right after a fresh reinstall +
   // login) is stuck on the placeholder forever, even though the real data
   // arrives moments later.
-  useEffect(() => onOfflineIndexUpdated(() => setRefreshNonce((n) => n + 1)), []);
+  useEffect(
+    () =>
+      onOfflineIndexUpdated(() => {
+        forgetCatalogNames();
+        setVersion((n) => n + 1);
+      }),
+    [],
+  );
 
   useEffect(() => {
+    const missing = medications.filter((med) => !resolvedNames.has(nameKey(med, full)));
+    if (missing.length === 0) return;
     let cancelled = false;
-    async function resolve() {
-      const cache = new DexieCatalogCacheRepository();
-      const offlineIndex = new DexieOfflineIndexRepository();
-      const map = new Map<string, string>();
-      for (const med of medications) {
+    const cache = new DexieCatalogCacheRepository();
+    const offlineIndex = new DexieOfflineIndexRepository();
+    Promise.all(
+      missing.map(async (med) => {
         const name = await resolveMedicationDisplayName(med, cache, offlineIndex, { full });
-        map.set(med.id, name ?? "Φάρμακο από κατάλογο");
-      }
-      if (!cancelled) setNames(map);
-    }
-    void resolve();
+        resolvedNames.set(nameKey(med, full), { name: name ?? "Φάρμακο από κατάλογο", fromCatalog: !med.customName });
+      }),
+    ).then(
+      () => {
+        if (!cancelled) setVersion((n) => n + 1);
+      },
+      () => {
+        // An IndexedDB read failed — the name stays "…" and is retried on the next visit (not on every redraw).
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [medications, refreshNonce, full]);
+  }, [medications, full, version]);
 
-  return names;
+  return useMemo(() => {
+    const names = new Map<string, string>();
+    for (const med of medications) {
+      const entry = resolvedNames.get(nameKey(med, full));
+      if (entry) names.set(med.id, entry.name);
+    }
+    return names;
+    // `version` is how this hears that the module-level cache gained names.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [medications, full, version]);
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { clearSnapshots } from "@/lib/client-cache/snapshot";
 
 export type CurrentProfileState =
   | { status: "loading" }
@@ -8,6 +9,8 @@ export type CurrentProfileState =
   | { status: "signed-out" };
 
 const CACHED_PROFILE_KEY = "medtrack:last-known-profile";
+/** Today's greeting name (`use-first-name.ts`) — kept here so signing out clears it with the profile. */
+export const CACHED_FIRST_NAME_KEY = "medtrack:first-name";
 
 type CachedProfile = { profileId: string; accountId: string };
 
@@ -72,8 +75,12 @@ export function getCachedProfileId(): string | null {
 }
 
 export function clearCachedProfile(): void {
+  // Same moment, same reason: the screens' in-memory snapshots and the
+  // remembered greeting name belong to the profile being signed out.
+  clearSnapshots();
   try {
     localStorage.removeItem(CACHED_PROFILE_KEY);
+    localStorage.removeItem(CACHED_FIRST_NAME_KEY);
   } catch {
     // Nothing to do if storage is unavailable.
   }
