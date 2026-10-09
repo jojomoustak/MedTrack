@@ -58,6 +58,21 @@ describe("resolveMedicationDisplayName", () => {
     expect(name).toBe("Aspirin 100mg");
   });
 
+  it("gives a catalog product its everyday name, and the full description only when asked (2026-10-09)", async () => {
+    const cache = { get: vi.fn().mockResolvedValue({ name: "FLAGYL CAPS 500MG/CAP BTX30" }) };
+    const offlineIndex = { getById: vi.fn() };
+    const med = makeMed({ catalogProductId: "prod-1" });
+    expect(await resolveMedicationDisplayName(med, cache, offlineIndex)).toBe("FLAGYL 500mg");
+    expect(await resolveMedicationDisplayName(med, cache, offlineIndex, { full: true })).toBe("FLAGYL CAPS 500MG/CAP BTX30");
+  });
+
+  it("shows a typed name exactly as typed, even one shaped like a catalog description", async () => {
+    const cache = { get: vi.fn() };
+    const offlineIndex = { getById: vi.fn() };
+    const name = await resolveMedicationDisplayName(makeMed({ customName: "DEPON TAB 500MG/TAB" }), cache, offlineIndex);
+    expect(name).toBe("DEPON TAB 500MG/TAB");
+  });
+
   it("returns null when a catalogProductId resolves nowhere (caller supplies the placeholder)", async () => {
     const cache = { get: vi.fn().mockResolvedValue(null) };
     const offlineIndex = { getById: vi.fn().mockResolvedValue(null) };

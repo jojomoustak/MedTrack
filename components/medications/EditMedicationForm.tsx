@@ -66,7 +66,7 @@ export function EditMedicationForm({
   error,
 }: {
   medication: UserMedicationRecord;
-  /** Resolved display name (catalog product name, or `medication.customName`) — shown read-only when catalog-linked. */
+  /** Resolved name: a catalog product's full official description, or `medication.customName` — shown read-only when catalog-linked. */
   displayName: string;
   /** The medication's current schedule, if it has one. */
   schedule: MedicationScheduleRecord | null;

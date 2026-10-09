@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { SelectField } from "@/components/ui/SelectField";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import type { CatalogProduct } from "@/lib/domain/catalog";
+import { shortCatalogName } from "@/lib/domain/catalog-short-name";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 import { playSound } from "@/lib/sound/client/play-sound";
 
@@ -62,7 +63,8 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
   const [strengthUnit, setStrengthUnit] = useState(catalogProduct?.strengthUnit ?? "");
   const [inventoryUnit, setInventoryUnit] = useState<MedicationForm>((catalogProduct?.form as MedicationForm | null) ?? "tablet");
 
-  const displayName = catalogProduct?.name ?? manualName ?? "";
+  // The product is chosen by its full description (search, confirmation); from here on it goes by its everyday name.
+  const displayName = catalogProduct ? shortCatalogName(catalogProduct.name) : (manualName ?? "");
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();

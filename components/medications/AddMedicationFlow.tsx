@@ -10,6 +10,7 @@ import { ScheduleStep } from "@/components/medications/ScheduleStep";
 import { ReviewStep } from "@/components/medications/ReviewStep";
 import { newId } from "@/lib/domain/ids";
 import type { CatalogProduct } from "@/lib/domain/catalog";
+import { shortCatalogName } from "@/lib/domain/catalog-short-name";
 import type { ParsedBarcode } from "@/lib/domain/gs1";
 import type { ScheduleDraft } from "@/lib/domain/schedule-draft";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
@@ -298,7 +299,8 @@ export function AddMedicationFlow({
     }
   }
 
-  const displayName = catalogProduct?.name ?? manualName ?? "";
+  // The product is chosen by its full description (search, confirmation); from here on it goes by its everyday name.
+  const displayName = catalogProduct ? shortCatalogName(catalogProduct.name) : (manualName ?? "");
 
   return (
     <div ref={stepContainerRef} tabIndex={-1} className="mx-auto flex max-w-md flex-col gap-6 px-5 pb-4 outline-none">

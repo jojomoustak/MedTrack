@@ -60,7 +60,8 @@ export default function EditMedicationPage() {
 
   // Memoized: the name hook re-resolves whenever this array's identity changes.
   const medicationList = useMemo(() => (medication ? [medication] : []), [medication]);
-  const names = useDisplayNames(medicationList);
+  // The one screen that shows a catalog product's full official description ("FLAGYL CAPS 500MG/CAP BTX30"); everywhere else it's "FLAGYL 500mg".
+  const names = useDisplayNames(medicationList, { full: true });
   const detailPath = `/medications/${params.id}`;
 
   /** Back to the detail screen — popping history when that's where the user came from, so the device back button doesn't return to this form. */
