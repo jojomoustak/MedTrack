@@ -96,8 +96,27 @@ export async function snoozeDose(doseId: string, profileId: string, accountId: s
 }
 
 /** Bulk "mark all as taken" — the same per-dose path as `recordDoseTaken`, looped, with one native refresh at the end. */
-export async function recordAllDosesTaken(doses: DoseEventRecord[], profileId: string): Promise<void> {
-  for (const dose of doses.filter(isDoseActionable)) {
+/** How early a dose counts as "due" for the bulk action — pills for the morning are often taken a little ahead of the set time. */
+export const DUE_EARLY_WINDOW_MS = 60 * 60_000;
+
+/**
+ * Still waiting to be recorded, and its time has come (or comes within
+ * `DUE_EARLY_WINDOW_MS`). Only these are covered by "mark all as taken".
+ */
+export function isDoseDue(dose: Pick<DoseEventRecord, "status" | "scheduledAt">, now: Date): boolean {
+  return isDoseActionable(dose) && dose.scheduledAt !== null && new Date(dose.scheduledAt).getTime() <= now.getTime() + DUE_EARLY_WINDOW_MS;
+}
+
+/**
+ * Records every DUE dose as taken — never one whose time is still ahead.
+ * Real bug, found on the owner's phone (2026-10-11): this used to take
+ * every pending dose of the day, so tapping it at 15:31 recorded the
+ * 18:57–19:25 doses as taken hours early — false history, and their
+ * reminders cancelled for doses not yet taken. Filtered here, not just in
+ * the button, so no caller can do it again.
+ */
+export async function recordAllDosesTaken(doses: DoseEventRecord[], profileId: string, now: Date = new Date()): Promise<void> {
+  for (const dose of doses.filter((d) => isDoseDue(d, now))) {
     await transitionToTaken(dose.id, profileId, "taken");
   }
   refreshNativeReminders(profileId);

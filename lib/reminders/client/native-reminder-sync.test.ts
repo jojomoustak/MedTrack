@@ -167,10 +167,10 @@ describe("syncNativeRemindersNow", () => {
     expect(deps.platform.upsertReminder).toHaveBeenCalledWith(expect.objectContaining({ doseEventId: "dose-2" }));
   });
 
-  it("queries a range from 2h in the past to 36h ahead of `now`", async () => {
+  it("queries a range from 2h in the past to 72h ahead of `now` — the whole generation horizon (2026-10-11)", async () => {
     const deps = makeDeps([]);
     await syncNativeRemindersNow("profile-1", deps);
 
-    expect(deps.doseEvents.listForProfileInRange).toHaveBeenCalledWith("profile-1", "2025-12-31T22:00:00.000Z", "2026-01-02T12:00:00.000Z");
+    expect(deps.doseEvents.listForProfileInRange).toHaveBeenCalledWith("profile-1", "2025-12-31T22:00:00.000Z", "2026-01-04T00:00:00.000Z");
   });
 });

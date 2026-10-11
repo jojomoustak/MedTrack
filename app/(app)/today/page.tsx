@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useFirstName } from "@/lib/auth/client/use-first-name";
@@ -13,7 +13,7 @@ import { useMedicationStrengths } from "@/lib/medications/client/use-medication-
 import { useLowStockMedicationIds } from "@/lib/inventory/client/use-low-stock-medications";
 import { useTodayDoseEvents, allTodayDosesResolved } from "@/components/today/use-today-dose-events";
 import { isDoseTaken } from "@/lib/domain/dose-event";
-import { isDoseActionable, recordAllDosesTaken, recordDoseTaken, recordDoseTakenLate } from "@/lib/doses/client/dose-actions";
+import { isDoseDue, recordAllDosesTaken, recordDoseTaken, recordDoseTakenLate } from "@/lib/doses/client/dose-actions";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
@@ -90,6 +90,12 @@ export default function TodayPage() {
   const { status: dosesStatus, todayDoses, refresh } = useTodayDoseEvents(profileId, () => playSound("notification"));
   const [confirmingMarkAll, setConfirmingMarkAll] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
+  // Which doses are due moves with the clock, not only with data changes.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   function handleTake(doseId: string, kind: "taken" | "taken_late") {
     const record = kind === "taken" ? recordDoseTaken : recordDoseTakenLate;
@@ -109,7 +115,7 @@ export default function TodayPage() {
     setConfirmingMarkAll(false);
     setMarkingAll(true);
     try {
-      await recordAllDosesTaken(todayDoses, profileId);
+      await recordAllDosesTaken(todayDoses, profileId, new Date());
       playSound("success");
     } catch (err) {
       logger.warn("today.mark_all_failed", { message: err instanceof Error ? err.message : String(err) });
@@ -148,7 +154,8 @@ export default function TodayPage() {
   // Progress counts doses actually taken — a missed or skipped dose is recorded, not completed.
   const takenCount = todayDoses.filter((d) => isDoseTaken(d.status)).length;
   const allResolved = total > 0 && allTodayDosesResolved(todayDoses);
-  const hasActionableDose = todayDoses.some(isDoseActionable);
+  // "Mark all as taken" covers only doses whose time has come (`isDoseDue`) — never this evening's ones (2026-10-11).
+  const dueCount = todayDoses.filter((d) => isDoseDue(d, now)).length;
   const percent = total > 0 ? Math.round((takenCount / total) * 100) : 0;
 
   return (
@@ -192,22 +199,24 @@ export default function TodayPage() {
                 medicationName={names.get(dose.userMedicationId) ?? "…"}
                 medicationStrength={strengths.get(dose.userMedicationId)}
                 onTake={handleTake}
+                // A dose missed earlier today can still be recorded as taken later, right here.
+                allowTakenLate
               />
             ))}
           </div>
         )}
       </section>
 
-      {hasActionableDose &&
+      {dueCount >= 2 &&
         (confirmingMarkAll ? (
           <div className="flex flex-col gap-2">
-            <p className="text-center text-[15px] text-stone-700 dark:text-stone-300">Να καταγραφούν όλες οι υπόλοιπες δόσεις ως ελήφθησαν τώρα;</p>
+            <p className="text-center text-[15px] text-stone-700 dark:text-stone-300">Να καταγραφούν ως ελήφθησαν οι {dueCount} δόσεις που είναι για τώρα; Οι επόμενες δόσεις της ημέρας δεν αλλάζουν.</p>
             <div className="flex items-center gap-2">
               <Button variant="secondary" size="lg" onClick={() => setConfirmingMarkAll(false)} fullWidth>
                 Ακύρωση
               </Button>
               <Button size="lg" onClick={() => void handleMarkAllTaken()} disabled={markingAll} aria-busy={markingAll} fullWidth>
-                {markingAll ? "Καταγραφή…" : "Ναι, όλες"}
+                {markingAll ? "Καταγραφή…" : "Ναι, ελήφθησαν"}
               </Button>
             </div>
           </div>
@@ -220,7 +229,7 @@ export default function TodayPage() {
             }}
             fullWidth
           >
-            Καταγραφή όλων ως ελήφθησαν
+            Καταγραφή {dueCount} δόσεων ως ελήφθησαν
           </Button>
         ))}
     </div>

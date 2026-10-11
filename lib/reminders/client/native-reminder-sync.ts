@@ -26,12 +26,27 @@ import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { resolveMedicationDisplayName } from "@/lib/medications/client/use-display-names";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 import { logger } from "@/lib/logging/logger";
+import { GENERATION_HORIZON_MS } from "@/lib/scheduling/client/dose-event-generator";
 
 /** How far back to look for a just-turned-terminal dose event to cancel — generous slack over the 45-minute scheduling-tick cadence (`sync-manager.ts`) so a missed tick still self-heals on the next one. */
 const RECONCILE_LOOKBACK_MS = 2 * 3_600_000;
 
-/** How far ahead to push reminders — deliberately tighter than the 72h dose-event GENERATION horizon (`dose-event-generator.ts`): a native alarm this far out has little value and keeps bridge-call volume down, since every tick re-pushes the whole window. */
-const REMINDER_PUSH_HORIZON_MS = 36 * 3_600_000;
+/**
+ * How far ahead to push reminders: the whole dose-event generation horizon
+ * (72 h, `dose-event-generator.ts`). Native alarms are the only thing that
+ * fires while the app is closed, and new ones are only armed while it's
+ * open — so this is how long reminders keep coming without the user
+ * opening the app.
+ *
+ * It was 36 h, to keep the per-pass bridge traffic down. Found live
+ * (2026-10-11, the owner's Redmi Note 8): the app wasn't opened from Friday
+ * evening to Sunday afternoon, MIUI had killed it in the background, and
+ * the armed reminders simply ran out — Sunday's 14:01 doses got no
+ * notification at all. Doubling the window roughly doubles the calls per
+ * pass (tens, not hundreds), a fair price for reminder reliability
+ * (CLAUDE.md's priority order).
+ */
+const REMINDER_PUSH_HORIZON_MS = GENERATION_HORIZON_MS;
 
 export interface NativeReminderSyncDeps {
   doseEvents: Pick<DoseEventRepository, "listForProfileInRange">;
