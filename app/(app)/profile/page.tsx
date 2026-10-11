@@ -15,13 +15,13 @@ import { playSound } from "@/lib/sound/client/play-sound";
 
 function RowIcon({ children }: { children: React.ReactNode }) {
   return (
-    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-stone-700 dark:text-stone-300">
+    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-stone-700">
       {children}
     </svg>
   );
 }
 
-const ROW = "flex min-h-16 w-full items-center gap-4 px-4 text-left text-[17px] font-medium text-stone-900 dark:text-stone-100";
+const ROW = "flex min-h-16 w-full items-center gap-4 px-4 text-left text-[17px] font-medium text-stone-900";
 
 /**
  * Phase 3 §2.8 Profile/settings, laid out after the reference mockup's
@@ -110,12 +110,12 @@ export default function ProfilePage() {
           // eslint-disable-next-line @next/next/no-img-element -- the account's own Google profile photo URL; not worth routing through image optimization
           <img src={image} alt="" referrerPolicy="no-referrer" className="mb-2 size-24 rounded-full object-cover shadow-[0_2px_10px_rgba(28,25,23,.12)]" />
         ) : (
-          <div aria-hidden="true" className="mb-2 flex size-24 items-center justify-center rounded-full bg-accent-100 text-4xl font-bold text-accent-800 dark:bg-accent-900/40 dark:text-accent-400">
+          <div aria-hidden="true" className="mb-2 flex size-24 items-center justify-center rounded-full bg-accent-100 text-4xl font-bold text-accent-800">
             {initial}
           </div>
         )}
-        <h1 className="text-[24px] font-bold tracking-tight text-stone-900 dark:text-stone-50">{name || "Προφίλ"}</h1>
-        {email && <p className="text-base text-stone-600 dark:text-stone-400">{email}</p>}
+        <h1 className="text-[24px] font-bold tracking-tight text-stone-900">{name || "Προφίλ"}</h1>
+        {email && <p className="text-base text-stone-600">{email}</p>}
       </div>
 
       <EmailVerificationBanner email={email ?? null} />
@@ -124,7 +124,7 @@ export default function ProfilePage() {
         <ReminderPermissionToggle profileId={profileId} />
       </div>
 
-      <nav aria-label="Ρυθμίσεις" className="surface-card divide-y divide-stone-100 overflow-hidden dark:divide-stone-800">
+      <nav aria-label="Ρυθμίσεις" className="surface-card divide-y divide-stone-100 overflow-hidden">
         <button type="button" onClick={handleExport} disabled={exporting} aria-busy={exporting} className={`${ROW} disabled:opacity-60`}>
           <RowIcon>
             <path d="M12 4v11m0 0-4-4m4 4 4-4" />
@@ -143,13 +143,13 @@ export default function ProfilePage() {
         </Link>
       </nav>
       {exportError && (
-        <p role="alert" className="-mt-2 text-[15px] font-medium text-red-700 dark:text-red-400">
+        <p role="alert" className="-mt-2 text-[15px] font-medium text-red-700">
           {exportError}
         </p>
       )}
 
       <section className="surface-card flex flex-col gap-3 p-4" aria-labelledby="account-heading">
-        <h2 id="account-heading" className="text-[17px] font-semibold text-stone-900 dark:text-stone-100">
+        <h2 id="account-heading" className="text-[17px] font-semibold text-stone-900">
           Λογαριασμός
         </h2>
         <GoogleAuthButton mode="link" callbackURL="/profile" label="Σύνδεση λογαριασμού Google" />
@@ -158,7 +158,7 @@ export default function ProfilePage() {
       <button
         type="button"
         onClick={handleSignOut}
-        className="flex min-h-16 w-full items-center gap-4 rounded-2xl bg-red-50 px-4 text-left text-[17px] font-semibold text-red-700 transition-transform active:scale-[0.99] dark:bg-red-950/50 dark:text-red-300"
+        className="flex min-h-16 w-full items-center gap-4 rounded-2xl bg-red-50 px-4 text-left text-[17px] font-semibold text-red-700 transition-transform active:scale-[0.99]"
       >
         <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3" />
@@ -170,7 +170,7 @@ export default function ProfilePage() {
       <Link
         href="/profile/delete"
         onClick={() => playSound("button")}
-        className="flex min-h-16 items-center gap-4 rounded-2xl border-2 border-red-300 px-4 py-3 text-red-800 dark:border-red-800 dark:text-red-300"
+        className="flex min-h-16 items-center gap-4 rounded-2xl border-2 border-red-300 px-4 py-3 text-red-800"
       >
         <svg viewBox="0 0 20 20" width="22" height="22" aria-hidden="true" focusable="false" fill="currentColor" className="shrink-0">
           <path d="M10 2 1 18h18L10 2Zm0 5a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm0 8a1.25 1.25 0 1 1 0-2.5A1.25 1.25 0 0 1 10 15Z" />

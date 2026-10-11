@@ -17,12 +17,12 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
   const { token } = await searchParams;
 
   return (
-    <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-6 pt-4 dark:bg-stone-950">
+    <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-6 pt-4">
       <div className="mx-auto flex w-full max-w-sm flex-col">
         <AuthBackLink href="/login" />
         <ResetPasswordIllustration className="size-36 self-center" />
-        <h1 className="mt-5 text-[32px] font-bold leading-tight tracking-tight text-stone-900 dark:text-stone-50">Επαναφορά κωδικού</h1>
-        <p className="mb-6 mt-2 text-lg leading-snug text-stone-600 dark:text-stone-400">Πληκτρολογήστε τον νέο σας κωδικό παρακάτω.</p>
+        <h1 className="mt-5 text-[32px] font-bold leading-tight tracking-tight text-stone-900">Επαναφορά κωδικού</h1>
+        <p className="mb-6 mt-2 text-lg leading-snug text-stone-600">Πληκτρολογήστε τον νέο σας κωδικό παρακάτω.</p>
         <ResetPasswordForm token={token ?? null} />
       </div>
     </main>

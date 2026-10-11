@@ -37,12 +37,12 @@ export function PrnScheduleBuilder({ onSubmit, onBack, initial }: PrnScheduleBui
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="text-[22px] font-bold tracking-tight text-stone-900 dark:text-stone-50">Όποτε χρειάζεται</h2>
-      <p className="text-[15px] text-stone-600 dark:text-stone-400">Χωρίς σταθερό πρόγραμμα — καταγράφετε τη δόση όποτε τη χρειάζεστε.</p>
+      <h2 className="text-[22px] font-bold tracking-tight text-stone-900">Όποτε χρειάζεται</h2>
+      <p className="text-[15px] text-stone-600">Χωρίς σταθερό πρόγραμμα — καταγράφετε τη δόση όποτε τη χρειάζεστε.</p>
 
       <div className="flex gap-3">
         <label className="flex flex-1 flex-col gap-2">
-          <span className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Ποσότητα δόσης</span>
+          <span className="text-[17px] font-semibold text-stone-800">Ποσότητα δόσης</span>
           <input
             type="text"
             inputMode="decimal"
@@ -53,7 +53,7 @@ export function PrnScheduleBuilder({ onSubmit, onBack, initial }: PrnScheduleBui
           />
         </label>
         <label className="flex flex-1 flex-col gap-2">
-          <span className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Μονάδα</span>
+          <span className="text-[17px] font-semibold text-stone-800">Μονάδα</span>
           <select
             value={unit}
             onChange={(e) => setUnit(e.target.value as MedicationForm)}
@@ -70,7 +70,7 @@ export function PrnScheduleBuilder({ onSubmit, onBack, initial }: PrnScheduleBui
       </div>
 
       {error && (
-        <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
+        <p role="alert" className="text-[15px] font-medium text-red-700">
           {error}
         </p>
       )}

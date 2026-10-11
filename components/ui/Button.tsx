@@ -15,11 +15,11 @@ export type ButtonSize = "lg" | "md" | "sm";
  * `secondary` so a destructive action never reads as a routine one.
  */
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: "bg-accent-700 text-white dark:bg-accent-500 dark:text-stone-950",
-  secondary: "border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100",
-  tertiary: "text-stone-600 dark:text-stone-400 font-semibold",
+  primary: "bg-accent-700 text-white",
+  secondary: "border border-stone-300 text-stone-900",
+  tertiary: "text-stone-600 font-semibold",
   danger: "bg-red-700 text-white",
-  "danger-outline": "border border-red-300 dark:border-red-900 text-red-700 dark:text-red-400",
+  "danger-outline": "border border-red-300 text-red-700",
 };
 
 // Rounded rectangles, not pills: every button in the reference mockup

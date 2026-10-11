@@ -6,10 +6,10 @@
  */
 export function PasswordRule({ met, label }: { met: boolean; label: string }) {
   return (
-    <p className="flex items-center gap-2.5 text-[15px] text-stone-600 dark:text-stone-400">
+    <p className="flex items-center gap-2.5 text-[15px] text-stone-600">
       <span
         aria-hidden="true"
-        className={`flex size-5 shrink-0 items-center justify-center rounded-full ${met ? "bg-accent-700 text-white dark:bg-accent-500" : "border-2 border-stone-300 dark:border-stone-600"}`}
+        className={`flex size-5 shrink-0 items-center justify-center rounded-full ${met ? "bg-accent-700 text-white" : "border-2 border-stone-300"}`}
       >
         {met && (
           <svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

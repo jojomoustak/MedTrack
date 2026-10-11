@@ -146,8 +146,8 @@ export function DoseCard({ dose, medicationName, medicationStrength, actionable,
     <div
       role="group"
       aria-label={buildAriaLabel(medicationName, medicationStrength, dose.quantityValue, unitLabel(dose.quantityUnit), timeLabel, label, availableActions)}
-      className={`flex flex-col gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-3 dark:border-stone-800 dark:bg-stone-900 ${
-        isCompleted ? "opacity-75" : "shadow-[0_1px_2px_rgba(28,25,23,.05),0_1px_3px_rgba(28,25,23,.07)] dark:shadow-none"
+      className={`flex flex-col gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-3 ${
+        isCompleted ? "opacity-75" : "shadow-[0_1px_2px_rgba(28,25,23,.05),0_1px_3px_rgba(28,25,23,.07)]"
       }`}
       data-dose-status={displayStatus}
     >
@@ -162,26 +162,26 @@ export function DoseCard({ dose, medicationName, medicationStrength, actionable,
           <MedicationThumbnail userMedicationId={dose.userMedicationId} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <p className={`truncate text-[17px] font-bold ${isCompleted ? "line-through decoration-stone-400 dark:decoration-stone-600" : ""}`}>{medicationName}</p>
+              <p className={`truncate text-[17px] font-bold ${isCompleted ? "line-through decoration-stone-400" : ""}`}>{medicationName}</p>
               {/* tabular-nums keeps digit widths steady down a whole list
                   of cards (impeccable craft: numerals in tabular data are
                   a browser default until themed on purpose). */}
               {timeLabel && (
-                <span className="shrink-0 text-[15px] font-extrabold tabular-nums text-accent-700 dark:text-accent-400">{timeLabel}</span>
+                <span className="shrink-0 text-[15px] font-extrabold tabular-nums text-accent-700">{timeLabel}</span>
               )}
             </div>
             {/* UX feedback (2026-09-26): shows the medication's strength
                 (e.g. "500 mg") instead of the per-dose quantity/form text
                 (e.g. "1 Δισκίο") this used to show — kept out of the
                 screen reader label change below, not dropped entirely. */}
-            {medicationStrength && <p className="text-sm text-stone-600 dark:text-stone-400">{medicationStrength}</p>}
+            {medicationStrength && <p className="text-sm text-stone-600">{medicationStrength}</p>}
             {/* `aria-live` scoped to just this line, not the whole card, so a
                 status change (e.g. tapping Έλαβα) is announced to a screen
                 reader without re-announcing the medication name/quantity
                 alongside it every time (accessibility audit, Phase 15
                 Hardening). */}
             {label && (
-              <p aria-live="polite" className="text-sm text-stone-600 dark:text-stone-400">
+              <p aria-live="polite" className="text-sm text-stone-600">
                 {label}
               </p>
             )}
@@ -223,7 +223,7 @@ export function DoseCard({ dose, medicationName, medicationStrength, actionable,
       )}
 
       {showMissedRecovery && (
-        <Button variant="tertiary" onClick={() => startUndoWindow("taken_late")} className="self-start px-0 font-semibold text-accent-700 dark:text-accent-400">
+        <Button variant="tertiary" onClick={() => startUndoWindow("taken_late")} className="self-start px-0 font-semibold text-accent-700">
           Το πήρα, καταγραφή ως αργοπορημένη λήψη
         </Button>
       )}

@@ -70,14 +70,14 @@ export function SyncStatusChip({ state, onRetry, className, compact = false }: S
 function stateColorClasses(state: SyncState): string {
   switch (state) {
     case "conflict":
-      return "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200";
+      return "bg-amber-100 text-amber-900";
     case "failed":
-      return "bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200";
+      return "bg-red-100 text-red-900";
     case "syncing":
-      return "bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200";
+      return "bg-blue-100 text-blue-900";
     case "deleted":
-      return "bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300";
+      return "bg-stone-200 text-stone-700";
     default:
-      return "bg-stone-100 text-stone-700 dark:bg-stone-800/60 dark:text-stone-300";
+      return "bg-stone-100 text-stone-700";
   }
 }

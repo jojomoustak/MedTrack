@@ -50,7 +50,7 @@ export function PasswordInput({
           }}
           aria-label={visible ? "Απόκρυψη κωδικού πρόσβασης" : "Εμφάνιση κωδικού πρόσβασης"}
           aria-pressed={visible}
-          className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-stone-500 dark:text-stone-400"
+          className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-stone-500"
         >
           <EyeIcon open={visible} />
         </button>

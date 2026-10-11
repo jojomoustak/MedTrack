@@ -33,15 +33,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const message = googleError ?? sessionExpiredMessage;
 
   return (
-    <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-5 pt-6 dark:bg-stone-950">
+    <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-5 pt-6">
       <div className="mx-auto flex w-full max-w-sm flex-col">
         <BrandLockup iconSize={72} textClassName="text-[30px] leading-none" className="self-center" />
 
-        <h1 className="mt-7 text-[34px] font-bold leading-tight tracking-tight text-stone-900 dark:text-stone-50">Καλώς ήρθατε ξανά</h1>
-        <p className="mt-2 text-lg leading-snug text-stone-600 dark:text-stone-400">Συνδεθείτε για να συνεχίσετε στο MedTrack.</p>
+        <h1 className="mt-7 text-[34px] font-bold leading-tight tracking-tight text-stone-900">Καλώς ήρθατε ξανά</h1>
+        <p className="mt-2 text-lg leading-snug text-stone-600">Συνδεθείτε για να συνεχίσετε στο MedTrack.</p>
 
         {message && (
-          <p role="alert" className="mt-4 text-sm text-red-700 dark:text-red-400">
+          <p role="alert" className="mt-4 text-sm text-red-700">
             {message}
           </p>
         )}
@@ -50,7 +50,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <LoginForm />
         </div>
 
-        <p className="mt-6 text-center text-base text-stone-500 dark:text-stone-400">ή συνεχίστε με</p>
+        <p className="mt-6 text-center text-base text-stone-500">ή συνεχίστε με</p>
 
         <div className="mt-4">
           <GoogleAuthButton
@@ -59,13 +59,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             errorCallbackURL="/login"
             size="lg"
             fullWidth
-            className="bg-white shadow-[0_1px_3px_rgba(28,25,23,0.06)] dark:bg-stone-900"
+            className="bg-white shadow-[0_1px_3px_rgba(28,25,23,0.06)]"
           />
         </div>
 
-        <p className="mt-6 text-center text-[15px] text-stone-600 dark:text-stone-400">
+        <p className="mt-6 text-center text-[15px] text-stone-600">
           Δεν έχετε λογαριασμό;{" "}
-          <Link href="/register" className="font-semibold text-accent-700 dark:text-accent-400">
+          <Link href="/register" className="font-semibold text-accent-700">
             Εγγραφή
           </Link>
         </p>

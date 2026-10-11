@@ -55,7 +55,7 @@ export function UndoableDeleteButton({ label, onConfirm }: { label: string; onCo
   }
 
   return (
-    <Button variant="tertiary" onClick={startDelete} aria-label={label} className="min-w-12 px-0 text-red-700 dark:text-red-400">
+    <Button variant="tertiary" onClick={startDelete} aria-label={label} className="min-w-12 px-0 text-red-700">
       Διαγραφή
     </Button>
   );

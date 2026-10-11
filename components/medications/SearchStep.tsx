@@ -43,7 +43,7 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
   return (
     <div className="flex flex-col gap-4">
       <label className="flex flex-col gap-1">
-        <span className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Αναζήτηση φαρμάκου</span>
+        <span className="text-[17px] font-semibold text-stone-800">Αναζήτηση φαρμάκου</span>
         <input
           type="search"
           value={query}
@@ -55,13 +55,13 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
       </label>
 
       {status === "loading" && (
-        <p role="status" aria-live="polite" className="text-[15px] text-stone-600 dark:text-stone-400">
+        <p role="status" aria-live="polite" className="text-[15px] text-stone-600">
           Αναζήτηση…
         </p>
       )}
 
       {status === "offline-cache" && results.length > 0 && (
-        <p role="status" className="text-sm text-amber-700 dark:text-amber-400">
+        <p role="status" className="text-sm text-amber-700">
           Είστε εκτός σύνδεσης — εμφανίζονται μόνο φάρμακα που έχετε ξαναδεί.
         </p>
       )}
@@ -76,8 +76,8 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
                 onClick={() => { playSound("button"); setCandidate(product); }}
                 className="flex min-h-16 w-full flex-col items-start text-left transition-transform duration-150 active:scale-[0.98]"
               >
-                <span className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">{product.name}</span>
-                <span className="text-[15px] text-stone-600 dark:text-stone-400">{formatSubtitle(product)}</span>
+                <span className="text-[17px] font-semibold text-stone-800">{product.name}</span>
+                <span className="text-[15px] text-stone-600">{formatSubtitle(product)}</span>
               </Card>
             </li>
           ))}
@@ -85,8 +85,8 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
       )}
 
       {(showNoResults || showOfflineEmpty) && (
-        <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center dark:border-stone-700">
-          <p className="mb-3 text-sm text-stone-700 dark:text-stone-300">
+        <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center">
+          <p className="mb-3 text-sm text-stone-700">
             Δεν βρέθηκε το φάρμακο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος.
           </p>
           {/* Equally weighted with search results, never a dead end (Phase 3 §2.4/§8). */}

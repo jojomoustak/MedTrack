@@ -70,7 +70,7 @@ export default function MedicationsPage() {
   return (
     <div className="flex flex-col gap-5 px-5 pt-1 pb-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Φάρμακα</h1>
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Φάρμακα</h1>
         <ButtonLink href="/medications/add" onClick={() => playSound("button")}>
           <PlusIcon />
           Προσθήκη
@@ -79,13 +79,13 @@ export default function MedicationsPage() {
 
       <label className="relative block">
         <span className="sr-only">Αναζήτηση φαρμάκων</span>
-        <SearchIcon className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-stone-500 dark:text-stone-400" />
+        <SearchIcon className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-stone-500" />
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Αναζήτηση φαρμάκων…"
-          className="min-h-12 w-full rounded-xl bg-surface-muted py-2 pr-4 pl-11 text-base text-stone-900 placeholder:text-stone-500 focus:ring-2 focus:ring-accent-600/25 focus:outline-none dark:text-stone-100 dark:placeholder:text-stone-500"
+          className="min-h-12 w-full rounded-xl bg-surface-muted py-2 pr-4 pl-11 text-base text-stone-900 placeholder:text-stone-500 focus:ring-2 focus:ring-accent-600/25 focus:outline-none"
         />
       </label>
 
@@ -100,7 +100,7 @@ export default function MedicationsPage() {
       />
 
       {status === "loading" && (
-        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+        <p role="status" className="text-sm text-stone-600">
           Φόρτωση…
         </p>
       )}
@@ -129,11 +129,11 @@ export default function MedicationsPage() {
                       up once synced. */}
                   <MedicationAvatar medicationId={med.id} form={med.customForm ?? med.inventoryUnit} withPhoto={med.syncState === "synced"} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[19px] font-bold text-stone-900 dark:text-stone-50">{name}</p>
-                    {detail && <p className="truncate text-base text-stone-600 dark:text-stone-400">{detail}</p>}
-                    {frequency && <p className="truncate text-base text-stone-600 dark:text-stone-400">{frequency}</p>}
+                    <p className="truncate text-[19px] font-bold text-stone-900">{name}</p>
+                    {detail && <p className="truncate text-base text-stone-600">{detail}</p>}
+                    {frequency && <p className="truncate text-base text-stone-600">{frequency}</p>}
                     {lowStock && (
-                      <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-amber-700 dark:text-amber-400">
+                      <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-amber-700">
                         <LowStockGlyph />
                         Χαμηλό απόθεμα
                       </p>

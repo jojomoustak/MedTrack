@@ -47,18 +47,18 @@ export function WelcomeIllustration({ className = "" }: { className?: string }) 
         <path
           d={`${ellipsePath(330, 400, 242, 322)} ${ellipsePath(100, 420, 122, 277)}`}
           fillRule="evenodd"
-          className="fill-[#E6EBE0] dark:fill-[#18231e]"
+          className="fill-[#E6EBE0]"
         />
-        <ellipse cx="-20" cy="470" rx="130" ry="180" className="fill-[#E0E8DB] dark:fill-[#1b2a23]" />
-        <ellipse cx="380" cy="460" rx="170" ry="185" className="fill-[#C5D8C7] dark:fill-[#1f3329]" />
-        <path d="M0 398 Q195 358 390 398 L390 430 L0 430 Z" className="fill-[#FCFBF7] dark:fill-stone-950" />
+        <ellipse cx="-20" cy="470" rx="130" ry="180" className="fill-[#E0E8DB]" />
+        <ellipse cx="380" cy="460" rx="170" ry="185" className="fill-[#C5D8C7]" />
+        <path d="M0 398 Q195 358 390 398 L390 430 L0 430 Z" className="fill-[#FCFBF7]" />
       </svg>
 
       <svg viewBox={LEAVES_VIEWBOX} preserveAspectRatio="xMidYMax meet" className="absolute inset-0 h-full w-full">
         {/* Halos first, then stems, then leaves: a halo drawn after the
             stems would cut a light gap across each stem at the leaf base. */}
         {LEAVES.map((spec, i) => (
-          <path key={i} d={leafOutline(spec)} strokeWidth="5" strokeLinejoin="round" className="fill-none stroke-[#FCFBF7] dark:stroke-stone-950" />
+          <path key={i} d={leafOutline(spec)} strokeWidth="5" strokeLinejoin="round" className="fill-none stroke-[#FCFBF7]" />
         ))}
         {STEMS.map((d) => (
           <path key={d} d={d} fill="none" stroke="#174F3B" strokeWidth={STEM_WIDTH} strokeLinecap="round" />

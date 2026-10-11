@@ -25,9 +25,9 @@ export default function AddMedicationPage() {
     <main className="min-h-dvh bg-background pb-8">
       <ScreenHeader />
       <OfflineBanner />
-      <h1 className="mx-auto max-w-md px-5 pt-1 pb-5 text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Προσθήκη φαρμάκου</h1>
+      <h1 className="mx-auto max-w-md px-5 pt-1 pb-5 text-[28px] leading-tight font-bold tracking-tight text-stone-900">Προσθήκη φαρμάκου</h1>
       {session.status === "loading" && (
-        <p role="status" className="px-5 text-sm text-stone-600 dark:text-stone-400">
+        <p role="status" className="px-5 text-sm text-stone-600">
           Φόρτωση…
         </p>
       )}

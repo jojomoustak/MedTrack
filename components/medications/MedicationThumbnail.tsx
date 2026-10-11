@@ -84,7 +84,7 @@ export function MedicationThumbnail({ userMedicationId }: { userMedicationId: st
       }}
       aria-label={uploadFailed ? "Η λήψη φωτογραφίας απέτυχε — πατήστε για να δοκιμάσετε ξανά" : "Λήψη φωτογραφίας φαρμάκου"}
       className={`flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform duration-150 active:scale-95 ${
-        uploadFailed ? "bg-red-100 text-red-500 dark:bg-red-900/40 dark:text-red-400" : `${color.bg} ${color.text}`
+        uploadFailed ? "bg-red-100 text-red-500" : `${color.bg} ${color.text}`
       }`}
     >
       {uploading ? (

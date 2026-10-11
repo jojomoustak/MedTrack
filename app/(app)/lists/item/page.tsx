@@ -27,7 +27,7 @@ function CheckSquare({ checked }: { checked: boolean }) {
     <span
       aria-hidden="true"
       className={`flex size-7 items-center justify-center rounded-lg border-2 ${
-        checked ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950" : "border-stone-400 bg-white dark:border-stone-500 dark:bg-stone-900"
+        checked ? "border-accent-700 bg-accent-700 text-white" : "border-stone-400 bg-white"
       }`}
     >
       {checked && (
@@ -75,7 +75,7 @@ function ItemRow({
   const purchased = item.status === "purchased";
   const removed = item.status === "removed";
   return (
-    <li className={`flex flex-col ${removed ? "rounded-2xl border-2 border-dashed border-stone-300 opacity-70 dark:border-stone-700" : "surface-card"}`}>
+    <li className={`flex flex-col ${removed ? "rounded-2xl border-2 border-dashed border-stone-300 opacity-70" : "surface-card"}`}>
       <div className="flex min-h-19 items-center gap-2 py-2 pr-1 pl-1.5">
         {onToggle ? (
           <button type="button" onClick={onToggle} aria-label={toggleLabel} className="flex size-12 shrink-0 items-center justify-center rounded-xl active:scale-95">
@@ -85,8 +85,8 @@ function ItemRow({
           <span className="size-3 shrink-0" aria-hidden="true" />
         )}
         <div className="min-w-0 flex-1">
-          <p className={`truncate text-[17px] font-bold ${purchased ? "text-stone-500 line-through dark:text-stone-400" : "text-stone-900 dark:text-stone-50"}`}>{name}</p>
-          {detail && <p className="truncate text-[15px] text-stone-600 dark:text-stone-400">{detail}</p>}
+          <p className={`truncate text-[17px] font-bold ${purchased ? "text-stone-500 line-through" : "text-stone-900"}`}>{name}</p>
+          {detail && <p className="truncate text-[15px] text-stone-600">{detail}</p>}
           {footer}
         </div>
         <button
@@ -97,12 +97,12 @@ function ItemRow({
           }}
           aria-expanded={open}
           aria-label={`Επιλογές για "${name}"`}
-          className="flex size-11 shrink-0 items-center justify-center rounded-full text-stone-500 active:bg-stone-100 dark:active:bg-stone-800"
+          className="flex size-11 shrink-0 items-center justify-center rounded-full text-stone-500 active:bg-stone-100"
         >
           <MoreIcon />
         </button>
       </div>
-      {open && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-stone-100 px-3 py-2 dark:border-stone-800">{actions}</div>}
+      {open && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-stone-100 px-3 py-2">{actions}</div>}
     </li>
   );
 }
@@ -200,7 +200,7 @@ export default function PurchaseListDetailPage() {
 
   return (
     <div className="flex flex-col gap-5 px-5 pt-1 pb-6">
-      <h1 className="text-[28px] leading-tight font-bold tracking-tight wrap-break-word text-stone-900 dark:text-stone-50">{list?.name ?? "…"}</h1>
+      <h1 className="text-[28px] leading-tight font-bold tracking-tight wrap-break-word text-stone-900">{list?.name ?? "…"}</h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <label htmlFor="new-item-label" className={FIELD_LABEL}>
@@ -219,7 +219,7 @@ export default function PurchaseListDetailPage() {
             type="submit"
             disabled={!label.trim() || adding}
             aria-label="Προσθήκη στη λίστα"
-            className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-accent-700 text-white transition-transform active:scale-95 disabled:opacity-50 dark:bg-accent-500 dark:text-stone-950"
+            className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-accent-700 text-white transition-transform active:scale-95 disabled:opacity-50"
           >
             <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.6">
               <path d="M12 5v14M5 12h14" strokeLinecap="round" />
@@ -229,7 +229,7 @@ export default function PurchaseListDetailPage() {
 
         {showPrice ? (
           <label className="flex items-center gap-3">
-            <span className="text-[15px] font-medium text-stone-700 dark:text-stone-300">Εκτιμώμενη τιμή (€)</span>
+            <span className="text-[15px] font-medium text-stone-700">Εκτιμώμενη τιμή (€)</span>
             <input
               type="text"
               inputMode="decimal"
@@ -246,7 +246,7 @@ export default function PurchaseListDetailPage() {
               playSound("button");
               setShowPrice(true);
             }}
-            className="min-h-11 self-start text-[15px] font-semibold text-accent-700 dark:text-accent-400"
+            className="min-h-11 self-start text-[15px] font-semibold text-accent-700"
           >
             + Προσθήκη τιμής
           </button>
@@ -254,7 +254,7 @@ export default function PurchaseListDetailPage() {
 
         {suggestions.length > 0 && (
           <div className="flex flex-col gap-2">
-            <p className="text-[15px] text-stone-600 dark:text-stone-400">Από τα φάρμακά σας:</p>
+            <p className="text-[15px] text-stone-600">Από τα φάρμακά σας:</p>
             <ul className="flex flex-wrap gap-2" aria-label="Προσθήκη φαρμάκου στη λίστα">
               {suggestions.map((m) => (
                 <li key={m.id}>
@@ -262,7 +262,7 @@ export default function PurchaseListDetailPage() {
                     type="button"
                     disabled={adding}
                     onClick={() => void add({ userMedicationId: m.id })}
-                    className="min-h-11 rounded-xl bg-surface-muted px-3.5 text-[15px] font-semibold text-stone-800 active:scale-95 disabled:opacity-50 dark:text-stone-200"
+                    className="min-h-11 rounded-xl bg-surface-muted px-3.5 text-[15px] font-semibold text-stone-800 active:scale-95 disabled:opacity-50"
                   >
                     + {medicationTitle(m.id)}
                   </button>
@@ -274,7 +274,7 @@ export default function PurchaseListDetailPage() {
       </form>
 
       {status === "loading" && (
-        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+        <p role="status" className="text-sm text-stone-600">
           Φόρτωση…
         </p>
       )}
@@ -319,7 +319,7 @@ export default function PurchaseListDetailPage() {
 
       {status === "ready" && purchased.length > 0 && (
         <section className="flex flex-col gap-3" aria-labelledby="purchased-heading">
-          <h2 id="purchased-heading" className="text-[17px] font-semibold text-stone-700 dark:text-stone-300">
+          <h2 id="purchased-heading" className="text-[17px] font-semibold text-stone-700">
             Αγορασμένα
           </h2>
           <ul className="flex flex-col gap-3">
@@ -341,7 +341,7 @@ export default function PurchaseListDetailPage() {
                       <Link
                         href={`/medications/${item.userMedicationId}/packages/add`}
                         onClick={() => playSound("button")}
-                        className="mt-0.5 inline-flex min-h-9 items-center text-[15px] font-semibold text-accent-700 dark:text-accent-400"
+                        className="mt-0.5 inline-flex min-h-9 items-center text-[15px] font-semibold text-accent-700"
                       >
                         Προσθήκη στο απόθεμα
                       </Link>
@@ -357,7 +357,7 @@ export default function PurchaseListDetailPage() {
 
       {status === "ready" && removed.length > 0 && (
         <section className="flex flex-col gap-3" aria-labelledby="removed-heading">
-          <h2 id="removed-heading" className="text-[17px] font-semibold text-stone-500 dark:text-stone-400">
+          <h2 id="removed-heading" className="text-[17px] font-semibold text-stone-500">
             Δεν χρειάζονται πια
           </h2>
           <ul className="flex flex-col gap-3">

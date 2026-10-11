@@ -55,7 +55,7 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
           className={`${FIELD_INPUT} pr-4`}
         />
         {error && (
-          <span id="manual-name-error" role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
+          <span id="manual-name-error" role="alert" className="text-[15px] font-medium text-red-700">
             {error}
           </span>
         )}
@@ -63,7 +63,7 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
 
       {(initialExpiry !== null || initialBatch !== null) && (
         <div className="surface-card flex flex-col gap-4 p-4">
-          <p className="text-[15px] text-stone-600 dark:text-stone-400">Αυτά διαβάστηκαν από τη σάρωση — ελέγξτε ή διορθώστε τα.</p>
+          <p className="text-[15px] text-stone-600">Αυτά διαβάστηκαν από τη σάρωση — ελέγξτε ή διορθώστε τα.</p>
           <label className={FIELD_WRAPPER}>
             <span className={FIELD_LABEL}>Ημερομηνία λήξης</span>
             <input

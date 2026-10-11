@@ -42,9 +42,9 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: ScanDiagnos
   if (process.env.NODE_ENV === "production") return null;
 
   return (
-    <div className="rounded-xl border border-dashed border-amber-400 bg-amber-50 p-3 text-xs dark:border-amber-700 dark:bg-amber-950">
-      <p className="mb-2 font-semibold text-amber-800 dark:text-amber-300">Διαγνωστικά σάρωσης (μόνο development)</p>
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-amber-900 dark:text-amber-200">
+    <div className="rounded-xl border border-dashed border-amber-400 bg-amber-50 p-3 text-xs">
+      <p className="mb-2 font-semibold text-amber-800">Διαγνωστικά σάρωσης (μόνο development)</p>
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-amber-900">
         <dt>Format:</dt>
         <dd>{diagnostics.format}</dd>
         <dt>GTIN:</dt>

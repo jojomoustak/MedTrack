@@ -105,7 +105,7 @@ export function AddPackageForm({
               fill="none"
               stroke="currentColor"
               strokeWidth="1.8"
-              className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-stone-600 dark:text-stone-400"
+              className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-stone-600"
             >
               <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -125,11 +125,11 @@ export function AddPackageForm({
 
       <label className="surface-card flex min-h-16 items-center gap-3 px-4 py-3">
         <input type="checkbox" checked={openNow} onChange={(e) => setOpenNow(e.target.checked)} className="size-5 shrink-0 accent-accent-700" />
-        <span className="text-[17px] text-stone-800 dark:text-stone-200">Άνοιγμα τώρα (μετράει στο τρέχον απόθεμα)</span>
+        <span className="text-[17px] text-stone-800">Άνοιγμα τώρα (μετράει στο τρέχον απόθεμα)</span>
       </label>
 
       {(validationError ?? error) && (
-        <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
+        <p role="alert" className="text-[15px] font-medium text-red-700">
           {validationError ?? error}
         </p>
       )}

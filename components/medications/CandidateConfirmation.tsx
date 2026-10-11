@@ -40,8 +40,8 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
       </Button>
 
       <Card>
-        <h2 className="text-[22px] font-bold tracking-tight text-stone-900 dark:text-stone-50">{product.name}</h2>
-        {product.manufacturer && <p className="text-[15px] text-stone-600 dark:text-stone-400">{product.manufacturer}</p>}
+        <h2 className="text-[22px] font-bold tracking-tight text-stone-900">{product.name}</h2>
+        {product.manufacturer && <p className="text-[15px] text-stone-600">{product.manufacturer}</p>}
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           {product.activeIngredient && (
             <>
@@ -65,14 +65,14 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
           )}
         </dl>
         {product.regulatorySource === SEED_PLACEHOLDER_SOURCE && (
-          <p className="mt-3 text-xs text-stone-500 dark:text-stone-400">
+          <p className="mt-3 text-xs text-stone-500">
             Δοκιμαστικά δεδομένα καταλόγου — όχι επίσημη πηγή.
           </p>
         )}
       </Card>
 
       {(parsedExpiry || parsedBatch || parsedSerial) && (
-        <div className="rounded-xl border border-dashed border-stone-300 p-4 dark:border-stone-700">
+        <div className="rounded-xl border border-dashed border-stone-300 p-4">
           <p className="mb-2 text-sm font-medium">Από τη σάρωση</p>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
             {parsedExpiry && (

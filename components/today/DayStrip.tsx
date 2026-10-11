@@ -47,11 +47,11 @@ export function DayStrip({ today }: { today: Date }) {
             }}
             className={`flex h-21 flex-col items-center justify-center gap-1.5 rounded-2xl transition-transform duration-150 ${
               isToday
-                ? "bg-accent-800 text-white shadow-[0_6px_14px_-6px_rgba(6,95,70,.55)] dark:bg-accent-600"
-                : "surface-card text-stone-800 active:scale-95 dark:text-stone-100"
+                ? "bg-accent-800 text-white shadow-[0_6px_14px_-6px_rgba(6,95,70,.55)]"
+                : "surface-card text-stone-800 active:scale-95"
             }`}
           >
-            <span aria-hidden="true" className={`text-[15px] font-medium ${isToday ? "text-white/85" : "text-stone-500 dark:text-stone-400"}`}>
+            <span aria-hidden="true" className={`text-[15px] font-medium ${isToday ? "text-white/85" : "text-stone-500"}`}>
               {shortWeekday(day)}
             </span>
             <span aria-hidden="true" className="text-[22px] leading-none font-bold tabular-nums">

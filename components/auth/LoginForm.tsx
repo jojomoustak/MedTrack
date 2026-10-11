@@ -70,13 +70,13 @@ export function LoginForm() {
       <Link
         href="/forgot-password"
         onClick={() => playSound("button")}
-        className="-mt-1 self-end text-[15px] font-semibold text-accent-700 dark:text-accent-400"
+        className="-mt-1 self-end text-[15px] font-semibold text-accent-700"
       >
         Ξεχάσατε τον κωδικό;
       </Link>
 
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm text-red-700">
           {error}
         </p>
       )}

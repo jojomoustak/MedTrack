@@ -48,9 +48,9 @@ function buildMonthCells(monthDate: Date): (Date | null)[] {
 
 /** Marker tint on an unselected day — the marker's shape already states the status; color only reinforces it. */
 function markerTint(kind: string): string {
-  if (kind === "missed") return "text-amber-600 dark:text-amber-400";
-  if (kind === "taken" || kind === "taken_late") return "text-accent-600 dark:text-accent-400";
-  return "text-stone-400 dark:text-stone-500";
+  if (kind === "missed") return "text-amber-600";
+  if (kind === "taken" || kind === "taken_late") return "text-accent-600";
+  return "text-stone-400";
 }
 
 function dayAriaLabel(date: Date, summary: DaySummary | undefined): string {
@@ -113,23 +113,23 @@ export default function CalendarPage() {
           type="button"
           onClick={() => shiftMonth(-1)}
           aria-label="Προηγούμενος μήνας"
-          className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-stone-700 active:scale-95 dark:text-stone-300"
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-stone-700 active:scale-95"
         >
           <ChevronIcon direction="left" />
         </button>
-        <h1 className="text-[22px] font-bold tracking-tight text-stone-900 capitalize dark:text-stone-50">{monthLabel}</h1>
+        <h1 className="text-[22px] font-bold tracking-tight text-stone-900 capitalize">{monthLabel}</h1>
         <button
           type="button"
           onClick={() => shiftMonth(1)}
           aria-label="Επόμενος μήνας"
-          className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-stone-700 active:scale-95 dark:text-stone-300"
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-stone-700 active:scale-95"
         >
           <ChevronIcon direction="right" />
         </button>
       </div>
 
       <div>
-        <div className="grid grid-cols-7 text-center text-[13px] font-medium text-stone-500 dark:text-stone-400" aria-hidden="true">
+        <div className="grid grid-cols-7 text-center text-[13px] font-medium text-stone-500" aria-hidden="true">
           {WEEKDAY_HEADERS.map((d) => (
             <span key={d} className="py-1">
               {d}
@@ -157,14 +157,14 @@ export default function CalendarPage() {
                 data-day-kind={summary?.kind ?? "empty"}
                 className={`mx-auto flex h-12 w-11 flex-col items-center justify-center gap-0.5 rounded-xl text-base tabular-nums transition-colors ${
                   isSelected
-                    ? "bg-accent-700 font-bold text-white dark:bg-accent-500 dark:text-stone-950"
+                    ? "bg-accent-700 font-bold text-white"
                     : isToday
-                      ? "font-bold text-accent-700 dark:text-accent-400"
-                      : "text-stone-800 dark:text-stone-200"
+                      ? "font-bold text-accent-700"
+                      : "text-stone-800"
                 }`}
               >
                 {cellDate.getDate()}
-                {markerKind && <DoseStatusGlyph kind={markerKind} className={`h-2.5 w-2.5 ${isSelected ? "text-white dark:text-stone-950" : markerTint(markerKind)}`} />}
+                {markerKind && <DoseStatusGlyph kind={markerKind} className={`h-2.5 w-2.5 ${isSelected ? "text-white" : markerTint(markerKind)}`} />}
               </button>
             );
           })}
@@ -177,18 +177,18 @@ export default function CalendarPage() {
           onClick={() => playSound("button")}
           className="flex min-h-11 items-center justify-between gap-2"
         >
-          <h2 id="selected-day-heading" className="text-[19px] font-bold text-stone-900 first-letter:uppercase dark:text-stone-50">
+          <h2 id="selected-day-heading" className="text-[19px] font-bold text-stone-900 first-letter:uppercase">
             {selectedLabel}
           </h2>
           <RowChevron />
         </Link>
 
         {dosesStatus === "loading" ? (
-          <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+          <p role="status" className="text-sm text-stone-600">
             Φόρτωση…
           </p>
         ) : dayItems.length === 0 ? (
-          <p className="text-[15px] text-stone-600 dark:text-stone-400">Καμία δόση αυτή την ημέρα.</p>
+          <p className="text-[15px] text-stone-600">Καμία δόση αυτή την ημέρα.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {dayItems.map((item, i) =>

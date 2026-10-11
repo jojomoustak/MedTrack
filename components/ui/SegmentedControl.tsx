@@ -11,7 +11,7 @@
  */
 export function segmentClasses(active: boolean): string {
   return `min-h-12 flex-1 rounded-xl px-3 py-2 text-[15px] font-semibold transition duration-200 active:scale-95 ${
-    active ? "bg-accent-700 text-white dark:bg-accent-500 dark:text-stone-950" : "bg-surface-muted text-stone-700 dark:text-stone-300"
+    active ? "bg-accent-700 text-white" : "bg-surface-muted text-stone-700"
   }`;
 }
 

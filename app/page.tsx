@@ -16,9 +16,9 @@ export default function RootPage() {
   }, [session.status, router]);
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-stone-50 dark:bg-stone-950">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-stone-50">
       <BrandWordmark className="text-2xl" />
-      <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+      <p role="status" className="text-sm text-stone-600">
         Φόρτωση…
       </p>
     </main>

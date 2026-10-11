@@ -62,7 +62,7 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
             {children}
           </CurrentProfileProvider>
         ) : (
-          <p role="status" className="p-6 text-sm text-stone-600 dark:text-stone-400">
+          <p role="status" className="p-6 text-sm text-stone-600">
             Φόρτωση…
           </p>
         )}

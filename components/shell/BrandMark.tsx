@@ -55,7 +55,7 @@ export function BrandMark({ size = 14, className }: { size?: number; className?:
 /** Icon + wordmark, the pairing used in every compact header (`AppBar`, the splash screen). */
 export function BrandWordmark({ className = "" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 font-semibold text-accent-700 dark:text-accent-400 ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 font-semibold text-accent-700 ${className}`}>
       <BrandMark />
       MedTrack
     </span>
@@ -125,7 +125,7 @@ export function BrandLockup({
   textClassName?: string;
 }) {
   return (
-    <div className={`flex flex-col items-center text-accent-700 dark:text-accent-400 ${className}`}>
+    <div className={`flex flex-col items-center text-accent-700 ${className}`}>
       <BrandMarkDetailed size={iconSize} />
       <span className={`font-bold tracking-tight ${textClassName}`}>MedTrack</span>
     </div>

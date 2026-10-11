@@ -144,9 +144,9 @@ export function EditMedicationForm({
     <form id={EDIT_MEDICATION_FORM_ID} onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
       {isCatalogLinked ? (
         <div className="surface-card flex flex-col gap-1 p-4">
-          <span className="text-sm font-medium text-stone-500 dark:text-stone-400">Φάρμακο από τον κατάλογο</span>
+          <span className="text-sm font-medium text-stone-500">Φάρμακο από τον κατάλογο</span>
           <p className="text-[19px] font-bold">{displayName}</p>
-          <p className="text-[15px] text-stone-600 dark:text-stone-400">Το όνομα, η μορφή και η περιεκτικότητα έρχονται από τον κατάλογο και δεν αλλάζουν εδώ.</p>
+          <p className="text-[15px] text-stone-600">Το όνομα, η μορφή και η περιεκτικότητα έρχονται από τον κατάλογο και δεν αλλάζουν εδώ.</p>
         </div>
       ) : (
         <>
@@ -200,7 +200,7 @@ export function EditMedicationForm({
             {times.length > FREQUENCY_OPTIONS.length && <option value={times.length}>{timesPerDayLabel(times.length)}</option>}
           </SelectField>
           {editableSchedule.scheduleKind === "specific_weekdays" && (
-            <p className="-mt-2 text-[15px] text-stone-600 dark:text-stone-400">Ημέρες: {describeWeekdays(editableSchedule.weekdaysMask ?? 0)}</p>
+            <p className="-mt-2 text-[15px] text-stone-600">Ημέρες: {describeWeekdays(editableSchedule.weekdaysMask ?? 0)}</p>
           )}
 
           <fieldset className={FIELD_WRAPPER}>
@@ -223,7 +223,7 @@ export function EditMedicationForm({
                         setTimes((current) => current.filter((_, i) => i !== index));
                       }}
                       aria-label={`Αφαίρεση ώρας ${time}`}
-                      className="absolute top-1/2 right-1 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-stone-500 active:bg-stone-100 dark:active:bg-stone-800"
+                      className="absolute top-1/2 right-1 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-stone-500 active:bg-stone-100"
                     >
                       <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="m5.5 5.5 9 9m0-9-9 9" strokeLinecap="round" />
@@ -240,7 +240,7 @@ export function EditMedicationForm({
                   playSound("button");
                   setTimes((current) => [...current, nextSuggestedTime(current)]);
                 }}
-                className="mt-1 inline-flex min-h-11 items-center gap-1.5 self-start text-[17px] font-semibold text-accent-700 dark:text-accent-400"
+                className="mt-1 inline-flex min-h-11 items-center gap-1.5 self-start text-[17px] font-semibold text-accent-700"
               >
                 <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2">
                   <path d="M10 4v12M4 10h12" strokeLinecap="round" />
@@ -258,7 +258,7 @@ export function EditMedicationForm({
       ) : (
         <div className={FIELD_WRAPPER}>
           <span className={FIELD_LABEL}>Συχνότητα</span>
-          <p className="text-[17px] text-stone-600 dark:text-stone-400">{schedule ? describeSchedule(schedule) : "Χωρίς πρόγραμμα δόσεων"}</p>
+          <p className="text-[17px] text-stone-600">{schedule ? describeSchedule(schedule) : "Χωρίς πρόγραμμα δόσεων"}</p>
         </div>
       )}
 
@@ -273,7 +273,7 @@ export function EditMedicationForm({
         />
       </label>
 
-      <h2 className="mt-3 text-[20px] font-bold tracking-tight text-stone-900 dark:text-stone-50">Απόθεμα και κατάσταση</h2>
+      <h2 className="mt-3 text-[20px] font-bold tracking-tight text-stone-900">Απόθεμα και κατάσταση</h2>
 
       <SelectField label="Κατάσταση θεραπείας" value={treatmentState} onChange={(e) => setTreatmentState(e.target.value as TreatmentState)}>
         {(Object.entries(TREATMENT_STATE_LABELS) as [TreatmentState, string][]).map(([value, label]) => (
@@ -283,7 +283,7 @@ export function EditMedicationForm({
         ))}
       </SelectField>
       {treatmentState !== "active" && medication.treatmentState === "active" && (
-        <p className="-mt-2 text-[15px] text-stone-600 dark:text-stone-400">Οι επόμενες δόσεις και οι υπενθυμίσεις του θα ακυρωθούν.</p>
+        <p className="-mt-2 text-[15px] text-stone-600">Οι επόμενες δόσεις και οι υπενθυμίσεις του θα ακυρωθούν.</p>
       )}
 
       <SelectField label="Μονάδα αποθέματος" value={inventoryUnit} onChange={(e) => setInventoryUnit(e.target.value as MedicationForm)}>
@@ -312,7 +312,7 @@ export function EditMedicationForm({
       </label>
 
       {(validationError ?? error) && (
-        <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
+        <p role="alert" className="text-[15px] font-medium text-red-700">
           {validationError ?? error}
         </p>
       )}

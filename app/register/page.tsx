@@ -18,30 +18,30 @@ import { BrandLockup } from "@/components/shell/BrandMark";
  */
 export default function RegisterPage() {
   return (
-    <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-6 pt-4 dark:bg-stone-950">
+    <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-6 pt-4">
       <div className="mx-auto flex w-full max-w-sm flex-col">
         <AuthBackLink href="/welcome" />
 
         <BrandLockup iconSize={72} textClassName="text-[30px] leading-none" className="self-center" />
 
-        <h1 className="mt-7 text-[27px] font-bold leading-tight tracking-tight text-stone-900 dark:text-stone-50">Δημιουργία λογαριασμού</h1>
-        <p className="mt-2 text-lg leading-snug text-stone-600 dark:text-stone-400">Εγγραφείτε στο MedTrack και αναλάβετε τον έλεγχο της υγείας σας.</p>
+        <h1 className="mt-7 text-[27px] font-bold leading-tight tracking-tight text-stone-900">Δημιουργία λογαριασμού</h1>
+        <p className="mt-2 text-lg leading-snug text-stone-600">Εγγραφείτε στο MedTrack και αναλάβετε τον έλεγχο της υγείας σας.</p>
 
         <div className="mt-6">
           <RegisterForm />
         </div>
 
-        <p className="mt-5 text-center text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+        <p className="mt-5 text-center text-sm leading-relaxed text-stone-500">
           Δημιουργώντας λογαριασμό, συμφωνείτε με την{" "}
-          <Link href="/privacy" className="font-semibold text-accent-700 dark:text-accent-400">
+          <Link href="/privacy" className="font-semibold text-accent-700">
             Πολιτική Απορρήτου
           </Link>
           .
         </p>
 
-        <p className="mt-6 text-center text-[15px] text-stone-600 dark:text-stone-400">
+        <p className="mt-6 text-center text-[15px] text-stone-600">
           Έχετε ήδη λογαριασμό;{" "}
-          <Link href="/login" className="font-semibold text-accent-700 dark:text-accent-400">
+          <Link href="/login" className="font-semibold text-accent-700">
             Σύνδεση
           </Link>
         </p>

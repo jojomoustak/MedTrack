@@ -131,9 +131,9 @@ export function DeleteAccountFlow() {
 
   const headerBlock = (
     <>
-      <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Διαγραφή λογαριασμού</h1>
+      <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Διαγραφή λογαριασμού</h1>
       <div className="flex flex-col items-center gap-4 text-center">
-        <span aria-hidden="true" className="flex size-24 items-center justify-center rounded-3xl bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400">
+        <span aria-hidden="true" className="flex size-24 items-center justify-center rounded-3xl bg-red-50 text-red-600">
           <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
             <path d="M12 3.5 2.5 20h19Z" />
             <path d="M12 10v4.5" strokeLinecap="round" />
@@ -141,8 +141,8 @@ export function DeleteAccountFlow() {
           </svg>
         </span>
         <div>
-          <p className="text-[19px] leading-snug font-bold text-stone-900 dark:text-stone-50">Θα διαγραφούν οριστικά ο λογαριασμός σας και όλα τα δεδομένα σας.</p>
-          <p className="mt-1 text-[15px] text-stone-600 dark:text-stone-400">Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.</p>
+          <p className="text-[19px] leading-snug font-bold text-stone-900">Θα διαγραφούν οριστικά ο λογαριασμός σας και όλα τα δεδομένα σας.</p>
+          <p className="mt-1 text-[15px] text-stone-600">Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.</p>
         </div>
       </div>
     </>
@@ -157,9 +157,9 @@ export function DeleteAccountFlow() {
       { label: "Τα στοιχεία του προφίλ σας", count: null },
     ];
     return (
-      <ul className="flex flex-col gap-3 rounded-2xl bg-red-50 p-4 dark:bg-red-950/50" aria-label="Τι θα διαγραφεί">
+      <ul className="flex flex-col gap-3 rounded-2xl bg-red-50 p-4" aria-label="Τι θα διαγραφεί">
         {rows.map((row) => (
-          <li key={row.label} className="flex items-center gap-3 text-[15px] font-medium text-red-800 dark:text-red-300">
+          <li key={row.label} className="flex items-center gap-3 text-[15px] font-medium text-red-800">
             <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.8" className="shrink-0">
               <rect x="3.5" y="3.5" width="13" height="13" rx="3" />
               <path d="M7 10h6" strokeLinecap="round" />
@@ -189,12 +189,12 @@ export function DeleteAccountFlow() {
         {headerBlock}
         {dangerList(null)}
         {/* CLAUDE.md rule 9: this is not clearing the app's storage. */}
-        <p className="text-[15px] text-stone-600 dark:text-stone-400">
+        <p className="text-[15px] text-stone-600">
           Αυτό είναι διαφορετικό από τον καθαρισμό της προσωρινής μνήμης της εφαρμογής: η διαγραφή γίνεται στον διακομιστή και αφορά όλες τις συσκευές σας,
           όχι μόνο αυτή.
         </p>
         {summaryError && (
-          <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
+          <p role="alert" className="text-[15px] font-medium text-red-700">
             {summaryError}
           </p>
         )}
@@ -206,7 +206,7 @@ export function DeleteAccountFlow() {
   if (step === "summary" && summary) {
     return (
       <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 px-5 pt-1 pb-6 outline-none">
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Αυτά θα χάσετε</h1>
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Αυτά θα χάσετε</h1>
         {dangerList(summary)}
         {actions(goToConfirm, "Συνέχεια")}
       </div>
@@ -216,16 +216,16 @@ export function DeleteAccountFlow() {
   if (step === "confirm") {
     return (
       <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col gap-6 px-5 pt-1 pb-6 outline-none">
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Επιβεβαίωση διαγραφής</h1>
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Επιβεβαίωση διαγραφής</h1>
 
         {offline && (
-          <p role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-[15px] text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+          <p role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-[15px] text-amber-900">
             Η διαγραφή λογαριασμού απαιτεί σύνδεση στο διαδίκτυο — δεν είναι τοπική ενέργεια. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.
           </p>
         )}
 
         <label className="flex flex-col gap-2">
-          <span className="text-[17px] text-stone-800 dark:text-stone-200">
+          <span className="text-[17px] text-stone-800">
             Για να επιβεβαιώσετε, πληκτρολογήστε <strong>{CONFIRM_PHRASE}</strong>.
           </span>
           <input
@@ -239,7 +239,7 @@ export function DeleteAccountFlow() {
         </label>
 
         {submitError && (
-          <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
+          <p role="alert" className="text-[15px] font-medium text-red-700">
             {submitError}
           </p>
         )}
@@ -254,7 +254,7 @@ export function DeleteAccountFlow() {
       <div ref={stepContainerRef} tabIndex={-1} className="flex flex-col items-center justify-center gap-4 px-5 py-16 text-center outline-none" role="status" aria-live="polite">
         <span aria-hidden="true" className="size-10 animate-spin rounded-full border-4 border-red-200 border-t-red-600" />
         <p className="text-[19px] font-semibold">Διαγραφή σε εξέλιξη…</p>
-        <p className="text-[15px] text-stone-600 dark:text-stone-400">Μην κλείσετε ή ανανεώσετε αυτή τη σελίδα.</p>
+        <p className="text-[15px] text-stone-600">Μην κλείσετε ή ανανεώσετε αυτή τη σελίδα.</p>
       </div>
     );
   }

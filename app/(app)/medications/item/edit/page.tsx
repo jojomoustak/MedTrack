@@ -106,7 +106,7 @@ export default function EditMedicationPage() {
 
   if (medication === undefined) {
     return (
-      <p role="status" className="p-6 text-sm text-stone-600 dark:text-stone-400">
+      <p role="status" className="p-6 text-sm text-stone-600">
         Φόρτωση…
       </p>
     );
@@ -115,7 +115,7 @@ export default function EditMedicationPage() {
   if (medication === null) {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <p className="text-stone-600 dark:text-stone-400">Το φάρμακο δεν βρέθηκε.</p>
+        <p className="text-stone-600">Το φάρμακο δεν βρέθηκε.</p>
         <ButtonLink href="/medications" onClick={() => playSound("button")} variant="tertiary" className="px-0 underline">
           Πίσω στα φάρμακα
         </ButtonLink>
@@ -126,7 +126,7 @@ export default function EditMedicationPage() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 px-5 pt-1 pb-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Επεξεργασία</h1>
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Επεξεργασία</h1>
         {/* A real HTML `form` attribute submits EditMedicationForm from the header, as in the reference. */}
         <Button form={EDIT_MEDICATION_FORM_ID} type="submit" disabled={submitting} aria-busy={submitting}>
           {submitting ? "Αποθήκευση…" : "Αποθήκευση"}

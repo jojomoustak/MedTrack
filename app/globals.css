@@ -7,14 +7,23 @@
  * reading "clinical" and "cold" rather than trustworthy — the fix isn't a
  * different accent, it's swapping the NEUTRALS: an off-white background
  * and a warm gray scale (`stone`, brown-leaning) throughout instead of
- * zinc. `--background` is the reference mockup's warm cream (light) and
- * `stone-950` (dark); `--foreground` is `stone-900`/`stone-100`. `--surface-muted`
+ * zinc. `--background` is the reference mockup's warm cream; `--foreground`
+ * is `stone-900`. `--surface-muted`
  * is the slightly deeper warm fill for inset controls on that cream — the
  * search field, unselected tabs (reference mockup). Every other `zinc-*` class
  * in the app was mechanically swapped to `stone-*` alongside this so the
  * whole neutral system moves together, not just the page background.
  */
 :root {
+  /*
+   * Light only (2026-10-11, owner's decision): no dark mode, whatever the
+   * phone's setting — the green-on-black palette and the logo didn't work in
+   * the dark. `color-scheme` keeps the browser's own controls (date and
+   * time pickers, scrollbars) light too; the Android wrapper is pinned to
+   * light as well (`androidTheme` in its appConfig.json), so the WebView
+   * never darkens the page itself.
+   */
+  color-scheme: light;
   --background: #f8f5ee;
   --foreground: #1c1917;
   --surface-muted: #eeebe3;
@@ -56,14 +65,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0a09;
-    --foreground: #f5f5f4;
-    --surface-muted: #1c1917;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -72,8 +73,8 @@ body {
 
 /*
  * The reference mockup's card surface: white with a soft two-layer shadow
- * on the cream page (no border), border-only in dark mode where shadows
- * don't read. One definition for `Card` and every hand-built row.
+ * on the cream page (no border). One definition for `Card` and every
+ * hand-built row.
  */
 @utility surface-card {
   border-radius: var(--radius-2xl);
@@ -81,8 +82,4 @@ body {
   box-shadow:
     0 1px 2px rgb(28 25 23 / 0.04),
     0 2px 8px rgb(28 25 23 / 0.06);
-  @media (prefers-color-scheme: dark) {
-    background-color: var(--color-stone-900);
-    box-shadow: inset 0 0 0 1px var(--color-stone-800);
-  }
 }

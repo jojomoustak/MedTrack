@@ -252,7 +252,7 @@ export function ScanStep({
   if (view.phase === "scanning" || view.phase === "looking-up") {
     return (
       <div className="flex flex-col items-center gap-3 py-8">
-        <p role="status" aria-live="polite" className="text-[15px] text-stone-600 dark:text-stone-400">
+        <p role="status" aria-live="polite" className="text-[15px] text-stone-600">
           {view.phase === "scanning" ? "Άνοιγμα κάμερας…" : "Αναζήτηση φαρμάκου…"}
         </p>
         <Button variant="tertiary" onClick={() => { playSound("button"); onCancel(); }} className="px-0 underline">
@@ -265,8 +265,8 @@ export function ScanStep({
   if (view.phase === "unavailable") {
     return (
       <div className="flex flex-col gap-4">
-        <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center dark:border-stone-700">
-          <p className="text-sm text-stone-700 dark:text-stone-300">
+        <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center">
+          <p className="text-sm text-stone-700">
             Η σάρωση barcode διατίθεται μόνο μέσα από την εφαρμογή MedTrack για κινητά.
           </p>
         </div>
@@ -283,7 +283,7 @@ export function ScanStep({
   if (view.phase === "error") {
     return (
       <div className="flex flex-col gap-4">
-        <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
+        <p role="alert" className="text-[15px] font-medium text-red-700">
           {view.message}
         </p>
         <Button
@@ -346,8 +346,8 @@ export function ScanStep({
             : "Δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος.";
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center dark:border-stone-700">
-        <p className="mb-1 text-sm text-stone-700 dark:text-stone-300">{notFoundMessage}</p>
+      <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center">
+        <p className="mb-1 text-sm text-stone-700">{notFoundMessage}</p>
       </div>
       {
         // OCR fallback (OCR-fallback task spec §1) — only for a genuinely
@@ -421,15 +421,15 @@ function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
 
   return (
     <Card>
-      <p className="mb-2 text-sm font-medium text-stone-700 dark:text-stone-300">
+      <p className="mb-2 text-sm font-medium text-stone-700">
         Αναζήτηση σε επίσημες πηγές
       </p>
-      <p className="mb-3 text-xs text-stone-500 dark:text-stone-400">
+      <p className="mb-3 text-xs text-stone-500">
         Αντιγράψτε τον κωδικό και αναζητήστε τον στον ιστότοπο του Εθνικού Οργανισμού Φαρμάκων (ΕΟΦ) ή
         του Ευρωπαϊκού Οργανισμού Φαρμάκων (EMA). Τα αποτελέσματα εμφανίζονται στον ιστότοπό τους — το
         MedTrack δεν τα διαβάζει ούτε τα συμπληρώνει αυτόματα.
       </p>
-      <div className="mb-3 flex items-center gap-2 rounded-lg bg-stone-50 px-3 py-2 dark:bg-stone-900">
+      <div className="mb-3 flex items-center gap-2 rounded-lg bg-stone-50 px-3 py-2">
         <code className="flex-1 truncate text-sm">{searchTerm}</code>
         <Button variant="secondary" size="sm" onClick={handleCopy} className="shrink-0 px-3 text-xs">
           {copied ? "Αντιγράφηκε ✓" : "Αντιγραφή"}

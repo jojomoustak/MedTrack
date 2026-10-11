@@ -28,7 +28,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Κύρια πλοήγηση"
-      className="grid grid-cols-5 border-t border-stone-200 bg-background dark:border-stone-800"
+      className="grid grid-cols-5 border-t border-stone-200 bg-background"
     >
       {TABS.map((tab) => {
         const active = pathname === tab.href || pathname?.startsWith(`${tab.href}/`);
@@ -39,7 +39,7 @@ export function BottomNav() {
             onClick={() => playSound("button")}
             aria-current={active ? "page" : undefined}
             className={`flex min-h-12 flex-col items-center justify-center gap-0.5 border-t-2 py-2 text-xs transition duration-200 active:scale-95 ${
-              active ? "border-accent-700 font-semibold text-accent-700 dark:border-accent-400 dark:text-accent-400" : "border-transparent font-medium text-stone-500 dark:text-stone-400"
+              active ? "border-accent-700 font-semibold text-accent-700" : "border-transparent font-medium text-stone-500"
             }`}
           >
             <NavIcon kind={tab.icon} active={active} />

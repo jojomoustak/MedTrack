@@ -81,8 +81,8 @@ export function ReminderPermissionToggle({ profileId, platform = new MedianMobil
   if (!platform.isAvailable()) {
     return (
       <section className="flex flex-col gap-2">
-        <h2 className="text-[17px] font-semibold text-stone-900 dark:text-stone-100">Ειδοποιήσεις υπενθύμισης</h2>
-        <p className="text-sm text-stone-500 dark:text-stone-400">Διαθέσιμες μόνο μέσω της εφαρμογής MedTrack για κινητά.</p>
+        <h2 className="text-[17px] font-semibold text-stone-900">Ειδοποιήσεις υπενθύμισης</h2>
+        <p className="text-sm text-stone-500">Διαθέσιμες μόνο μέσω της εφαρμογής MedTrack για κινητά.</p>
       </section>
     );
   }
@@ -130,23 +130,23 @@ export function ReminderPermissionToggle({ profileId, platform = new MedianMobil
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium text-stone-700 dark:text-stone-300">Ειδοποιήσεις υπενθύμισης</h2>
-      <p className="text-[15px] text-stone-600 dark:text-stone-400">
+      <h2 className="text-sm font-medium text-stone-700">Ειδοποιήσεις υπενθύμισης</h2>
+      <p className="text-[15px] text-stone-600">
         Οι υπενθυμίσεις δόσεων λειτουργούν στη συσκευή σας ακόμα και χωρίς σύνδεση στο διαδίκτυο. Χρειάζονται άδεια ειδοποιήσεων.
       </p>
 
       {status === "granted" && (
-        <p role="status" className="text-[15px] font-semibold text-accent-700 dark:text-accent-400">
+        <p role="status" className="text-[15px] font-semibold text-accent-700">
           Οι ειδοποιήσεις είναι ενεργές.
         </p>
       )}
       {status === "denied" && (
-        <p role="status" className="text-sm text-amber-800 dark:text-amber-300">
+        <p role="status" className="text-sm text-amber-800">
           Η άδεια απορρίφθηκε. Μπορείτε να την ενεργοποιήσετε από τις ρυθμίσεις ειδοποιήσεων της συσκευής σας.
         </p>
       )}
       {status === "error" && (
-        <p role="status" className="text-sm text-red-700 dark:text-red-400">
+        <p role="status" className="text-sm text-red-700">
           Κάτι πήγε στραβά. Δοκιμάστε ξανά.
         </p>
       )}

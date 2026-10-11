@@ -79,15 +79,15 @@ export default function CalendarDayPage() {
     <div className="flex flex-col gap-5 px-5 pt-1 pb-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 first-letter:uppercase dark:text-stone-50">{title}</h1>
-          <p className="mt-0.5 text-[17px] text-stone-600 dark:text-stone-400">{subtitle}</p>
+          <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 first-letter:uppercase">{title}</h1>
+          <p className="mt-0.5 text-[17px] text-stone-600">{subtitle}</p>
         </div>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => shiftDay(-1)}
             aria-label="Προηγούμενη ημέρα"
-            className="flex size-11 items-center justify-center rounded-xl bg-surface-muted text-stone-700 active:scale-95 dark:text-stone-300"
+            className="flex size-11 items-center justify-center rounded-xl bg-surface-muted text-stone-700 active:scale-95"
           >
             <ChevronIcon direction="left" />
           </button>
@@ -95,7 +95,7 @@ export default function CalendarDayPage() {
             type="button"
             onClick={() => shiftDay(1)}
             aria-label="Επόμενη ημέρα"
-            className="flex size-11 items-center justify-center rounded-xl bg-surface-muted text-stone-700 active:scale-95 dark:text-stone-300"
+            className="flex size-11 items-center justify-center rounded-xl bg-surface-muted text-stone-700 active:scale-95"
           >
             <ChevronIcon direction="right" />
           </button>
@@ -103,18 +103,18 @@ export default function CalendarDayPage() {
       </div>
 
       {status === "loading" ? (
-        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+        <p role="status" className="text-sm text-stone-600">
           Φόρτωση…
         </p>
       ) : items.length === 0 ? (
-        <p className="text-[17px] text-stone-600 dark:text-stone-400">Καμία δόση αυτή την ημέρα.</p>
+        <p className="text-[17px] text-stone-600">Καμία δόση αυτή την ημέρα.</p>
       ) : (
         <ol className="surface-card flex flex-col px-4 py-2" aria-label="Δόσεις ημέρας">
           {items.map((item, i) => {
             const last = i === items.length - 1;
             // The line joining one dose to the next runs through the status
             // column, from just under this dose's mark to the next row.
-            const connector = !last && <span aria-hidden="true" className="absolute top-12 bottom-0 left-[15px] w-0.5 bg-stone-200 dark:bg-stone-700" />;
+            const connector = !last && <span aria-hidden="true" className="absolute top-12 bottom-0 left-[15px] w-0.5 bg-stone-200" />;
 
             if (item.kind === "projected") {
               return (
@@ -125,8 +125,8 @@ export default function CalendarDayPage() {
                   </span>
                   <span className="w-12 shrink-0 pt-1 text-[15px] text-stone-500 tabular-nums">{formatDoseTime(item.scheduledAt)}</span>
                   <span className="min-w-0 pt-0.5">
-                    <span className="block truncate text-[17px] font-bold text-stone-700 dark:text-stone-300">{names.get(item.instant.userMedicationId) ?? "…"}</span>
-                    <span className="block text-[15px] text-stone-500 dark:text-stone-400">Προγραμματισμένη</span>
+                    <span className="block truncate text-[17px] font-bold text-stone-700">{names.get(item.instant.userMedicationId) ?? "…"}</span>
+                    <span className="block text-[15px] text-stone-500">Προγραμματισμένη</span>
                   </span>
                 </li>
               );
@@ -152,15 +152,15 @@ export default function CalendarDayPage() {
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center [&>svg]:h-8 [&>svg]:w-8" aria-hidden="true">
                     <DoseStatusMark visual={visual} />
                   </span>
-                  <span className={`w-12 shrink-0 pt-1 text-[15px] tabular-nums ${visual === "done" ? "font-semibold text-accent-700 dark:text-accent-400" : "text-stone-500 dark:text-stone-400"}`}>
+                  <span className={`w-12 shrink-0 pt-1 text-[15px] tabular-nums ${visual === "done" ? "font-semibold text-accent-700" : "text-stone-500"}`}>
                     {time}
                   </span>
                   <span className="min-w-0 pt-0.5">
-                    <span className="block truncate text-[17px] font-bold text-stone-900 dark:text-stone-50">{doseTitle}</span>
-                    {quantity && <span className="block text-[15px] text-stone-600 dark:text-stone-400">{quantity}</span>}
+                    <span className="block truncate text-[17px] font-bold text-stone-900">{doseTitle}</span>
+                    {quantity && <span className="block text-[15px] text-stone-600">{quantity}</span>}
                     <span
                       className={`block text-[15px] font-medium ${
-                        visual === "done" ? "text-accent-700 dark:text-accent-400" : visual === "missed" || visual === "snoozed" ? "text-amber-700 dark:text-amber-400" : "text-stone-500 dark:text-stone-400"
+                        visual === "done" ? "text-accent-700" : visual === "missed" || visual === "snoozed" ? "text-amber-700" : "text-stone-500"
                       }`}
                     >
                       {statusText}
@@ -174,11 +174,11 @@ export default function CalendarDayPage() {
       )}
 
       {isToday && doses.length > 0 && taken > 0 && (
-        <div className="flex items-center gap-4 overflow-hidden rounded-2xl bg-accent-50 pr-4 dark:bg-accent-950">
+        <div className="flex items-center gap-4 overflow-hidden rounded-2xl bg-accent-50 pr-4">
           <SproutIllustration className="h-24 w-28 shrink-0 translate-y-2" />
           <div className="py-4">
-            <p className="text-[19px] font-bold text-stone-900 dark:text-stone-50">{taken === doses.length ? "Μπράβο!" : "Συνεχίστε έτσι!"}</p>
-            <p className="text-[15px] text-stone-700 dark:text-stone-300">
+            <p className="text-[19px] font-bold text-stone-900">{taken === doses.length ? "Μπράβο!" : "Συνεχίστε έτσι!"}</p>
+            <p className="text-[15px] text-stone-700">
               {taken} από {doses.length} δόσεις ελήφθησαν σήμερα.
             </p>
           </div>

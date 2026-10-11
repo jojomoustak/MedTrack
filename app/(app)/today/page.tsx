@@ -59,11 +59,11 @@ function TodayGreeting({ today }: { today: Date }) {
 
   return (
     <div>
-      <h1 className="text-[30px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">
+      <h1 className="text-[30px] leading-tight font-bold tracking-tight text-stone-900">
         {greeting(today)}
         {firstName ? `, ${firstName}` : ""}
       </h1>
-      <p className="mt-1 text-[16px] text-stone-600 dark:text-stone-400">Μείνετε συνεπείς. Τα πάτε καλά!</p>
+      <p className="mt-1 text-[16px] text-stone-600">Μείνετε συνεπείς. Τα πάτε καλά!</p>
     </div>
   );
 }
@@ -127,7 +127,7 @@ export default function TodayPage() {
 
   if (medsStatus === "loading" || dosesStatus === "loading") {
     return (
-      <p role="status" className="p-6 text-sm text-stone-600 dark:text-stone-400">
+      <p role="status" className="p-6 text-sm text-stone-600">
         Φόρτωση…
       </p>
     );
@@ -141,7 +141,7 @@ export default function TodayPage() {
         <TodayGreeting today={today} />
         <div className="surface-card flex flex-col items-center gap-4 px-6 py-8 text-center">
           <p className="text-[17px] font-semibold">Δεν έχετε προσθέσει ακόμα κανένα φάρμακο.</p>
-          <p className="text-[15px] text-stone-600 dark:text-stone-400">Προσθέστε το πρώτο σας φάρμακο και το πρόγραμμά του, για να εμφανίζονται εδώ οι δόσεις της ημέρας.</p>
+          <p className="text-[15px] text-stone-600">Προσθέστε το πρώτο σας φάρμακο και το πρόγραμμά του, για να εμφανίζονται εδώ οι δόσεις της ημέρας.</p>
           <ButtonLink href="/medications/add" onClick={() => playSound("button")} size="lg" fullWidth>
             Προσθήκη φαρμάκου
           </ButtonLink>
@@ -168,10 +168,10 @@ export default function TodayPage() {
       <section className="flex flex-col gap-3" aria-labelledby="today-doses-heading">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 id="today-doses-heading" className="text-[24px] font-bold tracking-tight text-stone-900 dark:text-stone-50">
+            <h2 id="today-doses-heading" className="text-[24px] font-bold tracking-tight text-stone-900">
               Σημερινές δόσεις
             </h2>
-            <p role="status" className="mt-0.5 text-[15px] text-stone-600 dark:text-stone-400">
+            <p role="status" className="mt-0.5 text-[15px] text-stone-600">
               {total === 0
                 ? "Καμία προγραμματισμένη δόση σήμερα."
                 : allResolved
@@ -180,14 +180,14 @@ export default function TodayPage() {
             </p>
           </div>
           {total > 0 && (
-            <div aria-hidden="true" className="text-accent-700 dark:text-accent-400">
-              <ProgressRing value={takenCount} total={total} size={92} strokeWidth={9} label={`${percent}%`} labelClassName="text-[19px] font-bold text-stone-900 dark:text-stone-50" />
+            <div aria-hidden="true" className="text-accent-700">
+              <ProgressRing value={takenCount} total={total} size={92} strokeWidth={9} label={`${percent}%`} labelClassName="text-[19px] font-bold text-stone-900" />
             </div>
           )}
         </div>
 
         {total === 0 ? (
-          <Link href="/medications" onClick={() => playSound("button")} className="inline-flex min-h-12 items-center text-[15px] font-semibold text-accent-700 dark:text-accent-400">
+          <Link href="/medications" onClick={() => playSound("button")} className="inline-flex min-h-12 items-center text-[15px] font-semibold text-accent-700">
             Δείτε τα φάρμακά σας
           </Link>
         ) : (
@@ -210,7 +210,7 @@ export default function TodayPage() {
       {dueCount >= 2 &&
         (confirmingMarkAll ? (
           <div className="flex flex-col gap-2">
-            <p className="text-center text-[15px] text-stone-700 dark:text-stone-300">Να καταγραφούν ως ελήφθησαν οι {dueCount} δόσεις που είναι για τώρα; Οι επόμενες δόσεις της ημέρας δεν αλλάζουν.</p>
+            <p className="text-center text-[15px] text-stone-700">Να καταγραφούν ως ελήφθησαν οι {dueCount} δόσεις που είναι για τώρα; Οι επόμενες δόσεις της ημέρας δεν αλλάζουν.</p>
             <div className="flex items-center gap-2">
               <Button variant="secondary" size="lg" onClick={() => setConfirmingMarkAll(false)} fullWidth>
                 Ακύρωση

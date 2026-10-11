@@ -188,7 +188,7 @@ export function PackageOcrCandidateFlow({
 
   if (state.phase === "capturing" || state.phase === "processing") {
     return (
-      <p role="status" aria-live="polite" className="text-sm text-stone-600 dark:text-stone-400">
+      <p role="status" aria-live="polite" className="text-sm text-stone-600">
         {state.phase === "capturing" ? "Άνοιγμα κάμερας…" : "Ανάλυση ετικέτας…"}
       </p>
     );
@@ -197,7 +197,7 @@ export function PackageOcrCandidateFlow({
   if (state.phase === "error") {
     return (
       <div className="flex flex-col gap-2">
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm text-red-700">
           {state.message}
         </p>
         <Button variant="tertiary" size="sm" onClick={() => { playSound("button"); setState({ phase: "idle" }); }} className="self-start px-0 underline">
@@ -209,8 +209,8 @@ export function PackageOcrCandidateFlow({
 
   if (state.phase === "not-found") {
     return (
-      <div className="rounded-xl border border-dashed border-stone-300 p-4 dark:border-stone-700">
-        <p className="mb-3 text-sm text-stone-700 dark:text-stone-300">
+      <div className="rounded-xl border border-dashed border-stone-300 p-4">
+        <p className="mb-3 text-sm text-stone-700">
           Δεν βρέθηκε αντιστοιχία από την ετικέτα. Δοκιμάστε ξανά με καλύτερο φωτισμό ή αναζητήστε χειροκίνητα.
         </p>
         <div className="flex gap-3">
@@ -227,7 +227,7 @@ export function PackageOcrCandidateFlow({
 
   if (state.phase === "picking") {
     return (
-      <div className="flex flex-col gap-3 rounded-xl border border-stone-300 p-4 dark:border-stone-700">
+      <div className="flex flex-col gap-3 rounded-xl border border-stone-300 p-4">
         <p className="text-sm font-medium">Βρήκαμε πολλές πιθανές συσκευασίες. Επιλέξτε αυτή που αναγράφεται στο κουτί σας:</p>
         <ul className="flex flex-col gap-2">
           {state.scores.map((score) => (
@@ -254,7 +254,7 @@ export function PackageOcrCandidateFlow({
   const product = offlineIndexEntryToCatalogProduct(state.entry);
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-stone-600 dark:text-stone-400">Βρέθηκε από την ετικέτα του πακέτου — επιβεβαιώστε ότι είναι σωστό:</p>
+      <p className="text-sm text-stone-600">Βρέθηκε από την ετικέτα του πακέτου — επιβεβαιώστε ότι είναι σωστό:</p>
       <CandidateConfirmation
         product={product}
         parsedExpiry={parsed.expiry}

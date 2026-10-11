@@ -50,12 +50,12 @@ export function doseStatusText(dose: DoseEventRecord): string | null {
 }
 
 export const DOSE_TILE_CLASSES: Record<DoseVisual, string> = {
-  open: "bg-stone-100 dark:bg-stone-800",
-  snoozed: "bg-amber-50 dark:bg-amber-950/60",
-  done: "bg-accent-50 dark:bg-accent-950",
-  skipped: "bg-stone-100 dark:bg-stone-800",
-  missed: "bg-amber-50 dark:bg-amber-950/60",
-  cancelled: "bg-stone-100 dark:bg-stone-800",
+  open: "bg-stone-100",
+  snoozed: "bg-amber-50",
+  done: "bg-accent-50",
+  skipped: "bg-stone-100",
+  missed: "bg-amber-50",
+  cancelled: "bg-stone-100",
 };
 
 /** The status mark inside the tile. */
@@ -64,7 +64,7 @@ export function DoseStatusMark({ visual }: { visual: DoseVisual }) {
   if (visual === "done") {
     return (
       <svg {...common}>
-        <circle cx="16" cy="16" r="14" className="fill-accent-700 dark:fill-accent-500" />
+        <circle cx="16" cy="16" r="14" className="fill-accent-700" />
         <path d="m10 16.5 4 4 8-9" fill="none" stroke="white" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
@@ -73,30 +73,30 @@ export function DoseStatusMark({ visual }: { visual: DoseVisual }) {
     // An X, matching Calendar's missed mark (2026-10-09).
     return (
       <svg {...common}>
-        <circle cx="16" cy="16" r="13" fill="none" className="stroke-amber-600 dark:stroke-amber-400" strokeWidth="2.4" />
-        <path d="m11.5 11.5 9 9m0-9-9 9" fill="none" className="stroke-amber-600 dark:stroke-amber-400" strokeWidth="2.6" strokeLinecap="round" />
+        <circle cx="16" cy="16" r="13" fill="none" className="stroke-amber-600" strokeWidth="2.4" />
+        <path d="m11.5 11.5 9 9m0-9-9 9" fill="none" className="stroke-amber-600" strokeWidth="2.6" strokeLinecap="round" />
       </svg>
     );
   }
   if (visual === "skipped" || visual === "cancelled") {
     return (
       <svg {...common}>
-        <circle cx="16" cy="16" r="13" fill="none" className="stroke-stone-400 dark:stroke-stone-500" strokeWidth="2.4" />
-        <path d="M10.5 16h11" className="stroke-stone-400 dark:stroke-stone-500" strokeWidth="2.6" strokeLinecap="round" />
+        <circle cx="16" cy="16" r="13" fill="none" className="stroke-stone-400" strokeWidth="2.4" />
+        <path d="M10.5 16h11" className="stroke-stone-400" strokeWidth="2.6" strokeLinecap="round" />
       </svg>
     );
   }
   if (visual === "snoozed") {
     return (
       <svg {...common}>
-        <circle cx="16" cy="16" r="13" fill="none" className="stroke-amber-600 dark:stroke-amber-400" strokeWidth="2.4" />
-        <path d="M16 10v6.5l4 2.5" fill="none" className="stroke-amber-600 dark:stroke-amber-400" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="16" cy="16" r="13" fill="none" className="stroke-amber-600" strokeWidth="2.4" />
+        <path d="M16 10v6.5l4 2.5" fill="none" className="stroke-amber-600" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   }
   return (
     <svg {...common}>
-      <circle cx="16" cy="16" r="13" fill="none" className="stroke-accent-800 dark:stroke-accent-400" strokeWidth="2.4" />
+      <circle cx="16" cy="16" r="13" fill="none" className="stroke-accent-800" strokeWidth="2.4" />
     </svg>
   );
 }

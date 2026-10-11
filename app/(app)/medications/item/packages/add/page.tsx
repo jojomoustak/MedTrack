@@ -83,7 +83,7 @@ export default function AddPackagePage() {
 
   if (medication === undefined) {
     return (
-      <p role="status" className="p-6 text-sm text-stone-600 dark:text-stone-400">
+      <p role="status" className="p-6 text-sm text-stone-600">
         Φόρτωση…
       </p>
     );
@@ -92,7 +92,7 @@ export default function AddPackagePage() {
   if (medication === null) {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <p className="text-stone-600 dark:text-stone-400">Το φάρμακο δεν βρέθηκε.</p>
+        <p className="text-stone-600">Το φάρμακο δεν βρέθηκε.</p>
         <ButtonLink href="/medications" variant="tertiary" className="px-0 underline">
           Πίσω στα φάρμακα
         </ButtonLink>
@@ -102,7 +102,7 @@ export default function AddPackagePage() {
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 px-5 pt-1 pb-6">
-      <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Νέα συσκευασία</h1>
+      <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Νέα συσκευασία</h1>
       <MedicationHeader medication={medication} />
 
       <AddPackageForm defaultUnit={medication.inventoryUnit} onSubmit={(values) => void handleSubmit(values)} submitting={submitting} error={error} />

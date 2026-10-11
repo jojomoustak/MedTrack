@@ -51,12 +51,12 @@ export function DeleteMedicationSection({
         </Button>
       ) : (
         <div className="flex flex-col gap-3">
-          <p className="text-[17px] font-semibold text-red-800 dark:text-red-400">Διαγραφή αυτού του φαρμάκου;</p>
-          <p className="text-[15px] text-stone-600 dark:text-stone-400">
+          <p className="text-[17px] font-semibold text-red-800">Διαγραφή αυτού του φαρμάκου;</p>
+          <p className="text-[15px] text-stone-600">
             Το φάρμακο θα σταματήσει να εμφανίζεται και οι υπενθυμίσεις του θα ακυρωθούν. Το ιστορικό δόσεων και αποθέματος διατηρείται.
           </p>
           {error && (
-            <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+            <p role="alert" className="text-sm text-red-700">
               {error}
             </p>
           )}

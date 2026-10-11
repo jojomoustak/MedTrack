@@ -76,7 +76,7 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
 
   if (done) {
     return (
-      <p role="status" className="text-lg leading-snug text-stone-700 dark:text-stone-300">
+      <p role="status" className="text-lg leading-snug text-stone-700">
         Ο κωδικός σας άλλαξε. Μεταφορά στη σύνδεση…
       </p>
     );
@@ -110,10 +110,10 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm text-red-700">
           {error}{" "}
           {linkInvalid && (
-            <Link href="/forgot-password" onClick={() => playSound("button")} className="font-semibold text-accent-700 underline dark:text-accent-400">
+            <Link href="/forgot-password" onClick={() => playSound("button")} className="font-semibold text-accent-700 underline">
               Ζητήστε νέο σύνδεσμο
             </Link>
           )}
@@ -127,7 +127,7 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
       <Link
         href="/login"
         onClick={() => playSound("button")}
-        className="self-center py-2 text-[17px] font-semibold text-accent-700 dark:text-accent-400"
+        className="self-center py-2 text-[17px] font-semibold text-accent-700"
       >
         Επιστροφή στη σύνδεση
       </Link>

@@ -56,10 +56,10 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="text-[22px] font-bold tracking-tight text-stone-900 dark:text-stone-50">Ημερομηνίες</h2>
+      <h2 className="text-[22px] font-bold tracking-tight text-stone-900">Ημερομηνίες</h2>
 
       <label className="flex flex-col gap-1">
-        <span className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Ημερομηνία έναρξης</span>
+        <span className="text-[17px] font-semibold text-stone-800">Ημερομηνία έναρξης</span>
         <input
           type="date"
           value={startDate}
@@ -70,10 +70,10 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
       </label>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Ημερομηνία λήξης</legend>
+        <legend className="text-[17px] font-semibold text-stone-800">Ημερομηνία λήξης</legend>
         <label className="flex min-h-12 items-center gap-2">
           <input type="checkbox" checked={noEndDate} onChange={(e) => setNoEndDate(e.target.checked)} className="size-5 accent-accent-700" />
-          <span className="text-[17px] text-stone-800 dark:text-stone-200">Χωρίς ημερομηνία λήξης</span>
+          <span className="text-[17px] text-stone-800">Χωρίς ημερομηνία λήξης</span>
         </label>
         {!noEndDate && (
           <input
@@ -89,7 +89,7 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
       {needsQuantity && (
         <div className="flex gap-3">
           <label className="flex flex-1 flex-col gap-2">
-            <span className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Ποσότητα δόσης</span>
+            <span className="text-[17px] font-semibold text-stone-800">Ποσότητα δόσης</span>
             <input
               type="text"
               inputMode="decimal"
@@ -100,7 +100,7 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
             />
           </label>
           <label className="flex flex-1 flex-col gap-2">
-            <span className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Μονάδα</span>
+            <span className="text-[17px] font-semibold text-stone-800">Μονάδα</span>
             <select
               value={quantityUnit}
               onChange={(e) => setQuantityUnit(e.target.value as MedicationForm)}
@@ -118,7 +118,7 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
       )}
 
       {error && (
-        <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
+        <p role="alert" className="text-[15px] font-medium text-red-700">
           {error}
         </p>
       )}

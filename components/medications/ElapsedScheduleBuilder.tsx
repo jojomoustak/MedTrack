@@ -48,10 +48,10 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="text-[22px] font-bold tracking-tight text-stone-900 dark:text-stone-50">Κάθε πόσες ώρες</h2>
+      <h2 className="text-[22px] font-bold tracking-tight text-stone-900">Κάθε πόσες ώρες</h2>
 
       <label className="flex flex-col gap-1">
-        <span className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Κάθε πόσες ώρες;</span>
+        <span className="text-[17px] font-semibold text-stone-800">Κάθε πόσες ώρες;</span>
         <input
           type="number"
           inputMode="numeric"
@@ -65,7 +65,7 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
       </label>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">Πρώτη δόση</legend>
+        <legend className="text-[17px] font-semibold text-stone-800">Πρώτη δόση</legend>
         <div className="flex gap-2">
           <input
             type="date"
@@ -82,13 +82,13 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
             className={`${FIELD_INPUT} flex-1 pr-4`}
           />
         </div>
-        <p className="text-[15px] text-stone-600 dark:text-stone-400">
+        <p className="text-[15px] text-stone-600">
           Το διάστημα υπολογίζεται από την πρώτη δόση και δεν αλλάζει με την αλλαγή ώρας (π.χ. καλοκαιρινή/χειμερινή ώρα).
         </p>
       </fieldset>
 
       {error && (
-        <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
+        <p role="alert" className="text-[15px] font-medium text-red-700">
           {error}
         </p>
       )}

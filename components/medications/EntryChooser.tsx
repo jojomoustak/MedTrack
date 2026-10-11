@@ -71,14 +71,14 @@ function ChoiceCard({
       onClick={disabled ? undefined : () => onChoose(choice)}
       className={`surface-card flex min-h-24 w-full items-center gap-4 p-4 text-left transition-transform duration-150 ${disabled ? "opacity-60" : "active:scale-[0.98]"}`}
     >
-      <span aria-hidden="true" className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-accent-100 text-accent-700 dark:bg-accent-950 dark:text-accent-400">
+      <span aria-hidden="true" className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-accent-100 text-accent-700">
         <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           {ICONS[choice]}
         </svg>
       </span>
       <span className="min-w-0">
-        <span className="block text-[19px] font-bold text-stone-900 dark:text-stone-50">{title}</span>
-        <span className="block text-base text-stone-600 dark:text-stone-400">{description}</span>
+        <span className="block text-[19px] font-bold text-stone-900">{title}</span>
+        <span className="block text-base text-stone-600">{description}</span>
       </span>
     </button>
   );

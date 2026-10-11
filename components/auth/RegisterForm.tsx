@@ -81,7 +81,7 @@ export function RegisterForm() {
       <PasswordRule met={password.length >= MIN_PASSWORD_LENGTH} label={`Τουλάχιστον ${MIN_PASSWORD_LENGTH} χαρακτήρες`} />
 
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm text-red-700">
           {error}
         </p>
       )}

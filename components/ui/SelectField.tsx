@@ -19,7 +19,7 @@ export function SelectField({ label, children, ...props }: { label: string } & C
           fill="none"
           stroke="currentColor"
           strokeWidth="1.8"
-          className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-stone-600 dark:text-stone-400"
+          className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-stone-600"
         >
           <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>

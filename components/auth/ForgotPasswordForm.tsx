@@ -12,7 +12,7 @@ function BackToSignIn() {
     <Link
       href="/login"
       onClick={() => playSound("button")}
-      className="self-center py-2 text-[17px] font-semibold text-accent-700 dark:text-accent-400"
+      className="self-center py-2 text-[17px] font-semibold text-accent-700"
     >
       Επιστροφή στη σύνδεση
     </Link>
@@ -68,7 +68,7 @@ export function ForgotPasswordForm() {
   if (status === "sent") {
     return (
       <div role="status" className="flex w-full flex-col gap-6">
-        <p className="text-lg leading-snug text-stone-600 dark:text-stone-400">
+        <p className="text-lg leading-snug text-stone-600">
           Αν υπάρχει λογαριασμός με αυτό το email, θα λάβετε σύνδεσμο επαναφοράς κωδικού σε λίγα λεπτά.
         </p>
         <BackToSignIn />
@@ -78,7 +78,7 @@ export function ForgotPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4" noValidate>
-      <p className="mb-4 text-lg leading-snug text-stone-600 dark:text-stone-400">
+      <p className="mb-4 text-lg leading-snug text-stone-600">
         Πληκτρολογήστε το email σας και θα σας στείλουμε σύνδεσμο για επαναφορά του κωδικού σας.
       </p>
 
@@ -97,7 +97,7 @@ export function ForgotPasswordForm() {
       </label>
 
       {status === "offline" && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm text-red-700">
           Δεν ήταν δυνατή η σύνδεση με το διαδίκτυο. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.
         </p>
       )}

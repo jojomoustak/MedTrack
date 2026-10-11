@@ -82,7 +82,7 @@ export function EmailVerificationBanner({ email }: { email: string | null }) {
   return (
     <div
       role="status"
-      className="flex flex-col gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+      className="flex flex-col gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
     >
       <p>Το email σας δεν έχει επιβεβαιωθεί ακόμα. Η επαναφορά κωδικού πρόσβασης δεν θα λειτουργήσει μέχρι να το επιβεβαιώσετε.</p>
       <div className="flex flex-wrap items-center gap-3">
@@ -91,7 +91,7 @@ export function EmailVerificationBanner({ email }: { email: string | null }) {
           onClick={handleResend}
           disabled={!email || resend === "sending" || onCooldown}
           aria-busy={resend === "sending"}
-          className="border-amber-400 text-amber-900 dark:border-amber-600 dark:text-amber-100"
+          className="border-amber-400 text-amber-900"
         >
           {resend === "sending" ? "Αποστολή…" : onCooldown ? "Στάλθηκε — δοκιμάστε ξανά σε λίγο" : "Επαναποστολή email επιβεβαίωσης"}
         </Button>
@@ -101,13 +101,13 @@ export function EmailVerificationBanner({ email }: { email: string | null }) {
             playSound("button");
             setDismissed(true);
           }}
-          className="px-0 text-amber-900 underline dark:text-amber-100"
+          className="px-0 text-amber-900 underline"
         >
           Παράβλεψη
         </Button>
       </div>
       {resend === "error" && (
-        <p role="alert" className="text-red-700 dark:text-red-400">
+        <p role="alert" className="text-red-700">
           Η αποστολή απέτυχε. Δοκιμάστε ξανά αργότερα.
         </p>
       )}

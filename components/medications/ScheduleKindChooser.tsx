@@ -28,7 +28,7 @@ export function ScheduleKindChooser({ onChoose, onSkip, onBack }: ScheduleKindCh
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-[22px] font-bold tracking-tight text-stone-900 dark:text-stone-50">Πρόγραμμα δόσεων</h2>
+      <h2 className="text-[22px] font-bold tracking-tight text-stone-900">Πρόγραμμα δόσεων</h2>
       <div className="flex flex-col gap-3" role="group" aria-label="Πώς παίρνετε αυτό το φάρμακο;">
         <Card
           as="button"
@@ -37,8 +37,8 @@ export function ScheduleKindChooser({ onChoose, onSkip, onBack }: ScheduleKindCh
           className="flex min-h-20 items-center text-left transition-transform duration-150 active:scale-[0.98]"
         >
           <span>
-            <span className="block text-[17px] font-bold text-stone-900 dark:text-stone-50">Σταθερές ώρες</span>
-            <span className="block text-[15px] text-stone-600 dark:text-stone-400">Παίρνετε το φάρμακο σε συγκεκριμένες ώρες κάθε μέρα</span>
+            <span className="block text-[17px] font-bold text-stone-900">Σταθερές ώρες</span>
+            <span className="block text-[15px] text-stone-600">Παίρνετε το φάρμακο σε συγκεκριμένες ώρες κάθε μέρα</span>
           </span>
         </Card>
 
@@ -49,8 +49,8 @@ export function ScheduleKindChooser({ onChoose, onSkip, onBack }: ScheduleKindCh
           className="flex min-h-20 items-center text-left transition-transform duration-150 active:scale-[0.98]"
         >
           <span>
-            <span className="block text-[17px] font-bold text-stone-900 dark:text-stone-50">Κάθε πόσες ώρες</span>
-            <span className="block text-[15px] text-stone-600 dark:text-stone-400">Π.χ. κάθε 8 ώρες, ανεξαρτήτως ώρας ημέρας</span>
+            <span className="block text-[17px] font-bold text-stone-900">Κάθε πόσες ώρες</span>
+            <span className="block text-[15px] text-stone-600">Π.χ. κάθε 8 ώρες, ανεξαρτήτως ώρας ημέρας</span>
           </span>
         </Card>
 
@@ -61,8 +61,8 @@ export function ScheduleKindChooser({ onChoose, onSkip, onBack }: ScheduleKindCh
           className="flex min-h-20 items-center text-left transition-transform duration-150 active:scale-[0.98]"
         >
           <span>
-            <span className="block text-[17px] font-bold text-stone-900 dark:text-stone-50">Όποτε χρειάζεται</span>
-            <span className="block text-[15px] text-stone-600 dark:text-stone-400">Χωρίς σταθερό πρόγραμμα</span>
+            <span className="block text-[17px] font-bold text-stone-900">Όποτε χρειάζεται</span>
+            <span className="block text-[15px] text-stone-600">Χωρίς σταθερό πρόγραμμα</span>
           </span>
         </Card>
       </div>

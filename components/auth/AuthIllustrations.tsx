@@ -8,7 +8,7 @@ import { ILLUSTRATION_PALETTE, LeafArt } from "@/components/shell/leaf-art";
  * tucked into it, or a green padlock whose body carries a plus. They
  * replace the small outline-icon badges an earlier pass used.
  */
-const DISC = "fill-[#E6EBE0] dark:fill-[#18231e]";
+const DISC = "fill-[#E6EBE0]";
 
 export function ForgotPasswordIllustration({ className = "" }: { className?: string }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");

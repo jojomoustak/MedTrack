@@ -36,8 +36,8 @@ export function FilterTabs<T extends string>({
             onClick={() => onChange(tab.value)}
             className={`relative min-h-11 flex-1 rounded-xl px-2 text-[15px] whitespace-nowrap transition-colors duration-150 ${
               active
-                ? "font-semibold text-accent-700 after:absolute after:inset-x-3 after:bottom-1 after:h-[3px] after:rounded-full after:bg-accent-700 dark:text-accent-400 dark:after:bg-accent-400"
-                : "bg-surface-muted font-medium text-stone-700 active:bg-stone-200 dark:text-stone-300 dark:active:bg-stone-800"
+                ? "font-semibold text-accent-700 after:absolute after:inset-x-3 after:bottom-1 after:h-[3px] after:rounded-full after:bg-accent-700"
+                : "bg-surface-muted font-medium text-stone-700 active:bg-stone-200"
             }`}
           >
             {tab.label}

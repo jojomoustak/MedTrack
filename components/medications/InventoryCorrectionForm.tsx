@@ -83,7 +83,7 @@ export function InventoryCorrectionForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
       <div className="flex flex-col gap-1">
         <p className={FIELD_LABEL}>Τρέχον απόθεμα</p>
-        <p className="text-[17px] text-stone-600 tabular-nums dark:text-stone-400">{stockLabel(currentStock)}</p>
+        <p className="text-[17px] text-stone-600 tabular-nums">{stockLabel(currentStock)}</p>
       </div>
 
       <div role="radiogroup" aria-label="Είδος διόρθωσης" className="flex gap-2">
@@ -110,9 +110,9 @@ export function InventoryCorrectionForm({
       </label>
 
       {/* The reference's "New stock: 38 tablets" line — "—" until there's a real number to compute from. */}
-      <div className="flex flex-col gap-1 border-b border-stone-200 pb-4 dark:border-stone-800" aria-live="polite">
+      <div className="flex flex-col gap-1 border-b border-stone-200 pb-4" aria-live="polite">
         <p className={FIELD_LABEL}>Νέο απόθεμα</p>
-        <p className="text-[17px] text-stone-600 tabular-nums dark:text-stone-400">{previewStock !== null ? stockLabel(String(previewStock)) : "—"}</p>
+        <p className="text-[17px] text-stone-600 tabular-nums">{previewStock !== null ? stockLabel(String(previewStock)) : "—"}</p>
       </div>
 
       <label className={FIELD_WRAPPER}>
@@ -127,7 +127,7 @@ export function InventoryCorrectionForm({
       </label>
 
       {(validationError ?? error) && (
-        <p role="alert" className="text-[15px] font-medium text-red-700 dark:text-red-400">
+        <p role="alert" className="text-[15px] font-medium text-red-700">
           {validationError ?? error}
         </p>
       )}

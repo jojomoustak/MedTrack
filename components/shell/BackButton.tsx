@@ -15,7 +15,7 @@ export function BackButton({ fallback, className = "" }: { fallback: string; cla
       type="button"
       aria-label="Πίσω"
       onClick={() => (window.history.length > 1 ? router.back() : router.push(fallback))}
-      className={`flex size-11 items-center justify-center rounded-full text-stone-800 dark:text-stone-200 ${className}`}
+      className={`flex size-11 items-center justify-center rounded-full text-stone-800 ${className}`}
     >
       <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M15 5 8 12l7 7" />

@@ -20,8 +20,8 @@ export function MedicationHeader({ medication }: { medication: UserMedicationRec
     <div className="flex items-center gap-4">
       <MedicationAvatar medicationId={medication.id} form={form} withPhoto={medication.syncState === "synced"} />
       <div className="min-w-0">
-        <p className="truncate text-[21px] font-bold text-stone-900 dark:text-stone-50">{name}</p>
-        {subtitle && <p className="truncate text-[17px] text-stone-600 dark:text-stone-400">{subtitle}</p>}
+        <p className="truncate text-[21px] font-bold text-stone-900">{name}</p>
+        {subtitle && <p className="truncate text-[17px] text-stone-600">{subtitle}</p>}
       </div>
     </div>
   );

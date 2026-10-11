@@ -19,14 +19,14 @@ export function ProjectedDoseRow({ medicationName, scheduledAt }: ProjectedDoseR
     <div
       role="group"
       aria-label={`${medicationName}, ${timeLabel}, ${DOSE_MARKER_LABEL.projected}, χωρίς κατάσταση ακόμα`}
-      className="flex min-h-19 items-center gap-3.5 rounded-2xl border-2 border-dashed border-stone-300 py-3 pr-3 pl-3 dark:border-stone-700"
+      className="flex min-h-19 items-center gap-3.5 rounded-2xl border-2 border-dashed border-stone-300 py-3 pr-3 pl-3"
     >
       <span aria-hidden="true" className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-muted text-stone-400">
         <DoseStatusGlyph kind="projected" className="h-6 w-6" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[17px] font-bold text-stone-700 dark:text-stone-300">{medicationName}</p>
-        <p className="truncate text-[15px] text-stone-500 tabular-nums dark:text-stone-400">
+        <p className="truncate text-[17px] font-bold text-stone-700">{medicationName}</p>
+        <p className="truncate text-[15px] text-stone-500 tabular-nums">
           {timeLabel} • {DOSE_MARKER_LABEL.projected}
         </p>
       </div>

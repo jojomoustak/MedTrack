@@ -10,11 +10,11 @@ import type { ReactNode } from "react";
 export function EmptyState({ icon, title, body, action }: { icon: ReactNode; title: string; body?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-3 px-8 py-12 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-400" aria-hidden="true">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-50 text-accent-700" aria-hidden="true">
         {icon}
       </div>
       <h2 className="text-base font-semibold">{title}</h2>
-      {body && <p className="max-w-xs text-sm text-stone-600 dark:text-stone-400">{body}</p>}
+      {body && <p className="max-w-xs text-sm text-stone-600">{body}</p>}
       {action}
     </div>
   );

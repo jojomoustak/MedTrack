@@ -116,10 +116,10 @@ export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake,
         aria-label={[title, detail, status ?? "προγραμματισμένη"].join(", ")}
       >
         <div className="min-w-0 flex-1">
-          <p className={`truncate text-[17px] font-bold ${muted ? "text-stone-500 dark:text-stone-400" : "text-stone-900 dark:text-stone-50"}`}>{title}</p>
-          <p className="truncate text-[15px] text-stone-600 tabular-nums dark:text-stone-400">{detail}</p>
+          <p className={`truncate text-[17px] font-bold ${muted ? "text-stone-500" : "text-stone-900"}`}>{title}</p>
+          <p className="truncate text-[15px] text-stone-600 tabular-nums">{detail}</p>
           {status && (
-            <p aria-live="polite" className={`truncate text-sm font-medium ${visual === "done" ? "text-accent-700 dark:text-accent-400" : visual === "missed" || visual === "snoozed" ? "text-amber-700 dark:text-amber-400" : "text-stone-500 dark:text-stone-400"}`}>
+            <p aria-live="polite" className={`truncate text-sm font-medium ${visual === "done" ? "text-accent-700" : visual === "missed" || visual === "snoozed" ? "text-amber-700" : "text-stone-500"}`}>
               {status}
             </p>
           )}
@@ -132,7 +132,7 @@ export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake,
         <button
           type="button"
           onClick={undo}
-          className="min-h-11 shrink-0 rounded-full px-3 text-[15px] font-semibold text-accent-700 underline-offset-2 active:bg-accent-50 dark:text-accent-400 dark:active:bg-accent-950"
+          className="min-h-11 shrink-0 rounded-full px-3 text-[15px] font-semibold text-accent-700 underline-offset-2 active:bg-accent-50"
         >
           Αναίρεση
         </button>

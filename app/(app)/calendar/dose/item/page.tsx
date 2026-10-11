@@ -67,7 +67,7 @@ const CONFIRM_TEXT: Record<FinalAction, { question: string; confirm: string }> =
 
 function DetailIcon({ children }: { children: React.ReactNode }) {
   return (
-    <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300">
+    <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-stone-700">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         {children}
       </svg>
@@ -80,8 +80,8 @@ function DetailRow({ icon, label, children }: { icon: React.ReactNode; label: st
     <div className="flex items-center gap-3.5 py-3">
       {icon}
       <div className="min-w-0 flex-1">
-        <dt className="text-[15px] font-semibold text-stone-900 dark:text-stone-100">{label}</dt>
-        <dd className="text-[15px] text-stone-600 dark:text-stone-400">{children}</dd>
+        <dt className="text-[15px] font-semibold text-stone-900">{label}</dt>
+        <dd className="text-[15px] text-stone-600">{children}</dd>
       </div>
     </div>
   );
@@ -159,21 +159,21 @@ export default function DoseDetailPage() {
     <main className="mx-auto flex max-w-md flex-col gap-5 px-5 pt-1 pb-6">
 
       {dose === undefined && (
-        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+        <p role="status" className="text-sm text-stone-600">
           Φόρτωση…
         </p>
       )}
 
-      {dose === null && <p className="text-[15px] text-stone-600 dark:text-stone-400">Δεν βρέθηκε αυτή η δόση.</p>}
+      {dose === null && <p className="text-[15px] text-stone-600">Δεν βρέθηκε αυτή η δόση.</p>}
 
       {dose && (
         <>
           <div>
-            <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Λεπτομέρειες δόσης</h1>
-            <p className="mt-1 text-[17px] font-semibold text-stone-700 dark:text-stone-300">{medicationName}</p>
+            <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Λεπτομέρειες δόσης</h1>
+            <p className="mt-1 text-[17px] font-semibold text-stone-700">{medicationName}</p>
           </div>
 
-          <dl className="surface-card divide-y divide-stone-100 px-4 py-1 dark:divide-stone-800">
+          <dl className="surface-card divide-y divide-stone-100 px-4 py-1">
             <DetailRow
               label="Ημερομηνία"
               icon={
@@ -210,7 +210,7 @@ export default function DoseDetailPage() {
             <DetailRow
               label="Κατάσταση"
               icon={
-                <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-stone-100 dark:bg-stone-800">
+                <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-stone-100">
                   <DoseStatusGlyph kind={dose.status} className="h-6 w-6" />
                 </span>
               }
@@ -251,14 +251,14 @@ export default function DoseDetailPage() {
           )}
 
           {failed && (
-            <p role="alert" className="text-[15px] text-red-700 dark:text-red-400">
+            <p role="alert" className="text-[15px] text-red-700">
               Η ενέργεια δεν ολοκληρώθηκε. Δοκιμάστε ξανά.
             </p>
           )}
 
           {confirming ? (
             <div className="surface-card flex flex-col gap-3 p-4">
-              <p className="text-[16px] font-semibold text-stone-900 dark:text-stone-100">{CONFIRM_TEXT[confirming].question}</p>
+              <p className="text-[16px] font-semibold text-stone-900">{CONFIRM_TEXT[confirming].question}</p>
               <div className="flex gap-2">
                 <Button variant="secondary" size="lg" fullWidth onClick={() => setConfirming(null)}>
                   Ακύρωση

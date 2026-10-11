@@ -37,14 +37,14 @@ export function ScreenHeader({ trailing }: { trailing?: React.ReactNode }) {
           type="button"
           onClick={goBack}
           aria-label="Πίσω"
-          className="absolute left-2 flex size-11 items-center justify-center rounded-full text-stone-800 active:bg-stone-200/60 dark:text-stone-200 dark:active:bg-stone-800"
+          className="absolute left-2 flex size-11 items-center justify-center rounded-full text-stone-800 active:bg-stone-200/60"
         >
           <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 5 8 12l7 7" />
           </svg>
         </button>
       )}
-      <span className="inline-flex items-center gap-1.5 text-[21px] font-bold tracking-tight text-accent-700 dark:text-accent-400">
+      <span className="inline-flex items-center gap-1.5 text-[21px] font-bold tracking-tight text-accent-700">
         <BrandMark size={25} />
         MedTrack
       </span>

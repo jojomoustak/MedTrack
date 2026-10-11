@@ -55,8 +55,8 @@ function formatHistoryDay(iso: string | null): string {
 function InfoBlock({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <dt className="text-[17px] font-semibold text-stone-900 dark:text-stone-100">{label}</dt>
-      <dd className="text-[17px] text-stone-600 dark:text-stone-400">{children}</dd>
+      <dt className="text-[17px] font-semibold text-stone-900">{label}</dt>
+      <dd className="text-[17px] text-stone-600">{children}</dd>
     </div>
   );
 }
@@ -68,7 +68,7 @@ function TimeChips({ times, onCard = false }: { times: string[]; onCard?: boolea
       {times.map((t) => (
         <li
           key={t}
-          className={`flex min-h-12 items-center gap-2 px-4 text-[17px] font-medium text-stone-800 tabular-nums dark:text-stone-200 ${onCard ? "rounded-xl bg-surface-muted" : "surface-card"}`}
+          className={`flex min-h-12 items-center gap-2 px-4 text-[17px] font-medium text-stone-800 tabular-nums ${onCard ? "rounded-xl bg-surface-muted" : "surface-card"}`}
         >
           <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.6" className="text-stone-500">
             <circle cx="8" cy="8" r="6" />
@@ -86,7 +86,7 @@ function StatusPill({ medication }: { medication: UserMedicationRecord }) {
   return (
     <span
       className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold ${
-        active ? "bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-400" : "bg-stone-200/70 text-stone-700 dark:bg-stone-800 dark:text-stone-300"
+        active ? "bg-accent-100 text-accent-800" : "bg-stone-200/70 text-stone-700"
       }`}
     >
       <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.7">
@@ -196,7 +196,7 @@ export default function MedicationDetailPage() {
 
   if (medication === undefined) {
     return (
-      <p role="status" className="p-6 text-sm text-stone-600 dark:text-stone-400">
+      <p role="status" className="p-6 text-sm text-stone-600">
         Φόρτωση…
       </p>
     );
@@ -205,7 +205,7 @@ export default function MedicationDetailPage() {
   if (medication === null) {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <p className="text-stone-600 dark:text-stone-400">Το φάρμακο δεν βρέθηκε.</p>
+        <p className="text-stone-600">Το φάρμακο δεν βρέθηκε.</p>
         <ButtonLink href="/medications" onClick={() => playSound("button")} variant="tertiary" className="underline">
           Πίσω στα φάρμακα
         </ButtonLink>
@@ -236,8 +236,8 @@ export default function MedicationDetailPage() {
           <MedicationAvatar medicationId={medication.id} form={form} withPhoto={false} />
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="text-[26px] leading-tight font-bold tracking-tight wrap-break-word text-stone-900 dark:text-stone-50">{displayName}</h1>
-          {subtitle && <p className="mt-0.5 text-[17px] text-stone-600 dark:text-stone-400">{subtitle}</p>}
+          <h1 className="text-[26px] leading-tight font-bold tracking-tight wrap-break-word text-stone-900">{displayName}</h1>
+          {subtitle && <p className="mt-0.5 text-[17px] text-stone-600">{subtitle}</p>}
           <div className="mt-2.5">
             <StatusPill medication={medication} />
           </div>
@@ -250,7 +250,7 @@ export default function MedicationDetailPage() {
           }}
           aria-pressed={isFavorite}
           aria-label={isFavorite ? "Αφαίρεση από τα αγαπημένα" : "Προσθήκη στα αγαπημένα"}
-          className={`-mt-1 -mr-1 flex size-11 shrink-0 items-center justify-center rounded-full transition duration-200 active:scale-90 ${isFavorite ? "text-amber-500" : "text-stone-400 dark:text-stone-500"}`}
+          className={`-mt-1 -mr-1 flex size-11 shrink-0 items-center justify-center rounded-full transition duration-200 active:scale-90 ${isFavorite ? "text-amber-500" : "text-stone-400"}`}
         >
           <StarIcon filled={isFavorite} />
         </button>
@@ -278,7 +278,7 @@ export default function MedicationDetailPage() {
           </dl>
 
           {inventory.status === "loading" ? (
-            <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+            <p role="status" className="text-sm text-stone-600">
               Φόρτωση αποθέματος…
             </p>
           ) : (
@@ -300,14 +300,14 @@ export default function MedicationDetailPage() {
                   href={`/medications/${medication.id}/inventory/correct`}
                   onClick={() => playSound("button")}
                   variant="tertiary"
-                  className="text-accent-700 dark:text-accent-400"
+                  className="text-accent-700"
                 >
                   Διόρθωση αποθέματος
                 </ButtonLink>
               </div>
               {inventory.packages.length > 0 && (
                 <>
-                  <h2 className="mt-1 text-[17px] font-semibold text-stone-900 dark:text-stone-100">Συσκευασίες</h2>
+                  <h2 className="mt-1 text-[17px] font-semibold text-stone-900">Συσκευασίες</h2>
                   <PackageList profileId={profileId} packages={inventory.packages} transactions={inventory.transactions} onChanged={inventory.refresh} />
                 </>
               )}
@@ -322,7 +322,7 @@ export default function MedicationDetailPage() {
 
       {tab === "schedule" &&
         (currentSchedules.length === 0 ? (
-          <p className="text-[17px] text-stone-600 dark:text-stone-400">Χωρίς πρόγραμμα δόσεων.</p>
+          <p className="text-[17px] text-stone-600">Χωρίς πρόγραμμα δόσεων.</p>
         ) : (
           currentSchedules.map((schedule) => (
             <dl key={schedule.id} className="surface-card flex flex-col gap-5 p-4">
@@ -333,11 +333,11 @@ export default function MedicationDetailPage() {
 
       {tab === "history" &&
         (doseHistory === null ? (
-          <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+          <p role="status" className="text-sm text-stone-600">
             Φόρτωση ιστορικού…
           </p>
         ) : doseHistory.length === 0 ? (
-          <p className="text-[17px] text-stone-600 dark:text-stone-400">Δεν υπάρχει ακόμα ιστορικό δόσεων.</p>
+          <p className="text-[17px] text-stone-600">Δεν υπάρχει ακόμα ιστορικό δόσεων.</p>
         ) : (
           <ul className="flex flex-col gap-3" aria-label="Ιστορικό δόσεων">
             {doseHistory.map((dose) => {
@@ -356,8 +356,8 @@ export default function MedicationDetailPage() {
                       <DoseStatusMark visual={visual} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[17px] font-semibold text-stone-900 tabular-nums dark:text-stone-100">{when}</span>
-                      <span className="block truncate text-[15px] text-stone-600 dark:text-stone-400">{status}</span>
+                      <span className="block truncate text-[17px] font-semibold text-stone-900 tabular-nums">{when}</span>
+                      <span className="block truncate text-[15px] text-stone-600">{status}</span>
                     </span>
                     <ChevronIcon />
                   </Link>

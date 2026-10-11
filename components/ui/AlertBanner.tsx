@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 export type AlertTone = "warn" | "danger";
 
 const TONE_CLASSES: Record<AlertTone, string> = {
-  warn: "border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950 text-amber-900 dark:text-amber-200",
-  danger: "border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-300",
+  warn: "border-amber-300 bg-amber-50 text-amber-900",
+  danger: "border-red-300 bg-red-50 text-red-800",
 };
 
 /**

@@ -8,10 +8,10 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
   // amber/red scales below which have every shade) — a pre-existing bug
   // found during a later redesign audit, fixed here rather than left now
   // that it's spotted.
-  accent: "bg-accent-50 text-accent-800 dark:bg-accent-950 dark:text-accent-400",
-  warn: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  danger: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
-  neutral: "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400",
+  accent: "bg-accent-50 text-accent-800",
+  warn: "bg-amber-100 text-amber-800",
+  danger: "bg-red-100 text-red-800",
+  neutral: "bg-stone-100 text-stone-600",
 };
 
 /**

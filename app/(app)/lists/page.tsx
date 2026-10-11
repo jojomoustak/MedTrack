@@ -25,7 +25,7 @@ function CompletionSquare({ completed }: { completed: boolean }) {
     <span
       aria-hidden="true"
       className={`flex size-7 shrink-0 items-center justify-center rounded-lg border-2 ${
-        completed ? "border-accent-700 bg-accent-700 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-stone-950" : "border-stone-400 dark:border-stone-500"
+        completed ? "border-accent-700 bg-accent-700 text-white" : "border-stone-400"
       }`}
     >
       {completed && (
@@ -79,7 +79,7 @@ export default function ListsPage() {
   return (
     <div className="flex flex-col gap-5 px-5 pt-1 pb-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900 dark:text-stone-50">Λίστες αγορών</h1>
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Λίστες αγορών</h1>
         {!composing && (
           <Button
             onClick={() => {
@@ -95,7 +95,7 @@ export default function ListsPage() {
 
       {composing && (
         <form onSubmit={handleCreate} className="surface-card flex flex-col gap-3 p-4">
-          <label htmlFor="new-list-name" className="text-[17px] font-semibold text-stone-800 dark:text-stone-200">
+          <label htmlFor="new-list-name" className="text-[17px] font-semibold text-stone-800">
             Όνομα νέας λίστας
           </label>
           <input
@@ -140,7 +140,7 @@ export default function ListsPage() {
       )}
 
       {(status === "loading" || summaryStatus === "loading") && (
-        <p role="status" className="text-sm text-stone-600 dark:text-stone-400">
+        <p role="status" className="text-sm text-stone-600">
           Φόρτωση…
         </p>
       )}
@@ -165,8 +165,8 @@ export default function ListsPage() {
                 >
                   <CompletionSquare completed={Boolean(summary?.completed)} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[19px] font-bold text-stone-900 dark:text-stone-50">{list.name}</span>
-                    <span className="block text-base text-stone-600 dark:text-stone-400">
+                    <span className="block truncate text-[19px] font-bold text-stone-900">{list.name}</span>
+                    <span className="block text-base text-stone-600">
                       {itemCount} {itemCount === 1 ? "είδος" : "είδη"}
                     </span>
                   </span>

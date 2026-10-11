@@ -25,7 +25,7 @@ export function Tabs<T extends string>({
   label: string;
 }) {
   return (
-    <div role="tablist" aria-label={label} className="flex gap-5 border-b border-stone-200 dark:border-stone-800">
+    <div role="tablist" aria-label={label} className="flex gap-5 border-b border-stone-200">
       {tabs.map((tab) => {
         const active = tab.value === value;
         return (
@@ -36,7 +36,7 @@ export function Tabs<T extends string>({
             aria-selected={active}
             onClick={() => onChange(tab.value)}
             className={`min-h-11 border-b-2 px-0.5 text-sm font-semibold transition-colors ${
-              active ? "border-accent-700 text-accent-800 dark:border-accent-400 dark:text-accent-400" : "border-transparent text-stone-500 dark:text-stone-400"
+              active ? "border-accent-700 text-accent-800" : "border-transparent text-stone-500"
             }`}
           >
             {tab.label}
