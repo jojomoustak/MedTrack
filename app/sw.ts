@@ -22,9 +22,9 @@
  * few hundred ms of cache-first speed), falling back to the last
  * successfully cached response only when the network genuinely fails.
  * Content-hashed `/_next/static/` files are CacheFirst (they can never be
- * stale; see their rule below). A route only becomes available offline
- * AFTER it (or, for id-keyed screens, any one id of it — `SHARED_PAGES`)
- * has been opened at least once online — first-ever-cold-offline-launch on a
+ * stale; see their rule below). Every app screen is saved when this worker
+ * installs (`APP_SCREENS`, 2026-10-11), so any screen opens without signal —
+ * first-ever-cold-offline-launch on a
  * brand new install still can't render anything (nothing to fall back to,
  * and no service worker would even be registered yet either) — that's an
  * inherent limit of any offline-caching approach, not something this file
@@ -66,7 +66,12 @@ declare global {
 declare const self: ServiceWorkerGlobalScope;
 
 const OFFLINE_FALLBACK_URL = "/offline.html";
-const APP_SHELL_CACHE = "app-shell";
+/** Each screen's page: one saved copy per screen (keyed without the query — every page is prebuilt, so `?date=` and the like are read in the browser and never change the HTML). */
+const APP_PAGES_CACHE = "app-pages";
+/** Next.js navigation payloads (`?_rsc=`), kept apart and capped: each is keyed by a hash of the router state, so there are many. */
+const APP_NAVIGATION_CACHE = "app-navigation";
+/** Until 2026-10-11 pages and navigation payloads shared one cache that never expired — on the owner's phone, hundreds of entries. Deleted on activate. */
+const RETIRED_CACHES = ["app-shell"];
 
 /**
  * REVERTED (2026-08-30): a same-shape-URL substitute-shell handler for
@@ -121,6 +126,45 @@ function sharedPageCacheKey(request: Request): Request | string {
   return request;
 }
 
+function pageCacheKey(request: Request): string {
+  const shared = sharedPageCacheKey(request);
+  const url = new URL(typeof shared === "string" ? shared : request.url);
+  url.search = "";
+  return url.href;
+}
+
+/**
+ * Every screen of the app, saved whenever this worker installs (each deploy
+ * installs a new one). Found 2026-10-11: a screen never opened before had
+ * no saved copy, so a few seconds without signal — the owner's phone
+ * switching between Wi-Fi and mobile data — showed the offline page instead
+ * of the medication screen. All screens are prebuilt and carry no personal
+ * data (ADR-015), so saving them up front is safe. Dynamic ones (/login,
+ * /reset-password) are left to the network.
+ */
+const APP_SCREENS = [
+  "/",
+  "/today",
+  "/medications",
+  "/medications/add",
+  "/medications/item",
+  "/medications/item/edit",
+  "/medications/item/inventory/correct",
+  "/medications/item/packages/add",
+  "/medications/item/photo",
+  "/calendar",
+  "/calendar/day",
+  "/calendar/dose/item",
+  "/lists",
+  "/lists/item",
+  "/profile",
+  "/profile/delete",
+  "/welcome",
+  "/register",
+  "/forgot-password",
+  "/privacy",
+];
+
 const serwist = new Serwist({
   // Populated at request/build time by `createSerwistRoute`
   // (`app/serwist/[path]/route.ts`) — includes `/offline.html` via that
@@ -150,6 +194,18 @@ const serwist = new Serwist({
         plugins: [new ExpirationPlugin({ maxEntries: 400, maxAgeSeconds: 60 * 24 * 3600, purgeOnQuotaError: true })],
       }),
     },
+    // Next.js navigation payloads — their own capped cache (see APP_NAVIGATION_CACHE).
+    {
+      matcher: ({ url, sameOrigin }) => sameOrigin && url.searchParams.has("_rsc"),
+      handler: new NetworkFirst({
+        cacheName: APP_NAVIGATION_CACHE,
+        networkTimeoutSeconds: 2,
+        plugins: [
+          { cacheKeyWillBeUsed: async ({ request }) => sharedPageCacheKey(request) },
+          new ExpirationPlugin({ maxEntries: 80, purgeOnQuotaError: true }),
+        ],
+      }),
+    },
     // Page navigations — the actual "app shell" this file exists for.
     // Deliberately NOT gated on `request.mode === "navigate"` (a real
     // bug, found 2026-08-28 by comparing against a sibling project's
@@ -172,13 +228,13 @@ const serwist = new Serwist({
     {
       matcher: ({ url, sameOrigin }) => sameOrigin && !url.pathname.startsWith("/api/") && !url.pathname.startsWith("/serwist/"),
       handler: new NetworkFirst({
-        cacheName: APP_SHELL_CACHE,
+        cacheName: APP_PAGES_CACHE,
         // How long a launch on a weak signal waits for the network before
         // using the saved copy (was 4 s; 2026-10-09). Network-first stays,
         // so a new deploy arrives with the next launch as one consistent
         // version — never old screens mixed with a new server.
         networkTimeoutSeconds: 2,
-        plugins: [{ cacheKeyWillBeUsed: async ({ request }) => sharedPageCacheKey(request) }],
+        plugins: [{ cacheKeyWillBeUsed: async ({ request }) => pageCacheKey(request) }],
       }),
     },
   ],
@@ -198,3 +254,22 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+// Save every screen up front (APP_SCREENS). One failed fetch never fails the install.
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(APP_PAGES_CACHE).then((cache) =>
+      Promise.all(
+        APP_SCREENS.map((path) =>
+          fetch(path, { credentials: "same-origin" })
+            .then((response) => (response.ok ? cache.put(new URL(path, self.location.origin).href, response) : undefined))
+            .catch(() => undefined),
+        ),
+      ),
+    ),
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(Promise.all(RETIRED_CACHES.map((name) => caches.delete(name))));
+});
