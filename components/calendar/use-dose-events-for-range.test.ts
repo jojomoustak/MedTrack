@@ -14,9 +14,11 @@ const NOW = new Date("2026-03-10T12:00:00.000Z");
 
 let db: MedTrackingDexie;
 
-beforeEach(() => {
+beforeEach(async () => {
   db = new MedTrackingDexie(`test-range-${crypto.randomUUID()}`);
   __setClientDbForTests(db);
+  // Doses only show for a medication that exists (a deleted one's are hidden, 2026-10-11).
+  await db.userMedication.put({ id: "med-1", profileId: PROFILE_ID, deletedAt: null } as never);
 });
 
 afterEach(async () => {

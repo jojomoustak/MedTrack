@@ -111,6 +111,15 @@ export function AddMedicationFlow({
   /** Which step "Πίσω" from the schedule step's kind chooser returns to — "review" only once Review has actually been reached at least once (editing an already-set schedule), "details" otherwise. */
   const [scheduleStepBackTarget, setScheduleStepBackTarget] = useState<"details" | "review">("details");
   const [submitting, setSubmitting] = useState(false);
+  /**
+   * Real bug, found on the owner's phone (2026-10-11): one ALGOFREN was
+   * saved three times within a minute. Finish switched back on as soon as
+   * the save finished, while the app was still moving on to the photo
+   * screen (slow on a phone) — so a tap that seemed to do nothing, tapped
+   * again, saved another copy. This ref blocks any second save, and stays
+   * set after success: one flow creates at most one medication.
+   */
+  const finishingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [scanAvailable] = useState(() => (platform ?? getDefaultMobilePlatform()).isAvailable());
   const [manualPrefill, setManualPrefill] = useState<{ expiry: string | null; batch: string | null }>({ expiry: null, batch: null });
@@ -202,7 +211,8 @@ export function AddMedicationFlow({
    * spinner" true while respecting the FK.
    */
   async function handleFinish() {
-    if (!details) return;
+    if (!details || finishingRef.current) return;
+    finishingRef.current = true;
     setSubmitting(true);
     setError(null);
     try {
@@ -291,10 +301,11 @@ export function AddMedicationFlow({
       }
 
       playSound("success");
+      // Saved: the button stays disabled ("Αποθήκευση…") until the next screen takes over.
       onCreated?.(record);
     } catch {
       setError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
-    } finally {
+      finishingRef.current = false;
       setSubmitting(false);
     }
   }

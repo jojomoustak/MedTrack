@@ -12,9 +12,11 @@ const NOON_TODAY = new Date("2026-03-10T12:00:00.000Z");
 
 let db: MedTrackingDexie;
 
-beforeEach(() => {
+beforeEach(async () => {
   db = new MedTrackingDexie(`test-today-dose-events-${crypto.randomUUID()}`);
   __setClientDbForTests(db);
+  // Doses only show for a medication that exists (a deleted one's are hidden, 2026-10-11).
+  await db.userMedication.put({ id: "med-1", profileId: PROFILE_ID, deletedAt: null } as never);
   // Only fake setInterval/clearInterval/Date -- NOT setTimeout, which
   // both fake-indexeddb (to simulate async IDB operations) and
   // testing-library's own `waitFor` rely on internally. flushAsync()
@@ -159,5 +161,19 @@ describe("useTodayDoseEvents list", () => {
 
     expect(result.current.todayDoses.map((d) => d.id)).toEqual([today.id]);
     expect(Object.keys(result.current)).not.toContain("needsAttention");
+  });
+});
+
+describe("useTodayDoseEvents — deleted medications", () => {
+  it("doesn't show a deleted medication's doses — they'd have no name to show (2026-10-11)", async () => {
+    const repo = new DexieDoseEventRepository(db);
+    const kept = await repo.createIfMissing(doseInput());
+    await db.userMedication.put({ id: "med-deleted", profileId: PROFILE_ID, deletedAt: "2026-03-10T09:00:00.000Z" } as never);
+    await repo.createIfMissing(doseInput({ userMedicationId: "med-deleted" }));
+
+    const { result } = renderHook(() => useTodayDoseEvents(PROFILE_ID));
+    await flushAsync();
+
+    expect(result.current.todayDoses.map((d) => d.id)).toEqual([kept.id]);
   });
 });

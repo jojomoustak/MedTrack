@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
+import { liveMedicationIds } from "@/lib/medications/client/live-medication-ids";
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
 import { GENERATION_HORIZON_MS } from "@/lib/scheduling/client/dose-event-generator";
 import { projectDoseInstantsForRange, type ProjectedDoseInstant } from "@/lib/domain/dose-instant-projection";
@@ -64,8 +65,9 @@ export function useDoseEventsForRange(profileId: string | null, from: Date, to: 
       const now = new Date();
       const horizonEnd = new Date(now.getTime() + GENERATION_HORIZON_MS);
 
-      // Cancelled doses never happen (schedule changed / medication stopped) — not shown.
-      const doses = (await doseEventRepo.listForProfileInRange(profileId!, startOfLocalDayIso(from), endOfLocalDayIso(to))).filter((d) => d.status !== "cancelled");
+      // Not shown: cancelled doses (never happen) and a deleted medication's doses (no medicine to show them under).
+      const [rangeDoses, liveIds] = await Promise.all([doseEventRepo.listForProfileInRange(profileId!, startOfLocalDayIso(from), endOfLocalDayIso(to)), liveMedicationIds(profileId!)]);
+      const doses = rangeDoses.filter((d) => d.status !== "cancelled" && liveIds.has(d.userMedicationId));
       doses.sort((a, b) => compareTimestampsAscending(a.scheduledAt ?? "", b.scheduledAt ?? ""));
 
       let projected: ProjectedDoseInstant[] = [];

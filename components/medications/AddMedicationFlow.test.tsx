@@ -471,3 +471,30 @@ describe("AddMedicationFlow — scan entry, wired end to end (Phase 8)", () => {
     expect(screen.getByLabelText(/ημερομηνία λήξης/i)).toHaveValue("2026-06-30");
   });
 });
+
+describe("AddMedicationFlow — one flow saves one medication (2026-10-11)", () => {
+  it("once saved, Finish stays disabled while the app moves on — a second tap never creates a copy", async () => {
+    // Found on the owner's phone: one medicine saved three times within a minute. The button used to
+    // switch back on as soon as the save finished, while the app was still moving to the next screen.
+    const { repository, create } = makeFakeRepository();
+    const onCreated = vi.fn(); // the page navigates here; in the test nothing moves on, like a slow phone
+    render(<AddMedicationFlow profileId="profile-1" repository={repository} onCreated={onCreated} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /χειροκίνητη/i }));
+    fireEvent.change(screen.getByLabelText(/όνομα φαρμάκου/i), { target: { value: "Ιβουπροφένη" } });
+    fireEvent.click(screen.getByRole("button", { name: /συνέχεια/i }));
+    fireEvent.click(screen.getByRole("radio", { name: /δισκίο/i }));
+    fireEvent.click(screen.getByRole("button", { name: /συνέχεια/i }));
+    fireEvent.click(screen.getByRole("button", { name: /παράλειψη/i }));
+
+    fireEvent.click(screen.getByRole("button", { name: /ολοκλήρωση/i }));
+    await vi.waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const button = screen.getByRole("button", { name: /αποθήκευση|ολοκλήρωση/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    fireEvent.click(button);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+});

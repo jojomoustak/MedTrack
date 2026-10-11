@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
+import { liveMedicationIds } from "@/lib/medications/client/live-medication-ids";
 import { onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
@@ -76,7 +77,9 @@ export function useTodayDoseEvents(profileId: string | null, onNewlyDue?: (dose:
       // (2026-10-09): with a few medications it was a wall of rows pushing
       // today's doses down. They stay in Calendar, whose dose screen still
       // records "taken later".
-      const allTodayDoses = await repo.listForProfileInRange(profileId!, startOfLocalDayIso(now), endOfLocalDayIso(now));
+      const [rangeDoses, liveIds] = await Promise.all([repo.listForProfileInRange(profileId!, startOfLocalDayIso(now), endOfLocalDayIso(now)), liveMedicationIds(profileId!)]);
+      // A deleted medication's doses aren't today's doses any more (its records stay, for history and sync).
+      const allTodayDoses = rangeDoses.filter((d) => liveIds.has(d.userMedicationId));
       if (cancelled) return;
       // A cancelled dose never happens (its schedule was changed or the
       // medication stopped) — it isn't one of today's doses, and must not

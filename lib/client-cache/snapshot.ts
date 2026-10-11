@@ -41,7 +41,7 @@ function forgetSnapshots(prefixes: readonly string[]): void {
  */
 const AFFECTED_BY: Record<string, readonly string[]> = {
   doseEvent: ["today-doses:", "dose-range:", "inventory:"],
-  userMedication: ["medications:", "low-stock:", "schedule-summaries:"],
+  userMedication: ["medications:", "low-stock:", "schedule-summaries:", "today-doses:", "dose-range:"],
   medicationSchedule: ["schedules:", "schedule-summaries:", "dose-range:", "today-doses:", "inventory:"],
   medicationPackage: ["low-stock:", "inventory:"],
   medicationInventoryTransaction: ["low-stock:", "inventory:"],
