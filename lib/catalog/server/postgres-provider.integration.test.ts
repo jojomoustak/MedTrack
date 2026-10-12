@@ -67,6 +67,14 @@ describe.skipIf(!connectionString)("PostgresCatalogProvider against real seeded 
     expect(await provider.lookupByGtin("00000000000000")).toBeNull();
   });
 
+  it("getByIds returns exactly the asked-for products, skipping unknown ids (2026-10-12)", async () => {
+    const known = (await provider.search("Παρακεταμόλη")).slice(0, 2);
+    const unknownId = "00000000-0000-4000-8000-000000000000";
+    const products = await provider.getByIds([...known.map((p) => p.id), unknownId]);
+    expect(products.map((p) => p.id).sort()).toEqual(known.map((p) => p.id).sort());
+    expect(await provider.getByIds([])).toEqual([]);
+  });
+
   it("returns an empty array for an empty query rather than the whole table", async () => {
     expect(await provider.search("")).toEqual([]);
   });

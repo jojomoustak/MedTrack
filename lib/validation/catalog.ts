@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { uuidSchema } from "@/lib/validation/common";
 
 /** GET /api/catalog/search?q=&limit=&offset= */
 export const catalogSearchQuerySchema = z.object({
@@ -39,3 +40,17 @@ export const catalogLookupQuerySchema = z
     message: "Δώστε είτε gtin είτε eofCode, όχι και τα δύο ή κανένα.",
   });
 export type CatalogLookupQuery = z.infer<typeof catalogLookupQuerySchema>;
+
+/** Most catalog products one `/api/catalog/products` request may ask for — far above any real medication list. */
+export const CATALOG_PRODUCTS_MAX_IDS = 100;
+
+/** GET /api/catalog/products?ids=<uuid>,<uuid>,… — the products behind the user's own medications, by id. */
+export const catalogProductsQuerySchema = z.object({
+  ids: z
+    .string()
+    .trim()
+    .min(1, "Δώστε τουλάχιστον ένα id.")
+    .transform((value) => [...new Set(value.split(",").map((id) => id.trim()).filter(Boolean))])
+    .pipe(z.array(uuidSchema).min(1).max(CATALOG_PRODUCTS_MAX_IDS)),
+});
+export type CatalogProductsQuery = z.infer<typeof catalogProductsQuerySchema>;

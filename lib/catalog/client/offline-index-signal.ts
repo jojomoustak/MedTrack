@@ -16,6 +16,10 @@
  * (`lib/sync/client/outbox-signal.ts`) — deliberately not a bespoke
  * per-page workaround, since any other screen resolving a
  * `catalogProductId` to display data has the exact same latent bug.
+ *
+ * Also fired when the user's own products are fetched straight into the
+ * catalog cache (`cache-missing-catalog-products.ts`, 2026-10-12) — same
+ * meaning for every listener: catalog names may resolve now, look again.
  */
 type Listener = () => void;
 

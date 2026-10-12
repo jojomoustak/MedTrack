@@ -60,6 +60,8 @@ import { notifyLocalDataHydrated, onLocalDataHydrated } from "@/lib/sync/client/
 import { onSessionRestored } from "@/lib/auth/client/session-restored-signal";
 import { syncOfflineIndex, type SyncOfflineIndexOutcome } from "@/lib/catalog/client/sync-offline-index";
 import { syncLearnedMappings, type SyncLearnedMappingsOutcome } from "@/lib/catalog/client/sync-learned-mappings";
+import { cacheMissingCatalogProducts } from "@/lib/catalog/client/cache-missing-catalog-products";
+import { onOfflineIndexUpdated } from "@/lib/catalog/client/offline-index-signal";
 import { DexiePhotoOutboxRepository } from "@/lib/medications/client/photo-outbox-repository";
 import { DexiePhotoCacheRepository } from "@/lib/medications/client/photo-cache-repository";
 import { drainPhotoOutbox, type PhotoDrainSummary } from "@/lib/medications/client/photo-outbox-worker";
@@ -143,6 +145,7 @@ export function createSyncManager(): SyncManager {
   let unsubscribeOutbox: (() => void) | undefined;
   let unsubscribePhotoOutbox: (() => void) | undefined;
   let unsubscribeSessionRestored: (() => void) | undefined;
+  let unsubscribeCatalogNames: (() => void) | undefined;
   let schedulingTickTimer: ReturnType<typeof setInterval> | undefined;
 
   async function drainNow(): Promise<DrainSummary | null> {
@@ -207,6 +210,25 @@ export function createSyncManager(): SyncManager {
     }
   }
 
+  /**
+   * Fetches the catalog products behind the user's medications that this
+   * device doesn't have — right after "Clear data" or on a new phone, the
+   * restore brings the medications but not their catalog names (2026-10-12).
+   * Reminders get re-armed with the real names via `onOfflineIndexUpdated`
+   * in `start()`.
+   */
+  async function refreshCatalogNamesNow(): Promise<void> {
+    const profileId = getCachedProfileId();
+    if (!profileId) return;
+    try {
+      const medications = await new DexieUserMedicationRepository().list(profileId);
+      const productIds = medications.flatMap((m) => (m.catalogProductId ? [m.catalogProductId] : []));
+      if (productIds.length > 0) await cacheMissingCatalogProducts(productIds);
+    } catch (err) {
+      logger.warn("sync.manager.catalog_names_refresh_failed", { message: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
   async function runSchedulingTickNow(): Promise<void> {
     if (runningSchedulingTick) {
       // Don't drop it: the data that prompted this request (e.g. a pull
@@ -256,6 +278,7 @@ export function createSyncManager(): SyncManager {
       unsubscribeNetwork = network.subscribe((state: NetworkState) => {
         if (state === "online") {
           void drainNow();
+          void refreshCatalogNamesNow();
           void syncOfflineIndexNow();
           void syncLearnedMappingsNow();
           void drainPhotoOutboxNow();
@@ -268,8 +291,16 @@ export function createSyncManager(): SyncManager {
       // device's edits) must generate their upcoming doses — and native
       // reminders — now, not at the next periodic tick up to 45 min later.
       unsubscribeLocalData = onLocalDataHydrated((source) => {
-        if (source === "pull") void runSchedulingTickNow();
+        if (source !== "pull") return;
+        void runSchedulingTickNow();
+        // A restore brings medications but not their catalog names — fetch them now, not after the full offline index.
+        void refreshCatalogNamesNow();
       });
+      // Catalog names just became available (the offline index, or the
+      // user's own products fetched by any screen or by the restore above):
+      // re-arm native reminders, which may have been armed with the
+      // "Φάρμακο από κατάλογο" placeholder as their title (2026-10-12).
+      unsubscribeCatalogNames = onOfflineIndexUpdated(() => void runSchedulingTickNow());
       network.start();
       // Unsynced changes go out at once (data integrity); the rest waits
       // until the first screen is drawn (2026-10-09) — on a cold start it
@@ -280,6 +311,7 @@ export function createSyncManager(): SyncManager {
       void drainNow();
       afterFirstPaint(() => {
         void runSchedulingTickNow();
+        void refreshCatalogNamesNow();
         void syncOfflineIndexNow();
         void syncLearnedMappingsNow();
         void drainPhotoOutboxNow();
@@ -293,6 +325,7 @@ export function createSyncManager(): SyncManager {
       unsubscribePhotoOutbox?.();
       unsubscribeSessionRestored?.();
       unsubscribeLocalData?.();
+      unsubscribeCatalogNames?.();
       if (schedulingTickTimer) clearInterval(schedulingTickTimer);
     },
     drainNow,

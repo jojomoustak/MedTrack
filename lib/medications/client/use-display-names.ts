@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
 import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
 import { onOfflineIndexUpdated } from "@/lib/catalog/client/offline-index-signal";
+import { cacheMissingCatalogProducts, isCatalogProductRequestPending } from "@/lib/catalog/client/cache-missing-catalog-products";
 import type { CatalogCacheRepository, OfflineIndexRepository } from "@/lib/domain/repositories";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import { shortCatalogName } from "@/lib/domain/catalog-short-name";
@@ -67,6 +68,12 @@ function nameKey(med: UserMedicationRecord, full: boolean): string {
   return `${full ? "full" : "short"}|${med.id}|${med.customName ?? ""}|${med.catalogProductId ?? ""}`;
 }
 
+/** What a catalog medication is called when its product can't be found on the device or fetched. */
+const PLACEHOLDER_NAME = "Φάρμακο από κατάλογο";
+
+/** Catalog products already asked of the server this page life — asked once, then the placeholder (no retry loop while offline). */
+const fetchTried = new Set<string>();
+
 function forgetCatalogNames(): void {
   for (const [key, entry] of resolvedNames) if (entry.fromCatalog) resolvedNames.delete(key);
 }
@@ -74,6 +81,7 @@ function forgetCatalogNames(): void {
 /** Test seam. */
 export function __clearResolvedNamesForTests(): void {
   resolvedNames.clear();
+  fetchTried.clear();
 }
 
 /**
@@ -106,19 +114,34 @@ export function useDisplayNames(medications: UserMedicationRecord[], { full = fa
     let cancelled = false;
     const cache = new DexieCatalogCacheRepository();
     const offlineIndex = new DexieOfflineIndexRepository();
+    const toFetch: string[] = [];
     Promise.all(
       missing.map(async (med) => {
         const name = await resolveMedicationDisplayName(med, cache, offlineIndex, { full });
-        resolvedNames.set(nameKey(med, full), { name: name ?? "Φάρμακο από κατάλογο", fromCatalog: !med.customName });
+        // Not on this device yet (e.g. right after "Clear data"): ask the
+        // server for it and show "…" meanwhile — the placeholder only if
+        // that didn't work out (2026-10-12).
+        const productId = med.catalogProductId;
+        if (name === null && productId && (!fetchTried.has(productId) || isCatalogProductRequestPending(productId))) {
+          toFetch.push(productId);
+          return;
+        }
+        resolvedNames.set(nameKey(med, full), { name: name ?? PLACEHOLDER_NAME, fromCatalog: !med.customName });
       }),
-    ).then(
-      () => {
-        if (!cancelled) setVersion((n) => n + 1);
-      },
-      () => {
-        // An IndexedDB read failed — the name stays "…" and is retried on the next visit (not on every redraw).
-      },
-    );
+    )
+      .then(async () => {
+        if (toFetch.length === 0) return;
+        for (const id of toFetch) fetchTried.add(id);
+        await cacheMissingCatalogProducts(toFetch);
+      })
+      .then(
+        () => {
+          if (!cancelled) setVersion((n) => n + 1);
+        },
+        () => {
+          // An IndexedDB read failed — the name stays "…" and is retried on the next visit (not on every redraw).
+        },
+      );
     return () => {
       cancelled = true;
     };

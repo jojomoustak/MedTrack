@@ -124,6 +124,14 @@ export interface MedicationCatalogProvider {
    */
   lookupByEofCode(eofCode: string): Promise<CatalogProduct | null>;
   /**
+   * The products behind a user's own medications, by id — how a device
+   * that lost its local catalog (Android "Clear data", a new phone) gets
+   * their names back in one small request instead of waiting for the full
+   * offline index to download (2026-10-12). Unknown ids are simply absent
+   * from the result.
+   */
+  getByIds(ids: readonly string[]): Promise<CatalogProduct[]>;
+  /**
    * Multi-identifier lookup against `medication_identifier` (GTIN-
    * resolution task spec §1/§3/§19) — the real GS1 DataMatrix resolution
    * path. Distinct from `lookupByGtin` above: that method queries the

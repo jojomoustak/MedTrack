@@ -36,6 +36,21 @@ export async function searchCatalog(
   return response.json() as Promise<CatalogSearchResponse>;
 }
 
+/** GET /api/catalog/products?ids= — the products behind the user's own medications (`cache-missing-catalog-products.ts`). */
+export async function fetchCatalogProducts(ids: readonly string[], fetchImpl: typeof fetch = fetch, signal?: AbortSignal): Promise<CatalogProduct[]> {
+  const params = new URLSearchParams({ ids: ids.join(",") });
+  const response = await fetchImpl(`/api/catalog/products?${params.toString()}`, {
+    credentials: "include",
+    cache: "no-store",
+    signal,
+  });
+  if (!response.ok) {
+    throw new CatalogApiError(`Catalog products request failed with status ${response.status}`, response.status);
+  }
+  const body = (await response.json()) as { products: CatalogProduct[] };
+  return body.products;
+}
+
 export interface CatalogLookupResponse {
   product: CatalogProduct | null;
   gtin: string | null;

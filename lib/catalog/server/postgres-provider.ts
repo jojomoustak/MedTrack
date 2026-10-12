@@ -23,7 +23,7 @@
  * `app.current_profile_id`, never set on the unscoped connection — makes
  * those rows silently invisible/unwritable instead of erroring.
  */
-import { sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import { getDb, type Db, type TestableDb } from "@/lib/db/client";
 import { withProfileScope } from "@/lib/db/rls";
 import * as schema from "@/lib/db/schema";
@@ -86,6 +86,14 @@ export class PostgresCatalogProvider implements MedicationCatalogProvider {
       .where(sql`${schema.medicationCatalogProduct.eofCode} = ${eofCode}`)
       .limit(1);
     return row ?? null;
+  }
+
+  async getByIds(ids: readonly string[]): Promise<CatalogProduct[]> {
+    if (ids.length === 0) return [];
+    return this.db
+      .select()
+      .from(schema.medicationCatalogProduct)
+      .where(inArray(schema.medicationCatalogProduct.id, [...ids]));
   }
 
   /**
