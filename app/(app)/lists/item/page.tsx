@@ -19,6 +19,7 @@ import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import { formatCents, fromDecimalEuros, toCents } from "@/lib/domain/money";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
+import { ListItemsSkeleton } from "@/components/shell/ScreenSkeletons";
 
 const MAX_SUGGESTIONS = 6;
 
@@ -273,11 +274,7 @@ export default function PurchaseListDetailPage() {
         )}
       </form>
 
-      {status === "loading" && (
-        <p role="status" className="text-sm text-stone-600">
-          Φόρτωση…
-        </p>
-      )}
+      {status === "loading" && <ListItemsSkeleton />}
 
       {status === "ready" && items.length === 0 && <EmptyState icon={<EmptyListIcon />} title="Η λίστα είναι άδεια." />}
 

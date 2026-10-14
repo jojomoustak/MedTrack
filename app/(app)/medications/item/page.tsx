@@ -28,6 +28,8 @@ import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule"
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
 import { keepIfSame, readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
+import { DoseRowsSkeleton, InventoryCardSkeleton, MedicationDetailSkeleton } from "@/components/shell/ScreenSkeletons";
+import { SkeletonStatus } from "@/components/ui/Skeleton";
 
 type DetailTab = "overview" | "schedule" | "history";
 const DETAIL_TABS: FilterTab<DetailTab>[] = [
@@ -195,11 +197,7 @@ export default function MedicationDetailPage() {
   }, [tab, doseHistory, params.id]);
 
   if (medication === undefined) {
-    return (
-      <p role="status" className="p-6 text-sm text-stone-600">
-        Φόρτωση…
-      </p>
-    );
+    return <MedicationDetailSkeleton />;
   }
 
   if (medication === null) {
@@ -278,9 +276,7 @@ export default function MedicationDetailPage() {
           </dl>
 
           {inventory.status === "loading" ? (
-            <p role="status" className="text-sm text-stone-600">
-              Φόρτωση αποθέματος…
-            </p>
+            <InventoryCardSkeleton />
           ) : (
             <section className="flex flex-col gap-3" aria-label="Απόθεμα">
               <InventorySummary
@@ -333,9 +329,9 @@ export default function MedicationDetailPage() {
 
       {tab === "history" &&
         (doseHistory === null ? (
-          <p role="status" className="text-sm text-stone-600">
-            Φόρτωση ιστορικού…
-          </p>
+          <SkeletonStatus label="Φόρτωση ιστορικού…">
+            <DoseRowsSkeleton />
+          </SkeletonStatus>
         ) : doseHistory.length === 0 ? (
           <p className="text-[17px] text-stone-600">Δεν υπάρχει ακόμα ιστορικό δόσεων.</p>
         ) : (

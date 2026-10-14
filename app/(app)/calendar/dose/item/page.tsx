@@ -23,6 +23,7 @@ import {
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { logger } from "@/lib/logging/logger";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
+import { DoseDetailSkeleton } from "@/components/shell/ScreenSkeletons";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -158,11 +159,7 @@ export default function DoseDetailPage() {
   return (
     <main className="mx-auto flex max-w-md flex-col gap-5 px-5 pt-1 pb-6">
 
-      {dose === undefined && (
-        <p role="status" className="text-sm text-stone-600">
-          Φόρτωση…
-        </p>
-      )}
+      {dose === undefined && <DoseDetailSkeleton />}
 
       {dose === null && <p className="text-[15px] text-stone-600">Δεν βρέθηκε αυτή η δόση.</p>}
 

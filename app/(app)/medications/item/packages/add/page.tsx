@@ -14,6 +14,7 @@ import { MedicationHeader } from "@/components/medications/MedicationHeader";
 import { useReturnTo } from "@/lib/navigation/client/use-return-to";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
+import { MedicationFormSkeleton } from "@/components/shell/ScreenSkeletons";
 
 export default function AddPackagePage() {
   const profileId = useProfileId();
@@ -82,11 +83,7 @@ export default function AddPackagePage() {
   }
 
   if (medication === undefined) {
-    return (
-      <p role="status" className="p-6 text-sm text-stone-600">
-        Φόρτωση…
-      </p>
-    );
+    return <MedicationFormSkeleton title="Νέα συσκευασία" fields={3} />;
   }
 
   if (medication === null) {

@@ -9,6 +9,7 @@ import { CurrentProfileProvider } from "@/components/shell/CurrentProfileContext
 import { AppBar } from "@/components/shell/AppBar";
 import { BottomNav } from "@/components/shell/BottomNav";
 import { OfflineBanner } from "@/components/sync/OfflineBanner";
+import { RouteSkeleton } from "@/components/shell/ScreenSkeletons";
 
 /**
  * The authenticated app shell (Phase 3 §1): app bar + tab content +
@@ -65,9 +66,7 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
             {children}
           </CurrentProfileProvider>
         ) : (
-          <p role="status" className="p-6 text-sm text-stone-600">
-            Φόρτωση…
-          </p>
+          <RouteSkeleton />
         )}
       </div>
       <div className="fixed inset-x-0 bottom-0">

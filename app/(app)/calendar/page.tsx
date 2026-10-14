@@ -16,6 +16,8 @@ import { ProjectedDoseRow } from "@/components/calendar/ProjectedDoseRow";
 import { TodayDoseRow } from "@/components/today/TodayDoseRow";
 import { dateToParam, paramToDate } from "@/components/calendar/date-param";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { DoseRowsSkeleton } from "@/components/shell/ScreenSkeletons";
+import { SkeletonStatus } from "@/components/ui/Skeleton";
 
 /** Monday-first, the way a Greek week reads. */
 const WEEKDAY_HEADERS = ["Δευ", "Τρί", "Τετ", "Πέμ", "Παρ", "Σάβ", "Κυρ"];
@@ -184,9 +186,9 @@ export default function CalendarPage() {
         </Link>
 
         {dosesStatus === "loading" ? (
-          <p role="status" className="text-sm text-stone-600">
-            Φόρτωση…
-          </p>
+          <SkeletonStatus>
+            <DoseRowsSkeleton count={2} />
+          </SkeletonStatus>
         ) : dayItems.length === 0 ? (
           <p className="text-[15px] text-stone-600">Καμία δόση αυτή την ημέρα.</p>
         ) : (

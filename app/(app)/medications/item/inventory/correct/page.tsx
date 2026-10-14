@@ -14,6 +14,8 @@ import { MedicationHeader } from "@/components/medications/MedicationHeader";
 import { useReturnTo } from "@/lib/navigation/client/use-return-to";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
+import { FieldsSkeleton, MedicationFormSkeleton } from "@/components/shell/ScreenSkeletons";
+import { SkeletonStatus } from "@/components/ui/Skeleton";
 
 /**
  * Inventory manual correction (Phase 3 §2.5) — an explicit, unattributed
@@ -71,11 +73,7 @@ export default function InventoryCorrectionPage() {
   }
 
   if (medication === undefined) {
-    return (
-      <p role="status" className="p-6 text-sm text-stone-600">
-        Φόρτωση…
-      </p>
-    );
+    return <MedicationFormSkeleton title="Διόρθωση αποθέματος" fields={2} />;
   }
 
   if (medication === null) {
@@ -95,9 +93,9 @@ export default function InventoryCorrectionPage() {
       <MedicationHeader medication={medication} />
 
       {inventory.status === "loading" ? (
-        <p role="status" className="text-sm text-stone-600">
-          Φόρτωση αποθέματος…
-        </p>
+        <SkeletonStatus label="Φόρτωση αποθέματος…">
+          <FieldsSkeleton count={2} />
+        </SkeletonStatus>
       ) : (
         <InventoryCorrectionForm
           currentStock={inventory.currentStock}

@@ -458,12 +458,19 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
           // eslint-disable-next-line @next/next/no-img-element -- `photoUrl` is a local `blob:` object URL from an authenticated fetch (or a locally-cached/queued copy), never a remote asset `next/image` can optimize.
           <img src={photoUrl} alt="Φωτογραφία φαρμάκου" className="h-full w-full object-contain" />
         ) : (
-          <div className="flex flex-col items-center gap-4 px-8 text-center text-stone-400">
+          // While the saved photo is looked up, the frame's own icon pulses instead of a "Φόρτωση…" line.
+          <div className={`flex flex-col items-center gap-4 px-8 text-center text-stone-400 ${photoStatus === "checking" ? "motion-safe:animate-pulse" : ""}`}>
             <svg viewBox="0 0 64 64" width="72" height="72" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round">
               <path d="M10 22 32 12l22 10v24L32 56 10 46Z" />
               <path d="M10 22 32 32l22-10M32 32v24" />
             </svg>
-            <p className="text-[17px] font-medium text-stone-300">{photoStatus === "checking" ? "Φόρτωση…" : "Φωτογραφίστε τη συσκευασία του φαρμάκου"}</p>
+            {photoStatus === "checking" ? (
+              <p role="status" className="sr-only">
+                Φόρτωση…
+              </p>
+            ) : (
+              <p className="text-[17px] font-medium text-stone-300">Φωτογραφίστε τη συσκευασία του φαρμάκου</p>
+            )}
           </div>
         )}
         {/* Corner guides, as on a camera viewfinder. */}

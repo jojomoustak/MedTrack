@@ -18,6 +18,7 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { logger } from "@/lib/logging/logger";
+import { TodayDosesSkeleton } from "@/components/shell/ScreenSkeletons";
 
 function LowStockIcon() {
   return (
@@ -126,10 +127,13 @@ export default function TodayPage() {
   }
 
   if (medsStatus === "loading" || dosesStatus === "loading") {
+    // The greeting and day strip need no data, so they show as themselves; the doses as a skeleton.
     return (
-      <p role="status" className="p-6 text-sm text-stone-600">
-        Φόρτωση…
-      </p>
+      <div className="flex flex-col gap-6 px-5 pt-1 pb-6">
+        <TodayGreeting today={today} />
+        <DayStrip today={today} />
+        <TodayDosesSkeleton />
+      </div>
     );
   }
 

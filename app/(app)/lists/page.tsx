@@ -11,6 +11,7 @@ import { SegmentedControl, type Segment as SegmentDef } from "@/components/ui/Se
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FIELD_INPUT } from "@/components/ui/field-styles";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { ListRowsSkeleton } from "@/components/shell/ScreenSkeletons";
 
 type Segment = "active" | "completed";
 
@@ -139,11 +140,7 @@ export default function ListsPage() {
         />
       )}
 
-      {(status === "loading" || summaryStatus === "loading") && (
-        <p role="status" className="text-sm text-stone-600">
-          Φόρτωση…
-        </p>
-      )}
+      {(status === "loading" || summaryStatus === "loading") && <ListRowsSkeleton />}
 
       {status === "ready" && lists.length === 0 && !composing && <EmptyState icon={<EmptyListIcon />} title="Δεν έχετε δημιουργήσει ακόμα καμία λίστα" />}
 

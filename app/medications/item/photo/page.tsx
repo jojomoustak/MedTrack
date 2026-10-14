@@ -8,6 +8,7 @@ import { useCurrentProfile } from "@/lib/auth/client/use-current-profile";
 import { useReturnTo } from "@/lib/navigation/client/use-return-to";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
+import { PhotoFrameSkeleton } from "@/components/shell/ScreenSkeletons";
 
 /**
  * A medication's photo (reference mockup, screen 13): a dark camera screen
@@ -66,11 +67,7 @@ function PhotoScreen() {
           </p>
         )}
 
-        {session.status === "loading" && (
-          <p role="status" className="text-[15px] text-stone-300">
-            Φόρτωση…
-          </p>
-        )}
+        {session.status === "loading" && <PhotoFrameSkeleton />}
 
         {session.status === "ready" && <MedicationPhotoAttach userMedicationId={params.id} leading={leaveButton} className="flex-1 justify-between" />}
       </div>

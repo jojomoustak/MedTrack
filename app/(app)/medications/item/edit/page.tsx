@@ -21,6 +21,7 @@ import { logger } from "@/lib/logging/logger";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
+import { MedicationFormSkeleton } from "@/components/shell/ScreenSkeletons";
 
 function localToday(): string {
   const now = new Date();
@@ -105,11 +106,7 @@ export default function EditMedicationPage() {
   }
 
   if (medication === undefined) {
-    return (
-      <p role="status" className="p-6 text-sm text-stone-600">
-        Φόρτωση…
-      </p>
-    );
+    return <MedicationFormSkeleton title="Επεξεργασία" fields={4} />;
   }
 
   if (medication === null) {

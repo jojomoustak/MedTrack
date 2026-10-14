@@ -16,6 +16,7 @@ import { dateToParam, paramToDate } from "@/components/calendar/date-param";
 import { doseQuantityLabel } from "@/lib/medications/dose-quantity-label";
 import { isDoseTaken, type DoseEventRecord } from "@/lib/domain/dose-event";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { DayTimelineSkeleton } from "@/components/shell/ScreenSkeletons";
 
 function isSameLocalDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -103,9 +104,7 @@ export default function CalendarDayPage() {
       </div>
 
       {status === "loading" ? (
-        <p role="status" className="text-sm text-stone-600">
-          Φόρτωση…
-        </p>
+        <DayTimelineSkeleton />
       ) : items.length === 0 ? (
         <p className="text-[17px] text-stone-600">Καμία δόση αυτή την ημέρα.</p>
       ) : (

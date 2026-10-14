@@ -17,6 +17,8 @@ import { ChevronIcon } from "@/components/ui/ChevronIcon";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { dosageFormLabel, TREATMENT_STATE_LABELS } from "@/lib/medications/labels";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
+import { MedicationRowsSkeleton } from "@/components/shell/ScreenSkeletons";
+import { SkeletonStatus } from "@/components/ui/Skeleton";
 
 type Segment = "all" | "active" | "inactive";
 
@@ -100,9 +102,9 @@ export default function MedicationsPage() {
       />
 
       {status === "loading" && (
-        <p role="status" className="text-sm text-stone-600">
-          Φόρτωση…
-        </p>
+        <SkeletonStatus>
+          <MedicationRowsSkeleton />
+        </SkeletonStatus>
       )}
 
       {status === "ready" && visible.length === 0 && (
