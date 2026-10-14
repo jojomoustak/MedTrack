@@ -12,15 +12,18 @@ import { OfflineBanner } from "@/components/sync/OfflineBanner";
 
 /**
  * The authenticated app shell (Phase 3 §1): app bar + tab content +
- * persistent bottom nav. Unauthenticated visits to any tab redirect
- * to Login (no login/register UI existed before this task).
+ * persistent bottom nav. Unauthenticated visits to any tab go to Welcome
+ * (which leads to both sign-in and sign-up), the same as the root page:
+ * the Android app opens straight on /today since 2026-10-14 — the root
+ * page's "Φόρτωση…" step after the native loading screen was redundant —
+ * so a first launch must still reach Welcome from here.
  */
 export default function AppShellLayout({ children }: { children: React.ReactNode }) {
   const session = useCurrentProfile();
   const router = useRouter();
 
   useEffect(() => {
-    if (session.status === "signed-out") router.replace("/login");
+    if (session.status === "signed-out") router.replace("/welcome");
   }, [session.status, router]);
 
   // `lib/sync/client/api.ts`'s `reportIfUnauthenticated` fires this the
