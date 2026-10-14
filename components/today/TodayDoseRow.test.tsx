@@ -98,4 +98,15 @@ describe("TodayDoseRow", () => {
     render(<TodayDoseRow dose={makeDose()} medicationName="Metformin" onTake={vi.fn()} />);
     expect(screen.getByRole("link").getAttribute("href")).toBe("/calendar/dose/dose-1");
   });
+
+  it("starts with the medicine's picture and ends with the circle that records the dose (owner's choice, 2026-10-15)", () => {
+    const { container } = render(
+      <TodayDoseRow dose={makeDose()} medicationName="Metformin" medication={{ form: "capsule", withPhoto: false }} onTake={vi.fn()} />,
+    );
+    const row = container.firstElementChild as HTMLElement;
+    const first = row.firstElementChild as HTMLElement;
+    expect(first.getAttribute("aria-hidden")).toBe("true");
+    expect(first.querySelector("svg")).toBeTruthy();
+    expect(row.lastElementChild).toBe(takeButton());
+  });
 });

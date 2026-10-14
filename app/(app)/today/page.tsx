@@ -8,6 +8,7 @@ import { DayStrip } from "@/components/today/DayStrip";
 import { TodayDoseRow } from "@/components/today/TodayDoseRow";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
+import { useMedicationVisuals } from "@/components/medications/use-medication-visuals";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
 import { useLowStockMedicationIds } from "@/lib/inventory/client/use-low-stock-medications";
@@ -81,6 +82,7 @@ export default function TodayPage() {
   const { status: medsStatus, medications } = useMedicationsList(profileId);
   const names = useDisplayNames(medications);
   const strengths = useMedicationStrengths(medications);
+  const visuals = useMedicationVisuals(medications);
   // Journey 5 (Phase 3 §3): the same non-color low-stock cue as the
   // Medications list badge and the medication detail banner.
   const lowStockIds = useLowStockMedicationIds(profileId, medications);
@@ -202,6 +204,7 @@ export default function TodayPage() {
                 dose={dose}
                 medicationName={names.get(dose.userMedicationId) ?? "…"}
                 medicationStrength={strengths.get(dose.userMedicationId)}
+                medication={visuals.get(dose.userMedicationId)}
                 onTake={handleTake}
                 // A dose missed earlier today can still be recorded as taken later, right here.
                 allowTakenLate

@@ -114,22 +114,27 @@ export function MedicationFormGlyph({ form, size = 40 }: { form: MedicationForm 
  * `withPhoto` should be false for a medication not yet on the server (a
  * local-first create): the photo endpoint needs a real server row.
  */
-export function MedicationAvatar({ medicationId, form, withPhoto }: { medicationId: string; form: MedicationForm | null; withPhoto: boolean }) {
+/** `lg`: medication rows and headers (60px). `md`: dose rows on Today and the Calendar (56px, 2026-10-15). */
+type AvatarSize = "lg" | "md";
+const AVATAR_BOX: Record<AvatarSize, string> = { lg: "h-15 w-15", md: "h-14 w-14" };
+const GLYPH_PX: Record<AvatarSize, number> = { lg: 40, md: 36 };
+
+export function MedicationAvatar({ medicationId, form, withPhoto, size = "lg" }: { medicationId: string; form: MedicationForm | null; withPhoto: boolean; size?: AvatarSize }) {
   const color = medicationColorClasses(medicationId);
-  return withPhoto ? <PhotoOrGlyph medicationId={medicationId} form={form} color={color} /> : <GlyphTile form={form} color={color} />;
+  return withPhoto ? <PhotoOrGlyph medicationId={medicationId} form={form} color={color} size={size} /> : <GlyphTile form={form} color={color} size={size} />;
 }
 
-function GlyphTile({ form, color }: { form: MedicationForm | null; color: { bg: string; text: string } }) {
+function GlyphTile({ form, color, size }: { form: MedicationForm | null; color: { bg: string; text: string }; size: AvatarSize }) {
   return (
-    <span aria-hidden="true" className={`flex h-15 w-15 shrink-0 items-center justify-center rounded-2xl ${color.bg} ${color.text}`}>
-      <MedicationFormGlyph form={form} />
+    <span aria-hidden="true" className={`flex ${AVATAR_BOX[size]} shrink-0 items-center justify-center rounded-2xl ${color.bg} ${color.text}`}>
+      <MedicationFormGlyph form={form} size={GLYPH_PX[size]} />
     </span>
   );
 }
 
-function PhotoOrGlyph({ medicationId, form, color }: { medicationId: string; form: MedicationForm | null; color: { bg: string; text: string } }) {
+function PhotoOrGlyph({ medicationId, form, color, size }: { medicationId: string; form: MedicationForm | null; color: { bg: string; text: string }; size: AvatarSize }) {
   const { url } = useMedicationPhotoThumbnail(medicationId);
-  if (!url) return <GlyphTile form={form} color={color} />;
+  if (!url) return <GlyphTile form={form} color={color} size={size} />;
   // eslint-disable-next-line @next/next/no-img-element -- a local object URL from IndexedDB/fetch, not an optimizable remote asset
-  return <img src={url} alt="" aria-hidden="true" className="h-15 w-15 shrink-0 rounded-2xl object-cover" />;
+  return <img src={url} alt="" aria-hidden="true" className={`${AVATAR_BOX[size]} shrink-0 rounded-2xl object-cover`} />;
 }

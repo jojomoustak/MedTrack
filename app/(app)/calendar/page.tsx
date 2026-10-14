@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { useMedicationsList } from "@/components/medications/use-medications-list";
+import { useMedicationVisuals } from "@/components/medications/use-medication-visuals";
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
 import { useDoseEventsForRange } from "@/components/calendar/use-dose-events-for-range";
@@ -85,6 +86,7 @@ export default function CalendarPage() {
   const { medications } = useMedicationsList(profileId);
   const names = useDisplayNames(medications);
   const strengths = useMedicationStrengths(medications);
+  const visuals = useMedicationVisuals(medications);
   const { status: dosesStatus, doses, projected } = useDoseEventsForRange(profileId, startOfLocalDay(date), endOfLocalDay(date));
 
   // Real and projected doses can share a day right at the materialization
@@ -200,12 +202,15 @@ export default function CalendarPage() {
                   dose={item.dose}
                   medicationName={names.get(item.dose.userMedicationId) ?? "…"}
                   medicationStrength={strengths.get(item.dose.userMedicationId)}
+                  medication={visuals.get(item.dose.userMedicationId)}
                   onTake={() => {}}
                   readOnly
                 />
               ) : (
                 <ProjectedDoseRow
                   key={`${item.instant.scheduleId}-${i}`}
+                  medicationId={item.instant.userMedicationId}
+                  medication={visuals.get(item.instant.userMedicationId)}
                   medicationName={names.get(item.instant.userMedicationId) ?? "…"}
                   scheduledAt={item.instant.scheduledAt}
                 />

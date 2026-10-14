@@ -32,6 +32,8 @@ const THIRD_LINE = ["w-1/3", "w-2/5", "w-1/4", "w-[35%]"];
 export interface SkeletonCardRowProps {
   /** Size and shape of the leading tile (avatar, status tile), or null for none. */
   tile?: string | null;
+  /** Size and shape of a trailing mark (Today's status circle), or null for none. */
+  trailing?: string | null;
   lines?: 1 | 2 | 3;
   /** The real row's own spacing, so the placeholder occupies exactly its space. */
   className?: string;
@@ -40,7 +42,7 @@ export interface SkeletonCardRowProps {
 }
 
 /** One card row like the app's dose, medication and list rows: a tile and a few lines of text. */
-export function SkeletonCardRow({ tile = "h-14 w-14 rounded-2xl", lines = 2, className = "flex items-center gap-3.5 py-3 pr-2 pl-3", index = 0 }: SkeletonCardRowProps) {
+export function SkeletonCardRow({ tile = "h-14 w-14 rounded-2xl", trailing = null, lines = 2, className = "flex items-center gap-3.5 py-3 pr-2 pl-3", index = 0 }: SkeletonCardRowProps) {
   const i = index % FIRST_LINE.length;
   return (
     <div className={`surface-card ${className}`}>
@@ -50,6 +52,7 @@ export function SkeletonCardRow({ tile = "h-14 w-14 rounded-2xl", lines = 2, cla
         {lines > 1 && <Skeleton className={`h-3.5 rounded-md ${SECOND_LINE[i]}`} />}
         {lines > 2 && <Skeleton className={`h-3.5 rounded-md ${THIRD_LINE[i]}`} />}
       </div>
+      {trailing && <Skeleton className={`shrink-0 ${trailing}`} />}
     </div>
   );
 }

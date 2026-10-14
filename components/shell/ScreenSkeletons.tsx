@@ -11,9 +11,9 @@ import { Skeleton, SkeletonCardRows, SkeletonField, SkeletonMedicationHeader, Sk
  * as themselves by the screen instead of being skeletoned.
  */
 
-/** Dose rows, as on Today and the Calendar (`TodayDoseRow`). */
+/** Dose rows, as on Today and the Calendar (`TodayDoseRow`): the medicine's picture, two lines, the status circle. */
 export function DoseRowsSkeleton({ count = 3 }: { count?: number }) {
-  return <SkeletonCardRows count={count} tile="h-14 w-14 rounded-2xl" lines={2} className="flex items-center gap-3.5 py-3 pr-2 pl-3" />;
+  return <SkeletonCardRows count={count} tile="h-14 w-14 rounded-2xl" trailing="mr-1 size-12 rounded-full" lines={2} className="flex items-center gap-3 py-3 pr-2 pl-3" />;
 }
 
 /** Medication rows, as on the Medications tab. */

@@ -8,7 +8,8 @@ import { isDoseActionable } from "@/lib/doses/client/dose-actions";
 import { playSound } from "@/lib/sound/client/play-sound";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { DOSE_TILE_CLASSES, DoseStatusMark, doseStatusText, doseVisual, formatDoseTime, type DoseVisual } from "@/components/doses/DoseStatus";
-import { ChevronIcon } from "@/components/ui/ChevronIcon";
+import { MedicationAvatar } from "@/components/medications/MedicationAvatar";
+import type { MedicationForm } from "@/lib/domain/user-medication";
 
 export const UNDO_WINDOW_MS = 5000;
 
@@ -23,14 +24,19 @@ export interface TodayDoseRowProps {
   allowTakenLate?: boolean;
   /** Display only (Calendar): no tap-to-take — a dose on another day must not be recorded from a browsing view. */
   readOnly?: boolean;
+  /** For the medicine's picture at the start of the row: its photo once synced, otherwise its colour and form icon. */
+  medication?: { form: MedicationForm | null; withPhoto: boolean };
 }
 
 /**
  * Today's compact dose row (reference mockup, screen 1 — user's choice,
- * 2026-10-04: "Like the reference"). The leading tile is the status: tap an
- * open circle to record the dose as taken. Skip / Snooze / Mark missed live
- * on Dose Detail (tap the rest of the row), keeping each row one clear
- * action instead of three competing buttons.
+ * 2026-10-04: "Like the reference"). Since 2026-10-15 (owner's choice,
+ * "photo first, tick right") it starts with the medicine's picture — its
+ * photo, or its colour and form icon — like the Medications list, and the
+ * status circle sits at the end: tap an open circle to record the dose as
+ * taken. Skip / Snooze / Mark missed live on Dose Detail (tap the rest of
+ * the row), keeping each row one clear action instead of three competing
+ * buttons.
  *
  * A tap starts a 5 s undo window before anything is written — a recorded
  * dose can't be un-taken (`isDoseEventTransitionAllowed`), so the window is
@@ -38,7 +44,7 @@ export interface TodayDoseRowProps {
  * window (the user navigates away), the action is committed rather than
  * dropped: the user meant it and never pressed Undo.
  */
-export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake, allowTakenLate = false, readOnly = false }: TodayDoseRowProps) {
+export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake, allowTakenLate = false, readOnly = false, medication }: TodayDoseRowProps) {
   const [pending, setPending] = useState<"taken" | "taken_late" | null>(null);
   const [pendingAt, setPendingAt] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -87,27 +93,20 @@ export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake,
   const title = medicationStrength ? `${medicationName} ${medicationStrength}` : medicationName;
   const muted = visual === "skipped" || visual === "cancelled";
 
-  const tileClass = `flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${DOSE_TILE_CLASSES[visual]}`;
+  // The status circle, inside a 56px tap area at the end of the row.
+  const mark = (
+    <span className={`flex size-12 items-center justify-center rounded-full ${DOSE_TILE_CLASSES[visual]}`}>
+      <DoseStatusMark visual={visual} />
+    </span>
+  );
+  const markBox = "flex size-14 shrink-0 items-center justify-center rounded-full";
 
   return (
     <div
-      className="surface-card flex items-center gap-3.5 py-3 pr-2 pl-3"
+      className="surface-card flex items-center gap-3 py-3 pr-2 pl-3"
       data-dose-status={pending ?? dose.status}
     >
-      {tappable ? (
-        <button
-          type="button"
-          onClick={start}
-          aria-label={canTake ? `Σήμανση ως ελήφθη: ${title}, ${time}` : `Το πήρα αργότερα: ${title}, ${time}`}
-          className={`${tileClass} transition-transform duration-150 active:scale-95`}
-        >
-          <DoseStatusMark visual={visual} />
-        </button>
-      ) : (
-        <div className={tileClass} aria-hidden="true">
-          <DoseStatusMark visual={visual} />
-        </div>
-      )}
+      <MedicationAvatar medicationId={dose.userMedicationId} form={medication?.form ?? null} withPhoto={medication?.withPhoto ?? false} size="md" />
 
       <Link
         href={`/calendar/dose/${dose.id}`}
@@ -125,7 +124,6 @@ export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake,
           )}
         </div>
         {!pending && dose.syncState !== "synced" && <SyncStatusChip state={dose.syncState} compact />}
-        {!pending && <ChevronIcon />}
       </Link>
 
       {pending && (
@@ -136,6 +134,21 @@ export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake,
         >
           Αναίρεση
         </button>
+      )}
+
+      {tappable ? (
+        <button
+          type="button"
+          onClick={start}
+          aria-label={canTake ? `Σήμανση ως ελήφθη: ${title}, ${time}` : `Το πήρα αργότερα: ${title}, ${time}`}
+          className={`${markBox} transition-transform duration-150 active:scale-95`}
+        >
+          {mark}
+        </button>
+      ) : (
+        <span className={markBox} aria-hidden="true">
+          {mark}
+        </span>
       )}
     </div>
   );
