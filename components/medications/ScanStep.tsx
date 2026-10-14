@@ -9,6 +9,7 @@ import type { CatalogCacheRepository, LearnedMappingRepository, OfflineIndexRepo
 import { DexieUnresolvedScanRepository } from "@/lib/db-client/unresolved-scan-repository";
 import { lookupGtin } from "@/lib/catalog/client/lookup-gtin";
 import { lookupEofCode } from "@/lib/catalog/client/lookup-eof-code";
+import { learnScannedBarcode } from "@/lib/catalog/client/learn-scanned-barcode";
 import { useNetworkStatus } from "@/lib/sync/client/use-network-status";
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import { MobilePlatformUnavailableError, type MobilePlatform } from "@/lib/platform/mobile-platform";
@@ -48,7 +49,8 @@ export interface ScanStepProps {
 type ViewState =
   | { phase: "scanning" }
   | { phase: "looking-up" }
-  | { phase: "candidate"; product: CatalogProduct; parsed: ParsedBarcode; diagnostics: ScanDiagnostics }
+  /** `suggested`: identified by other MedTrack users, not by an official source or this person (`lookupGtin`). */
+  | { phase: "candidate"; product: CatalogProduct; parsed: ParsedBarcode; suggested: boolean; diagnostics: ScanDiagnostics }
   /**
    * `reason` distinguishes three different "not found" situations, never
    * collapsed into one generic message (GTIN-resolution task spec §11:
@@ -209,7 +211,8 @@ export function ScanStep({
         phase: "candidate",
         product: outcome.product,
         parsed,
-        diagnostics: { ...baseDiagnostics, resolutionState: "found", matchedIdentifierType, matchedProductName: outcome.product.name },
+        suggested: outcome.suggested === true,
+        diagnostics: { ...baseDiagnostics, resolutionState: outcome.suggested ? "suggested" : "found", matchedIdentifierType, matchedProductName: outcome.product.name },
       });
       return;
     }
@@ -328,7 +331,13 @@ export function ScanStep({
           parsedExpiry={view.parsed.expiry}
           parsedBatch={view.parsed.batch}
           parsedSerial={view.parsed.serial}
-          onConfirm={() => onConfirmCandidate(view.product, view.parsed)}
+          note={view.suggested ? "Πρόταση από άλλους χρήστες του MedTrack, όχι από επίσημη πηγή. Ελέγξτε ότι είναι το φάρμακο της συσκευασίας σας." : undefined}
+          onConfirm={() => {
+            // Confirming someone else's identification makes it this
+            // person's own: the next scan finds it directly, offline too.
+            if (view.suggested && view.parsed.gtin) void learnScannedBarcode(view.parsed.gtin, view.product, { learnedMappings, cache: cacheRepository });
+            onConfirmCandidate(view.product, view.parsed);
+          }}
           onBack={onCancel}
         />
         <ScanDiagnosticsPanel diagnostics={view.diagnostics} />

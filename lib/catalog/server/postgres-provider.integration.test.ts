@@ -9,7 +9,8 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
+import { withProfileScope } from "@/lib/db/rls";
 import * as schema from "@/lib/db/schema";
 import { PostgresCatalogProvider } from "@/lib/catalog/server/postgres-provider";
 import { SEED_PLACEHOLDER_SOURCE } from "@/lib/domain/catalog";
@@ -188,6 +189,8 @@ describe.skipIf(!connectionString)("PostgresCatalogProvider — USER_CONFIRMED e
   let profileId: string;
   let otherAccountId: string;
   let otherProfileId: string;
+  let thirdAccountId: string;
+  let thirdProfileId: string;
 
   beforeAll(async () => {
     pool = new Pool({ connectionString });
@@ -198,13 +201,17 @@ describe.skipIf(!connectionString)("PostgresCatalogProvider — USER_CONFIRMED e
     profileId = crypto.randomUUID();
     otherAccountId = crypto.randomUUID();
     otherProfileId = crypto.randomUUID();
+    thirdAccountId = crypto.randomUUID();
+    thirdProfileId = crypto.randomUUID();
     await db.insert(schema.account).values([
       { id: accountId, email: `ocr-fallback-${accountId}@example.com`, status: "active" },
       { id: otherAccountId, email: `ocr-fallback-${otherAccountId}@example.com`, status: "active" },
+      { id: thirdAccountId, email: `ocr-fallback-${thirdAccountId}@example.com`, status: "active" },
     ]);
     await db.insert(schema.profile).values([
       { id: profileId, ownerAccountId: accountId },
       { id: otherProfileId, ownerAccountId: otherAccountId },
+      { id: thirdProfileId, ownerAccountId: thirdAccountId },
     ]);
   });
 
@@ -220,10 +227,11 @@ describe.skipIf(!connectionString)("PostgresCatalogProvider — USER_CONFIRMED e
     // (lib/sync/server/changes.ts).
     if (productIds.length > 0) {
       await db.delete(schema.medicationIdentifier).where(inArray(schema.medicationIdentifier.catalogProductId, productIds));
+      await db.delete(schema.medicationIdentifierSuggestion).where(inArray(schema.medicationIdentifierSuggestion.catalogProductId, productIds));
       await db.delete(schema.medicationCatalogProduct).where(inArray(schema.medicationCatalogProduct.id, productIds));
     }
-    await db.delete(schema.profile).where(inArray(schema.profile.id, [profileId, otherProfileId]));
-    await db.delete(schema.account).where(inArray(schema.account.id, [accountId, otherAccountId]));
+    await db.delete(schema.profile).where(inArray(schema.profile.id, [profileId, otherProfileId, thirdProfileId]));
+    await db.delete(schema.account).where(inArray(schema.account.id, [accountId, otherAccountId, thirdAccountId]));
     await pool.end();
   });
 
@@ -252,11 +260,90 @@ describe.skipIf(!connectionString)("PostgresCatalogProvider — USER_CONFIRMED e
     expect(await provider.lookupByIdentifier("GTIN", "08888888888882")).toEqual({ state: "VALID_IDENTIFIER_UNRESOLVED" });
   });
 
-  it("a DIFFERENT profile's own lookup never sees another profile's USER_CONFIRMED mapping (spec §17)", async () => {
+  it("a DIFFERENT profile never resolves EXACT from another profile's mapping, only gets it as a SUGGESTED to confirm (owner's decision, 2026-10-15)", async () => {
     const productId = await insertTestProduct("Integration Test Product — Scope Check B");
     await provider.confirmIdentifier("GTIN", "08888888888883", productId, profileId);
 
-    expect(await provider.lookupByIdentifier("GTIN", "08888888888883", otherProfileId)).toEqual({ state: "VALID_IDENTIFIER_UNRESOLVED" });
+    const resolution = await provider.lookupByIdentifier("GTIN", "08888888888883", otherProfileId);
+    expect(resolution.state).toBe("SUGGESTED");
+    if (resolution.state === "SUGGESTED") expect(resolution.product.id).toBe(productId);
+    // Never says how many people, nor who.
+    expect(Object.keys(resolution).sort()).toEqual(["product", "state"]);
+  });
+
+  async function sharedRows(value: string) {
+    const s = schema.medicationIdentifierSuggestion;
+    return db
+      .select({ catalogProductId: s.catalogProductId })
+      .from(s)
+      .where(sql`${s.identifierType} = 'GTIN' AND ${s.identifierValue} = ${value}`);
+  }
+
+  it("each person is shared once: a re-confirmation by the same person adds nothing, a second person adds one", async () => {
+    const productId = await insertTestProduct("Integration Test Product — Shared Once");
+    await provider.confirmIdentifier("GTIN", "08888888888887", productId, profileId);
+    await provider.confirmIdentifier("GTIN", "08888888888887", productId, profileId);
+    expect(await sharedRows("08888888888887")).toHaveLength(1);
+
+    await provider.confirmIdentifier("GTIN", "08888888888887", productId, otherProfileId);
+    expect(await sharedRows("08888888888887")).toHaveLength(2);
+
+    expect(await provider.lookupByIdentifier("GTIN", "08888888888887", thirdProfileId)).toMatchObject({ state: "SUGGESTED" });
+  });
+
+  it("one person answering two different products is not shared as a dispute: others still get their first answer", async () => {
+    const first = await insertTestProduct("Integration Test Product — First Answer");
+    const second = await insertTestProduct("Integration Test Product — Changed Mind");
+    await provider.confirmIdentifier("GTIN", "08888888888891", first, profileId);
+    await provider.confirmIdentifier("GTIN", "08888888888891", second, profileId);
+
+    expect(await sharedRows("08888888888891")).toEqual([{ catalogProductId: first }]);
+    const resolution = await provider.lookupByIdentifier("GTIN", "08888888888891", otherProfileId);
+    expect(resolution.state).toBe("SUGGESTED");
+    if (resolution.state === "SUGGESTED") expect(resolution.product.id).toBe(first);
+  });
+
+  it("deleting a person's own identifications (as account deletion does) removes what they shared", async () => {
+    const productId = await insertTestProduct("Integration Test Product — Deleted Sharer");
+    await provider.confirmIdentifier("GTIN", "08888888888892", productId, otherProfileId);
+    expect(await sharedRows("08888888888892")).toHaveLength(1);
+
+    await withProfileScope(otherProfileId, (scopedDb) => [scopedDb.delete(schema.medicationIdentifier).where(eq(schema.medicationIdentifier.profileId, otherProfileId))] as const, { db });
+
+    expect(await sharedRows("08888888888892")).toHaveLength(0);
+    expect(await provider.lookupByIdentifier("GTIN", "08888888888892", thirdProfileId)).toEqual({ state: "VALID_IDENTIFIER_UNRESOLVED" });
+  });
+
+  it("a disputed package (two people, two different products) suggests nothing to anyone else", async () => {
+    const productA = await insertTestProduct("Integration Test Product — Disputed A");
+    const productB = await insertTestProduct("Integration Test Product — Disputed B");
+    await provider.confirmIdentifier("GTIN", "08888888888888", productA, profileId);
+    await provider.confirmIdentifier("GTIN", "08888888888888", productB, otherProfileId);
+
+    expect(await provider.lookupByIdentifier("GTIN", "08888888888888", thirdProfileId)).toEqual({ state: "VALID_IDENTIFIER_UNRESOLVED" });
+  });
+
+  it("a person's own identification outranks the shared suggestion", async () => {
+    const othersProduct = await insertTestProduct("Integration Test Product — Others' Pick");
+    const ownProduct = await insertTestProduct("Integration Test Product — Own Pick");
+    await provider.confirmIdentifier("GTIN", "08888888888889", othersProduct, profileId);
+    await provider.confirmIdentifier("GTIN", "08888888888889", othersProduct, otherProfileId);
+    await provider.confirmIdentifier("GTIN", "08888888888889", ownProduct, thirdProfileId);
+
+    const resolution = await provider.lookupByIdentifier("GTIN", "08888888888889", thirdProfileId);
+    expect(resolution).toMatchObject({ state: "EXACT", evidence: "USER_CONFIRMED" });
+    if (resolution.state === "EXACT") expect(resolution.product.id).toBe(ownProduct);
+  });
+
+  it("an official mapping outranks a shared suggestion", async () => {
+    const official = await insertTestProduct("Integration Test Product — Official Over Suggestion");
+    const suggested = await insertTestProduct("Integration Test Product — Suggestion Under Official");
+    await db.insert(schema.medicationIdentifier).values({ catalogProductId: official, identifierType: "GTIN", identifierValue: "08888888888890", source: "integration-test" });
+    await provider.confirmIdentifier("GTIN", "08888888888890", suggested, profileId);
+
+    const resolution = await provider.lookupByIdentifier("GTIN", "08888888888890", otherProfileId);
+    expect(resolution).toMatchObject({ state: "EXACT", evidence: "AUTHORITATIVE" });
+    if (resolution.state === "EXACT") expect(resolution.product.id).toBe(official);
   });
 
   it("re-confirming the SAME product for the SAME profile/gtin is idempotent — already_confirmed, no duplicate row", async () => {

@@ -60,6 +60,18 @@ describe("redact (Phase 1 risk R12 — enforced by code, not convention)", () =>
     expect(result).not.toHaveProperty("stack");
   });
 
+  it("drops a failed query's bound values, whether logged as a message string or as an Error (2026-10-15)", () => {
+    const message = 'Failed query: select "id" from "medication_identifier" where "identifier_value" = $1\nparams: GTIN,02800232802025,0b6f6c5e-1111-4222-8333-444455556666';
+    const fromString = redact({ message }) as { message: string };
+    const fromError = redact(new Error(message)) as { message: string };
+
+    for (const logged of [fromString.message, fromError.message]) {
+      expect(logged).toContain("Failed query: select");
+      expect(logged).not.toContain("02800232802025");
+      expect(logged).not.toContain("0b6f6c5e");
+    }
+  });
+
   it("handles circular references without throwing", () => {
     const obj: Record<string, unknown> = { a: 1 };
     obj.self = obj;

@@ -98,7 +98,10 @@ export async function lookupCatalogByEofCode(eofCode: string, fetchImpl: typeof 
  * represent a genuine cross-product conflict.
  */
 export async function resolveCatalogIdentifier(type: CatalogIdentifierType, value: string, fetchImpl: typeof fetch = fetch): Promise<IdentifierResolution> {
-  const params = new URLSearchParams({ type, value });
+  // `suggestions=1`: this client knows a SUGGESTED answer must be shown as
+  // other people's suggestion. Older cached app versions don't send it and
+  // would treat one as a plain match, so they never get one.
+  const params = new URLSearchParams({ type, value, suggestions: "1" });
   const response = await fetchImpl(`/api/catalog/resolve-identifier?${params.toString()}`, {
     credentials: "include",
     cache: "no-store",

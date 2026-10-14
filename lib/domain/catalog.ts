@@ -63,8 +63,8 @@ export type CatalogIdentifierType = "EOF_CODE" | "NHRN" | "EAN13" | "GTIN";
 export type IdentifierEvidence = "AUTHORITATIVE" | "USER_CONFIRMED" | "VERIFIED_PHYSICAL_OBSERVATION" | "COMMUNITY_CONFIRMED";
 
 /**
- * The three, and only three, outcomes an identifier lookup can produce
- * (spec §11/§19) — deliberately not a bare `CatalogProduct | null`, which
+ * The only outcomes an identifier lookup can produce (spec §11/§19; the
+ * fourth, `SUGGESTED`, added 2026-10-15) — deliberately not a bare `CatalogProduct | null`, which
  * cannot distinguish "no mapping exists yet" from "this identifier is
  * genuinely ambiguous, two different products claim it." Never resolved
  * to a fourth, "best guess" outcome under any circumstance:
@@ -90,6 +90,15 @@ export type IdentifierEvidence = "AUTHORITATIVE" | "USER_CONFIRMED" | "VERIFIED_
  */
 export type IdentifierResolution =
   | { state: "EXACT"; product: CatalogProduct; evidence: IdentifierEvidence }
+  /**
+   * No authoritative match and nothing this person confirmed, but other
+   * people identified this package as exactly one product (owner's
+   * decision, 2026-10-15: "share as suggestions"). Shown for the person to
+   * confirm, never resolved automatically. Deliberately no count of how
+   * many people: with few users that says too much. A disputed identifier
+   * (two products) is never suggested.
+   */
+  | { state: "SUGGESTED"; product: CatalogProduct }
   | { state: "CONFLICT"; catalogProductIds: readonly string[] }
   | { state: "VALID_IDENTIFIER_UNRESOLVED" };
 
@@ -145,8 +154,9 @@ export interface MedicationCatalogProvider {
    *
    * `confirmingProfileId`, when supplied, scopes which `USER_CONFIRMED`
    * rows are considered in addition to every `AUTHORITATIVE` row
-   * (OCR-fallback task spec §17: a profile's own confirmations are never
-   * visible to, or resolved for, any other profile — see
+   * (OCR-fallback task spec §17: a profile's own confirmations never
+   * resolve for any other profile; since 2026-10-15 they can reach other
+   * people only as an anonymous `SUGGESTED` answer to confirm — see
    * `medication-resolution-architecture.md` §21 for the full precedence
    * algorithm). Omitted entirely, only `AUTHORITATIVE` rows are considered
    * (the GTIN-resolution task's original behavior, unchanged).

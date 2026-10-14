@@ -81,8 +81,16 @@ function isDeniedKey(key: string): boolean {
   return DENYLIST_FRAGMENTS.some((fragment) => normalized.includes(fragment));
 }
 
+// A failed Drizzle query's message ends with its bound values
+// ("Failed query: <sql>\nparams: <values>"): a barcode, a product, a
+// person's id. Logged as `{ message: err.message }` or as an Error, those
+// values would reach the log under a harmless key (security review,
+// 2026-10-15), so everything from "params:" on is dropped from any string.
+const QUERY_PARAMS_MARKER = /\nparams:[\s\S]*$/;
+
 function truncateString(value: string): string {
-  return value.length > MAX_STRING_LENGTH ? `${value.slice(0, MAX_STRING_LENGTH)}…[truncated]` : value;
+  const safe = value.replace(QUERY_PARAMS_MARKER, "\nparams: [redacted]");
+  return safe.length > MAX_STRING_LENGTH ? `${safe.slice(0, MAX_STRING_LENGTH)}…[truncated]` : safe;
 }
 
 /**

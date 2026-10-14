@@ -126,6 +126,7 @@ describe("lookupGtin — offline-index-first, then cache, then server if online 
     const fetchImpl = vi.fn().mockImplementation((url: string) => {
       expect(url).toContain("/api/catalog/resolve-identifier");
       expect(url).toContain("type=GTIN");
+      expect(url).toContain("suggestions=1");
       return Promise.resolve({ ok: true, json: async () => ({ state: "EXACT", product }) });
     });
 
@@ -177,6 +178,39 @@ describe("lookupGtin — offline-index-first, then cache, then server if online 
 
     expect(outcome).toEqual({ status: "conflict" });
     expect(cache.cacheAll).not.toHaveBeenCalled();
+  });
+
+  it("online + server SUGGESTED (identified by other users): found, marked suggested, product cached for its name", async () => {
+    const product = makeProduct({ id: "algofren", gtin: null, name: "ALGOFREN" });
+    const cache = makeCache();
+    const offlineIndex = makeOfflineIndex();
+    const learnedMappings = makeLearnedMappings();
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ state: "SUGGESTED", product }) });
+
+    const outcome = await lookupGtin("02800000000000", "online", { cache, offlineIndex, learnedMappings, fetchImpl });
+
+    expect(outcome).toEqual({ status: "found", product, suggested: true });
+    expect(cache.cacheAll).toHaveBeenCalledWith([product]);
+    expect(learnedMappings.save).not.toHaveBeenCalled();
+  });
+
+  it("online + server SUGGESTED, but this person already identified the package differently on this device: their own answer wins, not suggested", async () => {
+    const own = makeOfflineEntry({ id: "own-product", name: "FLAGYL CAPS 500MG/CAP" });
+    const suggested = makeProduct({ id: "someone-elses-product" });
+    const cache = makeCache();
+    const offlineIndex = makeOfflineIndex({ getById: vi.fn().mockResolvedValue(own) });
+    const learnedMappings = makeLearnedMappings({
+      getByGtin: vi.fn().mockResolvedValue({ gtin: "05201048000563", catalogProductId: own.id, evidenceType: "USER_CONFIRMED", confirmedAt: "t", syncedAt: null }),
+    });
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ state: "SUGGESTED", product: suggested }) });
+
+    const outcome = await lookupGtin("05201048000563", "online", { cache, offlineIndex, learnedMappings, fetchImpl });
+
+    expect(outcome.status).toBe("found");
+    if (outcome.status === "found") {
+      expect(outcome.product.id).toBe("own-product");
+      expect(outcome.suggested).toBeUndefined();
+    }
   });
 
   it("offline + all local sources miss: returns unresolved-offline without touching the network", async () => {

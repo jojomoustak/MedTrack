@@ -17,7 +17,7 @@ export interface ScanDiagnostics {
    * and pasted somewhere it shouldn't be.
    */
   serialPresent: boolean;
-  resolutionState: "found" | "not-found" | "conflict" | "unresolved-offline" | "unrecognized";
+  resolutionState: "found" | "suggested" | "not-found" | "conflict" | "unresolved-offline" | "unrecognized";
   matchedIdentifierType: "EOF_CODE" | "GTIN" | null;
   matchedProductName: string | null;
 }

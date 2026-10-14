@@ -167,7 +167,7 @@ export class PostgresCatalogProvider implements MedicationCatalogProvider {
       { db: this.db },
     );
 
-    if (userMatches.length === 0) return { state: "VALID_IDENTIFIER_UNRESOLVED" };
+    if (userMatches.length === 0) return this.lookupSuggestion(type, value);
     if (userMatches.length > 1) {
       // This profile confirmed the SAME identifier for two DIFFERENT
       // products at different times (spec §19's MAPPING_CONFLICT case) —
@@ -236,7 +236,7 @@ export class PostgresCatalogProvider implements MedicationCatalogProvider {
       { db: this.db },
     );
 
-    await withProfileScope(
+    const [inserted] = await withProfileScope(
       profileId,
       (scopedDb) => [
         scopedDb
@@ -252,11 +252,73 @@ export class PostgresCatalogProvider implements MedicationCatalogProvider {
           .onConflictDoNothing({
             target: [mi.catalogProductId, mi.identifierType, mi.identifierValue, mi.profileId],
             where: sql`${mi.evidenceType} = 'USER_CONFIRMED'`,
-          }),
+          })
+          .returning({ id: mi.id }),
       ] as const,
       { db: this.db },
     );
 
+    // Shared once per person, and only an unambiguous answer: a row this
+    // call really inserted (a double tap or concurrent re-confirm hits ON
+    // CONFLICT DO NOTHING) and not this person's second, different answer
+    // for the same package, so no one person can make it disputed for
+    // everyone else (security review, 2026-10-15).
+    if (inserted.length > 0 && conflictingForOtherProduct.length === 0) {
+      await this.shareIdentification(type, value, catalogProductId, inserted[0].id);
+    }
+
     return conflictingForOtherProduct.length > 0 ? { status: "conflict_with_own_prior_mapping" } : { status: "created" };
   }
+
+  /**
+   * Other people's identification of this package (owner's decision,
+   * 2026-10-15: "share as suggestions"), from `medication_identifier_suggestion`:
+   * suggested only when everyone who shared one agrees on ONE product; a
+   * disputed identifier suggests nothing. Says nothing about who, or how
+   * many: with few users a count would tell people too much.
+   */
+  private async lookupSuggestion(type: CatalogIdentifierType, value: string): Promise<IdentifierResolution> {
+    const { medicationIdentifierSuggestion: s } = schema;
+    let rows: { catalogProductId: string }[];
+    try {
+      rows = await this.db
+        .selectDistinct({ catalogProductId: s.catalogProductId })
+        .from(s)
+        .where(sql`${s.identifierType} = ${type} AND ${s.identifierValue} = ${value}`);
+    } catch (err) {
+      // The table arrives with migration 0019: until it exists, no suggestions, never a failed scan.
+      logger.warn("catalog.identifier.suggestion_lookup_failed", queryFailure(err));
+      return { state: "VALID_IDENTIFIER_UNRESOLVED" };
+    }
+    if (rows.length !== 1) return { state: "VALID_IDENTIFIER_UNRESOLVED" };
+    const [product] = await this.db
+      .select()
+      .from(schema.medicationCatalogProduct)
+      .where(sql`${schema.medicationCatalogProduct.id} = ${rows[0].catalogProductId}`)
+      .limit(1);
+    if (!product) return { state: "VALID_IDENTIFIER_UNRESOLVED" };
+    return { state: "SUGGESTED", product };
+  }
+
+  /** Shares one person's new identification. Best-effort: never fails the confirmation itself. */
+  private async shareIdentification(type: CatalogIdentifierType, value: string, catalogProductId: string, medicationIdentifierId: string): Promise<void> {
+    try {
+      await this.db
+        .insert(schema.medicationIdentifierSuggestion)
+        .values({ identifierType: type, identifierValue: value, catalogProductId, medicationIdentifierId })
+        .onConflictDoNothing();
+    } catch (err) {
+      logger.warn("catalog.identifier.suggestion_share_failed", queryFailure(err));
+    }
+  }
+}
+
+/**
+ * A failed query's log fields: its kind and Postgres error code (e.g.
+ * 42P01, no such table), never its message, which carries the query's
+ * values (a barcode, a product).
+ */
+function queryFailure(err: unknown): { name: string; pgCode: string | null } {
+  const cause = (err as { cause?: { code?: unknown } }).cause;
+  return { name: (err as Error).name, pgCode: typeof cause?.code === "string" ? cause.code : null };
 }

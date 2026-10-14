@@ -134,6 +134,13 @@
       "when": 1789720000000,
       "tag": "0018_sync_change_log_commit_ordered_ids",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792014680604,
+      "tag": "0019_identifier_suggestion",
+      "breakpoints": true
     }
   ]
 }

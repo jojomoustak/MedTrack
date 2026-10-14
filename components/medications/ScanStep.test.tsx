@@ -539,4 +539,67 @@ describe("ScanStep — packages this person identified before (2026-10-15)", () 
     findIt.click();
     expect(onSearchInstead).toHaveBeenCalledWith(expect.objectContaining({ gtin: "02800232802025" }));
   });
+
+  it("identified by other people (shared suggestion): says so, and learns it for this person only once they confirm", async () => {
+    __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
+    const product = makeProduct({ id: "algofren-600", gtin: null, name: "ALGOFREN F.C.TAB 600MG/TAB BTx20 (BLIST 2x10)" });
+    global.fetch = vi.fn(async (url: string) =>
+      String(url).includes("resolve-identifier")
+        ? ({ ok: true, json: async () => ({ state: "SUGGESTED", product }) } as Response)
+        : ({ ok: true, json: async () => ({ product: null, gtin: null, eofCode: "023280202" }) } as Response),
+    ) as unknown as typeof fetch;
+    const learnedMappings = fakeLearnedMappings();
+    const onConfirmCandidate = vi.fn();
+
+    render(
+      <ScanStep
+        profileId="profile-1"
+        platform={greekScan()}
+        cacheRepository={fakeCache()}
+        offlineIndex={fakeOfflineIndex()}
+        learnedMappings={learnedMappings}
+        onConfirmCandidate={onConfirmCandidate}
+        onFallbackToManual={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: /ALGOFREN F\.C\.TAB 600MG/ })).toBeTruthy();
+    expect(screen.getByText(/Πρόταση από άλλους χρήστες του MedTrack, όχι από επίσημη πηγή/)).toBeTruthy();
+    expect(learnedMappings.save).not.toHaveBeenCalled();
+
+    screen.getByRole("button", { name: /Επιβεβαίωση — είναι αυτό το φάρμακο/ }).click();
+
+    expect(onConfirmCandidate).toHaveBeenCalledWith(product, expect.objectContaining({ gtin: "02800232802025" }));
+    await waitFor(() =>
+      expect(learnedMappings.save).toHaveBeenCalledWith(expect.objectContaining({ gtin: "02800232802025", catalogProductId: "algofren-600", evidenceType: "USER_CONFIRMED" })),
+    );
+  });
+
+  it("a match from the catalog itself shows no 'other users' note", async () => {
+    __setNetworkMonitorForTests(fakeNetworkMonitor("offline"));
+    const learnedMappings = fakeLearnedMappings({
+      getByGtin: vi.fn(async (gtin: string) =>
+        gtin === "02800232802025" ? { gtin, catalogProductId: "algofren-600", evidenceType: "USER_CONFIRMED" as const, confirmedAt: "2026-10-14T18:00:00.000Z", syncedAt: null } : null,
+      ),
+    });
+    const offlineIndex = fakeOfflineIndex({ getById: vi.fn(async (id: string) => (id === "algofren-600" ? ALGOFREN : null)) });
+
+    render(
+      <ScanStep
+        profileId="profile-1"
+        platform={greekScan()}
+        cacheRepository={fakeCache()}
+        offlineIndex={offlineIndex}
+        learnedMappings={learnedMappings}
+        unresolvedScanRepository={fakeUnresolvedScanRepository()}
+        onConfirmCandidate={vi.fn()}
+        onFallbackToManual={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: /ALGOFREN F\.C\.TAB 600MG/ })).toBeTruthy();
+    expect(screen.queryByText(/Πρόταση από άλλους χρήστες/)).toBeNull();
+  });
 });

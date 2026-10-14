@@ -16,9 +16,11 @@ import { logger } from "@/lib/logging/logger";
  * by the owner (2026-10-15): ALGOFREN, scanned again, still wasn't
  * recognised — Greek national barcodes were never learned nor checked.
  *
- * This profile only (medication-resolution-architecture §21: never global
- * from one profile). The device copy makes a repeat scan work offline; the
- * server copy (USER_CONFIRMED) is best-effort and retried by
+ * Resolves for this profile only. Since 2026-10-15 the server also shares
+ * it, anonymously, as a suggestion other people must confirm themselves
+ * (`PostgresCatalogProvider.confirmIdentifier`); it never resolves for them
+ * by itself. The device copy makes a repeat scan work offline; the server
+ * copy (USER_CONFIRMED) is best-effort and retried by
  * `sync-learned-mappings.ts`. Never throws and never blocks the caller.
  */
 export async function learnScannedBarcode(

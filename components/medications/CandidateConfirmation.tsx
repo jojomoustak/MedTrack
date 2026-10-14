@@ -17,6 +17,8 @@ export interface CandidateConfirmationProps {
   parsedExpiry?: string | null;
   parsedBatch?: string | null;
   parsedSerial?: string | null;
+  /** Shown above the product, e.g. when other people identified this package rather than an official source. */
+  note?: string;
 }
 
 /**
@@ -25,7 +27,7 @@ export interface CandidateConfirmationProps {
  * scan match alone — CLAUDE.md, Phase 1 §7). Shared by both entry paths
  * (`SearchStep`, `ScanStep`) rather than a second confirmation screen.
  */
-export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry, parsedBatch, parsedSerial }: CandidateConfirmationProps) {
+export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry, parsedBatch, parsedSerial, note }: CandidateConfirmationProps) {
   return (
     <div className="flex flex-col gap-4">
       <Button
@@ -38,6 +40,8 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
       >
         ← Πίσω στα αποτελέσματα
       </Button>
+
+      {note && <p className="rounded-xl bg-accent-50 px-4 py-3 text-[15px] text-accent-900">{note}</p>}
 
       <Card>
         <h2 className="text-[22px] font-bold tracking-tight text-stone-900">{product.name}</h2>

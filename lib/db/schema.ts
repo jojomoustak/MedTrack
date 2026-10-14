@@ -26,6 +26,7 @@ import {
   check,
   customType,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -282,6 +283,42 @@ export const medicationIdentifier = pgTable(
       "chk_medication_identifier_profile_scope",
       sql`(${t.evidenceType} = 'AUTHORITATIVE' AND ${t.profileId} IS NULL) OR (${t.evidenceType} <> 'AUTHORITATIVE' AND ${t.profileId} IS NOT NULL)`,
     ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// 2.3b MedicationIdentifierSuggestion — shared package suggestions (owner's
+// decision, 2026-10-15: "share as suggestions"). One row per person's
+// shared identification of a scanned package: a copy of the identifier →
+// product pair from their own USER_CONFIRMED row above, so other people's
+// lookups can read it without reaching past that table's per-profile RLS.
+// It holds no profile, account or time; `medication_identifier_id` ties it
+// to the person's own row, so deleting that row (account deletion, which
+// already removes them) removes the shared copy with it (ON DELETE CASCADE,
+// security review 2026-10-15). Only confirmations made after this table
+// existed are shared; earlier ones were made under "only for you".
+//
+// Another person scanning the same package is SHOWN the product as a
+// suggestion they must still confirm, never resolved automatically. When
+// rows disagree (two products for one identifier) nothing is suggested.
+// Never part of the offline index, never promoted to AUTHORITATIVE.
+// ---------------------------------------------------------------------------
+export const medicationIdentifierSuggestion = pgTable(
+  "medication_identifier_suggestion",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    identifierType: text("identifier_type").notNull(),
+    identifierValue: text("identifier_value").notNull(),
+    catalogProductId: uuid("catalog_product_id").notNull(),
+    medicationIdentifierId: uuid("medication_identifier_id").notNull(),
+  },
+  (t) => [
+    index("ix_medication_identifier_suggestion_lookup").on(t.identifierType, t.identifierValue),
+    uniqueIndex("uq_medication_identifier_suggestion_source").on(t.medicationIdentifierId),
+    // Named explicitly: the generated names would pass Postgres's 63-character limit.
+    foreignKey({ name: "fk_identifier_suggestion_product", columns: [t.catalogProductId], foreignColumns: [medicationCatalogProduct.id] }),
+    foreignKey({ name: "fk_identifier_suggestion_source", columns: [t.medicationIdentifierId], foreignColumns: [medicationIdentifier.id] }).onDelete("cascade"),
+    check("chk_medication_identifier_suggestion_type", sql`${t.identifierType} IN ('EOF_CODE','NHRN','EAN13','GTIN')`),
   ],
 );
 

@@ -9,7 +9,13 @@ import type { NetworkState } from "@/lib/sync/client/network";
 import { logger } from "@/lib/logging/logger";
 
 export type CatalogLookupOutcome =
-  | { status: "found"; product: CatalogProduct }
+  /**
+   * `suggested`: nobody official and not this person, but other MedTrack
+   * users identified this package as `product` (the server's `SUGGESTED`
+   * state). The caller must say so and only learn it once the person
+   * confirms it's their medicine.
+   */
+  | { status: "found"; product: CatalogProduct; suggested?: boolean }
   /** A real lookup ran (cache and/or server) and found nothing — distinct from `unresolved-offline`, which never got to ask the server at all. */
   | { status: "not-found" }
   /**
@@ -104,6 +110,16 @@ export async function lookupGtin(
       return (await checkLearnedMapping()) ?? { status: "not-found" };
     }
     if (resolution.state === "CONFLICT") return { status: "conflict" };
+    if (resolution.state === "SUGGESTED") {
+      // This person's own confirmation, even one not synced yet, outranks
+      // what other people said. Caching the product only gives it a name
+      // on this device; the cache matches by the product's own GTIN
+      // column, so this never makes the scanned code resolve by itself.
+      const own = await checkLearnedMapping();
+      if (own) return own;
+      await cache.cacheAll([resolution.product]);
+      return { status: "found", product: resolution.product, suggested: true };
+    }
     await cache.cacheAll([resolution.product]);
     return { status: "found", product: resolution.product };
   } catch (err) {
