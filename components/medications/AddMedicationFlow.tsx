@@ -34,6 +34,7 @@ import type { MedicationForm, UserMedicationRecord } from "@/lib/domain/user-med
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import type { MobilePlatform } from "@/lib/platform/mobile-platform";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { learnScannedBarcode } from "@/lib/catalog/client/learn-scanned-barcode";
 
 type FlowStep = "entry" | "scan" | "search" | "manual" | "details" | "schedule" | "review";
 
@@ -123,6 +124,8 @@ export function AddMedicationFlow({
   const [error, setError] = useState<string | null>(null);
   const [scanAvailable] = useState(() => (platform ?? getDefaultMobilePlatform()).isAvailable());
   const [manualPrefill, setManualPrefill] = useState<{ expiry: string | null; batch: string | null }>({ expiry: null, batch: null });
+  /** A scanned package the catalog didn't recognise, while the person finds it in catalog search: what they pick is learned for it. */
+  const [learnForScan, setLearnForScan] = useState<ParsedBarcode | null>(null);
   const stepContainerRef = useRef<HTMLDivElement>(null);
 
   // Moves focus to the newly-rendered step on every transition — without
@@ -143,6 +146,7 @@ export function AddMedicationFlow({
   }
 
   function handleEntryChoice(choice: EntryChoice) {
+    setLearnForScan(null);
     if (choice === "scan") setStep("scan");
     else if (choice === "search") setStep("search");
     else if (choice === "manual") handleManualEntryDirect();
@@ -173,6 +177,22 @@ export function AddMedicationFlow({
       inventoryUnit: (product.form as MedicationForm | null) ?? "tablet",
     });
     setStep("schedule");
+  }
+
+  /**
+   * Scan → no match → "Find it in the catalog" (2026-10-15): catalog
+   * search, and the medicine picked there is learned for this package, so
+   * scanning it again finds it straight away (`learnScannedBarcode`). The
+   * owner scanned ALGOFREN twice; nothing had ever been learned.
+   */
+  function handleScanSearchInstead(parsed: ParsedBarcode) {
+    setLearnForScan(parsed);
+    setStep("search");
+  }
+
+  function handleSearchPicked(product: CatalogProduct) {
+    if (learnForScan?.gtin) void learnScannedBarcode(learnForScan.gtin, product, { cache: cacheRepository });
+    handleCandidateConfirmed(product, learnForScan ?? undefined);
   }
 
   /** Scan → "couldn't identify automatically" → "Continue manually," pre-filled with whatever GS1 fields were parsed (Phase 3 Journey 3). */
@@ -341,12 +361,14 @@ export function AddMedicationFlow({
           unresolvedScanRepository={unresolvedScanRepository}
           onConfirmCandidate={handleCandidateConfirmed}
           onFallbackToManual={handleScanFallbackToManual}
+          onSearchInstead={handleScanSearchInstead}
           onCancel={() => setStep("entry")}
         />
       )}
-      {step === "search" && (
-        <SearchStep onConfirmCandidate={(product) => handleCandidateConfirmed(product)} onFallbackToManual={handleManualEntryDirect} />
+      {step === "search" && learnForScan && (
+        <p className="rounded-xl bg-accent-50 px-4 py-3 text-[15px] text-accent-900">Βρείτε το φάρμακο της συσκευασίας που σαρώσατε. Την επόμενη φορά θα το αναγνωρίζουμε αυτόματα.</p>
       )}
+      {step === "search" && <SearchStep onConfirmCandidate={handleSearchPicked} onFallbackToManual={handleManualEntryDirect} />}
       {step === "manual" && (
         <ManualEntryForm onSubmit={handleManualSubmit} initialExpiry={manualPrefill.expiry} initialBatch={manualPrefill.batch} />
       )}

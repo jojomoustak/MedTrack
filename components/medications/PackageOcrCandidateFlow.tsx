@@ -8,9 +8,7 @@ import { rankPackageCandidates, type OcrConfidenceState, type PackageCandidateSc
 import { offlineIndexEntryToCatalogProduct, type OfflineIndexEntry } from "@/lib/domain/offline-index";
 import type { CatalogCacheRepository, LearnedMappingRepository, OfflineIndexRepository } from "@/lib/domain/repositories";
 import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
-import { DexieLearnedMappingRepository } from "@/lib/db-client/learned-mapping-repository";
-import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
-import { confirmCatalogIdentifier } from "@/lib/catalog/client/api";
+import { learnScannedBarcode } from "@/lib/catalog/client/learn-scanned-barcode";
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import { MobilePlatformUnavailableError, type MobilePlatform } from "@/lib/platform/mobile-platform";
 import { CandidateConfirmation } from "@/components/medications/CandidateConfirmation";
@@ -129,46 +127,11 @@ export function PackageOcrCandidateFlow({
   }
 
   async function handleConfirm(entry: OfflineIndexEntry) {
-    const mappingRepository = learnedMappings ?? new DexieLearnedMappingRepository();
-    const cache = cacheRepository ?? new DexieCatalogCacheRepository();
-    const confirmedAt = new Date().toISOString();
     const product = offlineIndexEntryToCatalogProduct(entry);
-
-    try {
-      // Same requirement as `lookup-gtin.ts`/`lookup-eof-code.ts`'s
-      // offline-index-hit branches: the medications list resolves a
-      // `UserMedication`'s display name solely via `catalogProductCache`,
-      // by id — skipping this means the medicine this screen just
-      // confirmed would show as a generic placeholder forever after.
-      await cache.cacheAll([product]);
-    } catch (err) {
-      logger.warn("package_ocr_flow.cache_product_failed", { message: (err as Error).message });
-    }
-
-    try {
-      const { overwroteDifferentProduct } = await mappingRepository.save({
-        gtin,
-        catalogProductId: entry.id,
-        evidenceType: "USER_CONFIRMED",
-        confirmedAt,
-        syncedAt: null,
-      });
-      if (overwroteDifferentProduct) {
-        logger.warn("package_ocr_flow.learned_mapping_overwritten", { gtin });
-      }
-    } catch (err) {
-      // Never blocks confirmation — the local mapping is a durability
-      // nicety for the NEXT scan, not a precondition for using this one
-      // (spec §15 is about repeat scans, not this one).
-      logger.warn("package_ocr_flow.save_learned_mapping_failed", { message: (err as Error).message });
-    }
-
-    // Best-effort, fire-and-forget (module doc / spec §16): never awaited
-    // by the caller, never blocks `onConfirmCandidate` below.
-    confirmCatalogIdentifier("GTIN", gtin, entry.id, fetchImpl)
-      .then(() => mappingRepository.markSynced(gtin, new Date().toISOString()))
-      .catch((err: Error) => logger.warn("package_ocr_flow.server_confirm_failed", { message: err.message }));
-
+    // Caches the product (its name resolves through that cache), remembers
+    // this package for the next scan, and confirms it to the server in the
+    // background — never blocking this confirmation (spec §15/§16).
+    await learnScannedBarcode(gtin, product, { learnedMappings, cache: cacheRepository, fetchImpl });
     onConfirmCandidate(product, parsed);
   }
 

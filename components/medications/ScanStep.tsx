@@ -27,6 +27,12 @@ export interface ScanStepProps {
   onConfirmCandidate: (product: CatalogProduct, parsed: ParsedBarcode) => void;
   /** Fires on "couldn't identify automatically" → "Continue manually," carrying whatever GS1 fields were parsed (or `null` if the raw value couldn't be parsed as a GTIN at all). */
   onFallbackToManual: (parsed: ParsedBarcode | null) => void;
+  /**
+   * "Find it in the catalog" for a recognised package with no match: the
+   * caller opens catalog search, and whatever the person picks is learned
+   * for this package (`learnScannedBarcode`), so the next scan finds it.
+   */
+  onSearchInstead?: (parsed: ParsedBarcode) => void;
   /** Fires on a native cancel, or the user backing out of an error/unavailable state — returns quietly to the entry chooser, no error shown (bridge contract's `cancelled` status). */
   onCancel: () => void;
   /** Test/DI seam — defaults to the real Median-backed implementation. */
@@ -77,6 +83,7 @@ export function ScanStep({
   profileId,
   onConfirmCandidate,
   onFallbackToManual,
+  onSearchInstead,
   onCancel,
   platform,
   cacheRepository,
@@ -184,9 +191,17 @@ export function ScanStep({
     // product from the GTIN's own digits.
     const isGreekNational = identifier.kind === "GREEK_NATIONAL_EAN13";
     const matchedIdentifierType: ScanDiagnostics["matchedIdentifierType"] = isGreekNational ? "EOF_CODE" : "GTIN";
-    const outcome = isGreekNational
+    let outcome = isGreekNational
       ? await lookupEofCode(identifier.eofCode, networkRef.current, { cache: cacheRepository, offlineIndex })
       : await lookupGtin(identifier.gtin, networkRef.current, { cache: cacheRepository, offlineIndex, learnedMappings });
+    // A Greek national barcode the catalog doesn't list may be one this
+    // person already identified: packages are learned under the scan's full
+    // number whatever the barcode type (`learnScannedBarcode`). Found by the
+    // owner (2026-10-15): ALGOFREN, scanned again, still wasn't recognised.
+    if (isGreekNational && (outcome.status === "not-found" || outcome.status === "unresolved-offline")) {
+      const learned = await lookupGtin(parsed.gtin, networkRef.current, { cache: cacheRepository, offlineIndex, learnedMappings });
+      if (learned.status === "found" && learned.product) outcome = learned;
+    }
     if (!mountedRef.current) return;
 
     if (outcome.status === "found") {
@@ -349,17 +364,30 @@ export function ScanStep({
       <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center">
         <p className="mb-1 text-sm text-stone-700">{notFoundMessage}</p>
       </div>
+      {view.reason === "unresolved" && view.parsed?.gtin && onSearchInstead && (
+        <div className="flex flex-col gap-2">
+          <Button
+            onClick={() => {
+              playSound("button");
+              if (view.parsed) onSearchInstead(view.parsed);
+            }}
+          >
+            Βρείτε το στον κατάλογο
+          </Button>
+          <p className="text-center text-[15px] text-stone-600">Θα το αναγνωρίζουμε αυτόματα την επόμενη φορά που θα σαρώσετε αυτή τη συσκευασία.</p>
+        </div>
+      )}
       {
-        // OCR fallback (OCR-fallback task spec §1) — only for a genuinely
-        // unresolved real GTIN (Path B), never for Path A's own EOF-code
-        // resolution (out of this task's scope, spec is scoped to
-        // "GS1 DataMatrix -> parse GTIN"), never for "unrecognized"/
+        // OCR fallback (OCR-fallback task spec §1) — for any unresolved
+        // recognised package: a real GTIN (Path B) or, since 2026-10-15, a
+        // Greek national EAN-13 (Path A; learned under its full number,
+        // `learnScannedBarcode`), never for "unrecognized"/
         // "conflict" (there is no well-formed identifier to attach a
         // learned mapping to in either case). Works fully offline —
         // candidate matching and the local learned-mapping write need no
         // network; only the best-effort server sync does, and that never
         // blocks anything here (spec §25's airplane-mode requirement).
-        view.reason === "unresolved" && view.diagnostics?.matchedIdentifierType === "GTIN" && view.parsed?.gtin && (
+        view.reason === "unresolved" && view.parsed?.gtin && (
           <PackageOcrCandidateFlow
             gtin={view.parsed.gtin}
             parsed={view.parsed}
@@ -374,7 +402,7 @@ export function ScanStep({
       }
       {searchTerm && !view.offline && <OfficialSourceSearchLinks searchTerm={searchTerm} />}
       {view.diagnostics && <ScanDiagnosticsPanel diagnostics={view.diagnostics} />}
-      <Button onClick={() => { playSound("button"); onFallbackToManual(view.parsed); }}>
+      <Button variant="secondary" onClick={() => { playSound("button"); onFallbackToManual(view.parsed); }}>
         Συνέχεια με χειροκίνητη καταχώριση
       </Button>
       <Button variant="tertiary" onClick={() => { playSound("button"); onCancel(); }} className="self-start px-0 underline">

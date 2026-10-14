@@ -464,3 +464,79 @@ describe("ScanStep — a rejected scanBarcode() promise that isn't MobilePlatfor
     expect(await screen.findByText(/διατίθεται μόνο μέσα από την εφαρμογή/i)).toBeTruthy();
   });
 });
+
+describe("ScanStep — packages this person identified before (2026-10-15)", () => {
+  // Owner-reported: ALGOFREN, scanned again, still wasn't recognised —
+  // Greek national barcodes ("280…") were never learned nor checked.
+  const ALGOFREN = {
+    id: "algofren-600",
+    eofCode: "207000000",
+    gtin: null,
+    gtins: [],
+    barcode: null,
+    name: "ALGOFREN F.C.TAB 600MG/TAB BTx20 (BLIST 2x10)",
+    activeIngredient: "IBUPROFEN",
+    strengthValue: "600",
+    strengthUnit: "mg",
+    form: "tablet",
+    packSizeValue: "20",
+    packSizeUnit: "tablet",
+  };
+  const greekScan = () => fakePlatform({ scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "2800232802025", format: "EAN_13" }) });
+
+  it("a Greek national barcode the catalog doesn't list, learned before: found straight away, even offline", async () => {
+    __setNetworkMonitorForTests(fakeNetworkMonitor("offline"));
+    const learnedMappings = fakeLearnedMappings({
+      getByGtin: vi.fn(async (gtin: string) =>
+        gtin === "02800232802025" ? { gtin, catalogProductId: "algofren-600", evidenceType: "USER_CONFIRMED" as const, confirmedAt: "2026-10-14T18:00:00.000Z", syncedAt: null } : null,
+      ),
+    });
+    const offlineIndex = fakeOfflineIndex({ getById: vi.fn(async (id: string) => (id === "algofren-600" ? ALGOFREN : null)) });
+
+    render(
+      <ScanStep
+        profileId="profile-1"
+        platform={greekScan()}
+        cacheRepository={fakeCache()}
+        offlineIndex={offlineIndex}
+        learnedMappings={learnedMappings}
+        unresolvedScanRepository={fakeUnresolvedScanRepository()}
+        onConfirmCandidate={vi.fn()}
+        onFallbackToManual={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: /ALGOFREN F\.C\.TAB 600MG/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Επιβεβαίωση — είναι αυτό το φάρμακο/ })).toBeTruthy();
+  });
+
+  it("an unrecognised Greek national barcode offers 'find it in the catalog' (handing over the package) and label reading", async () => {
+    __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
+    global.fetch = vi.fn(async (url: string) =>
+      String(url).includes("resolve-identifier")
+        ? ({ ok: true, json: async () => ({ state: "VALID_IDENTIFIER_UNRESOLVED" }) } as Response)
+        : ({ ok: true, json: async () => ({ product: null, gtin: null, eofCode: "023280202" }) } as Response),
+    ) as unknown as typeof fetch;
+    const onSearchInstead = vi.fn();
+
+    render(
+      <ScanStep
+        profileId="profile-1"
+        platform={greekScan()}
+        cacheRepository={fakeCache()}
+        offlineIndex={fakeOfflineIndex()}
+        learnedMappings={fakeLearnedMappings()}
+        onSearchInstead={onSearchInstead}
+        onConfirmCandidate={vi.fn()}
+        onFallbackToManual={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const findIt = await screen.findByRole("button", { name: "Βρείτε το στον κατάλογο" });
+    expect(screen.getByRole("button", { name: /Δοκιμή αναγνώρισης από την ετικέτα/ })).toBeTruthy();
+    findIt.click();
+    expect(onSearchInstead).toHaveBeenCalledWith(expect.objectContaining({ gtin: "02800232802025" }));
+  });
+});
