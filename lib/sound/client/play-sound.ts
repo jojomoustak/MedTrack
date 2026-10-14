@@ -30,10 +30,26 @@
  */
 export type SoundEffect = "button" | "success" | "notification";
 
+/** Each file's content fingerprint, from the build (`next.config.ts`'s `soundRevisions`); absent in tests. */
+function readRevisions(): Partial<Record<SoundEffect, string>> {
+  try {
+    return JSON.parse(process.env.NEXT_PUBLIC_SOUND_REVISIONS ?? "{}") as Partial<Record<SoundEffect, string>>;
+  } catch {
+    return {};
+  }
+}
+const REVISIONS = readRevisions();
+
+/** `/success.mp3?v=<fingerprint>`: a changed sound gets a new address, so no older cache can play the old one. */
+function soundFile(effect: SoundEffect): string {
+  const revision = REVISIONS[effect];
+  return revision ? `/${effect}.mp3?v=${revision}` : `/${effect}.mp3`;
+}
+
 const SOUND_FILES: Record<SoundEffect, string> = {
-  button: "/button.mp3",
-  success: "/success.mp3",
-  notification: "/notification.mp3",
+  button: soundFile("button"),
+  success: soundFile("success"),
+  notification: soundFile("notification"),
 };
 
 /**

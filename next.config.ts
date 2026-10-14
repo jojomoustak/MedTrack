@@ -1,5 +1,24 @@
 import type { NextConfig } from "next";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { withSerwist } from "@serwist/turbopack";
+
+/**
+ * A fingerprint of each UI sound's content, put into its address
+ * (`/success.mp3?v=…`, `lib/sound/client/play-sound.ts`). A service worker
+ * from an older deploy keeps that deploy's copy of `/success.mp3` and
+ * serves it to newer pages: the password-reset page, opened from an email
+ * in the phone's browser, played the replaced success sound (2026-10-15).
+ * A changed sound now has a new address that no old cache can answer.
+ */
+function soundRevisions(): string {
+  const revisions: Record<string, string> = {};
+  for (const name of ["button", "success", "notification"]) {
+    revisions[name] = createHash("sha256").update(readFileSync(join(process.cwd(), "public", `${name}.mp3`))).digest("hex").slice(0, 12);
+  }
+  return JSON.stringify(revisions);
+}
 
 // Security review (Phase 15 Hardening, 2026-09-15): no security headers
 // existed anywhere in the app before this. `'unsafe-inline'` on script-src
@@ -37,6 +56,7 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  env: { NEXT_PUBLIC_SOUND_REVISIONS: soundRevisions() },
   experimental: {
     // Every screen is prebuilt and only changes with a deploy, so a screen
     // prefetched once stays usable for 30 minutes instead of the default 5

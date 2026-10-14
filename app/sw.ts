@@ -194,6 +194,18 @@ const serwist = new Serwist({
         plugins: [new ExpirationPlugin({ maxEntries: 400, maxAgeSeconds: 60 * 24 * 3600, purgeOnQuotaError: true })],
       }),
     },
+    // UI sounds addressed by their content fingerprint (`/success.mp3?v=…`,
+    // lib/sound/client/play-sound.ts): what's at such an address never
+    // changes, so it's kept and served from the phone. Not matched against
+    // the precached `/success.mp3`: a worker a deploy behind the page would
+    // answer with its own, older sound (2026-10-15).
+    {
+      matcher: ({ url, sameOrigin }) => sameOrigin && url.pathname.endsWith(".mp3") && url.searchParams.has("v"),
+      handler: new CacheFirst({
+        cacheName: "ui-sounds",
+        plugins: [new ExpirationPlugin({ maxEntries: 12, purgeOnQuotaError: true })],
+      }),
+    },
     // Next.js navigation payloads — their own capped cache (see APP_NAVIGATION_CACHE).
     {
       matcher: ({ url, sameOrigin }) => sameOrigin && url.searchParams.has("_rsc"),

@@ -154,3 +154,48 @@ describe("playSound — decoded once, then played from memory (2026-10-09)", () 
     expect(audioConstructed.mock.calls.length).toBe(elementsAfterUnlock);
   });
 });
+
+describe("playSound — sound addresses (2026-10-15)", () => {
+  let constructedSrcs: string[];
+
+  beforeEach(() => {
+    constructedSrcs = [];
+    class FakeAudio {
+      src: string;
+      preload = "";
+      constructor(src: string) {
+        this.src = src;
+        constructedSrcs.push(src);
+      }
+      play() {
+        return Promise.resolve();
+      }
+      pause() {}
+      cloneNode() {
+        return new FakeAudio(this.src) as unknown as HTMLAudioElement;
+      }
+    }
+    vi.stubGlobal("Audio", FakeAudio);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // Last in the file: it loads a second copy of the module, whose first-tap listener would also answer any later test's taps.
+  it("addresses each sound by the build's fingerprint of its content, so no older cache can play a replaced sound (2026-10-15)", async () => {
+    vi.resetModules();
+    vi.stubEnv("NEXT_PUBLIC_SOUND_REVISIONS", JSON.stringify({ success: "abc123def456" }));
+    try {
+      const fresh = await import("@/lib/sound/client/play-sound");
+      fresh.__resetSoundCacheForTests();
+      fresh.playSound("success");
+      expect(constructedSrcs).toContain("/success.mp3?v=abc123def456");
+      fresh.playSound("button");
+      expect(constructedSrcs).toContain("/button.mp3");
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+});
