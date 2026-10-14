@@ -3,20 +3,23 @@
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MedicationPhotoAttach } from "@/components/medications/MedicationPhotoAttach";
+import { CameraViewfinder } from "@/components/medications/CameraViewfinder";
 import { OfflineBanner } from "@/components/sync/OfflineBanner";
 import { useCurrentProfile } from "@/lib/auth/client/use-current-profile";
 import { useReturnTo } from "@/lib/navigation/client/use-return-to";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
-import { PhotoFrameSkeleton } from "@/components/shell/ScreenSkeletons";
+import { useCameraSystemBars } from "@/lib/platform/system-bars";
 
 /**
- * A medication's photo (reference mockup, screen 13): a dark camera screen
- * — the live camera, the photo, or a framed placeholder, then cancel /
- * shutter / gallery. The viewfinder IS the camera (2026-10-09; it used to
- * hand off to the phone's camera app, a second camera screen), falling
- * back to the phone's camera only where the page can't use one. The photo
- * is optional.
+ * A medication's photo (reference mockup, screen 13): a full-screen camera
+ * in the native scanner screens' style (2026-10-15): the camera dimmed
+ * around a clear frame, an X and the title at the top (the X is also how
+ * a new medication's optional photo step ends: it goes on to Today), gallery / shutter /
+ * torch along the bottom, the phone's bars black while it's open. The
+ * viewfinder IS the camera (2026-10-09; it used to hand off to the phone's
+ * camera app, a second camera screen), falling back to the phone's camera
+ * only where the page can't use one. The photo is optional.
  * Reached two ways:
  *   1. Right after "Add Medication" finishes (`?new=1`) — optional, the
  *      medication is already fully saved; leaving goes on to Today.
@@ -29,6 +32,7 @@ function PhotoScreen() {
   const params = { id: usePathId(2) };
   const searchParams = useSearchParams();
   const isNew = searchParams.get("new") === "1";
+  useCameraSystemBars();
 
   useEffect(() => {
     if (session.status === "signed-out") router.replace("/login");
@@ -41,44 +45,54 @@ function PhotoScreen() {
     else returnTo(`/medications/${params.id}`);
   }
 
-  const leaveButton = (
-    <button type="button" onClick={leave} className="min-h-12 px-2 text-[17px] font-semibold text-white">
-      {isNew ? "Ολοκλήρωση" : "Κλείσιμο"}
-    </button>
-  );
-
-  return (
-    <main className="flex min-h-dvh flex-col bg-black text-white">
+  const top = (
+    <>
       <OfflineBanner />
-      <div className="mx-auto flex w-full max-w-md items-center justify-between px-2 pt-2">
-        <button type="button" onClick={leave} aria-label="Κλείσιμο" className="flex size-12 items-center justify-center rounded-full active:bg-white/10">
-          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center px-2 py-2">
+        <button
+          type="button"
+          onClick={leave}
+          aria-label="Κλείσιμο"
+          className="flex size-12 items-center justify-center justify-self-start rounded-full bg-black/35 active:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round">
             <path d="m6 6 12 12M18 6 6 18" />
           </svg>
         </button>
         <h1 className="text-[17px] font-semibold">Φωτογραφία φαρμάκου</h1>
-        <span className="size-12" aria-hidden="true" />
+        <span aria-hidden="true" />
       </div>
+    </>
+  );
 
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-5 pt-3 pb-8">
-        {isNew && (
-          <p className="text-center text-[15px] text-stone-300">
-            Το φάρμακο προστέθηκε. Μπορείτε προαιρετικά να προσθέσετε μια φωτογραφία της συσκευασίας — ή να το παραλείψετε.
-          </p>
-        )}
+  if (session.status !== "ready") {
+    // The frame waits, its corners already in place, while the session loads.
+    return (
+      <main>
+        <CameraViewfinder top={top}>
+          <span role="status" className="block size-full bg-white/5 motion-safe:animate-pulse">
+            <span className="sr-only">Φόρτωση…</span>
+          </span>
+        </CameraViewfinder>
+      </main>
+    );
+  }
 
-        {session.status === "loading" && <PhotoFrameSkeleton />}
-
-        {session.status === "ready" && <MedicationPhotoAttach userMedicationId={params.id} leading={leaveButton} className="flex-1 justify-between" />}
-      </div>
+  return (
+    <main>
+      <MedicationPhotoAttach
+        userMedicationId={params.id}
+        top={top}
+        intro={isNew ? "Το φάρμακο προστέθηκε. Αν θέλετε, φωτογραφίστε τη συσκευασία του." : undefined}
+      />
     </main>
   );
 }
 
-/** `useSearchParams` (the `?new=1` flag) needs a Suspense boundary in a prebuilt page; the fallback is the same dark backdrop, so nothing flashes. */
+/** `useSearchParams` (the `?new=1` flag) needs a Suspense boundary in a prebuilt page; the fallback is the same black backdrop, so nothing flashes. */
 export default function MedicationPhotoPage() {
   return (
-    <Suspense fallback={<main className="min-h-dvh bg-black" />}>
+    <Suspense fallback={<main className="h-dvh bg-black" />}>
       <PhotoScreen />
     </Suspense>
   );

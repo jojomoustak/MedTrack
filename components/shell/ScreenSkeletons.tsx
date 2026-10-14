@@ -230,12 +230,3 @@ export function EntryChoicesSkeleton() {
   );
 }
 
-/** The photo screen's frame, on its dark background. */
-export function PhotoFrameSkeleton() {
-  return (
-    <SkeletonStatus className="flex flex-1 flex-col">
-      <Skeleton tone="dark" className="aspect-[3/4] w-full rounded-3xl" />
-    </SkeletonStatus>
-  );
-}
-

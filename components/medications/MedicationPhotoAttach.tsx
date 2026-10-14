@@ -17,10 +17,9 @@ import { playSound } from "@/lib/sound/client/play-sound";
 import { browserLiveCamera, stopStream, type LiveCamera } from "@/lib/camera/client/live-camera";
 import { makePhotoThumbnail, shrinkPhotoForUpload } from "@/lib/medications/client/photo-thumbnail";
 import { forgetPhotoThumbnail } from "@/lib/medications/client/use-medication-photo-thumbnail";
+import { CameraViewfinder } from "@/components/medications/CameraViewfinder";
 
 const POLL_INTERVAL_MS = 1500;
-/** The viewfinder's width / height (`aspect-3/4` below) — a captured photo is cropped to exactly this. */
-const VIEWFINDER_ASPECT = 3 / 4;
 /** ~60s of polling before giving up and asking the user to retry manually — a freshly-created medication is expected to sync within a few seconds when online; this is a generous ceiling, not a tight timeout. */
 const MAX_POLL_ATTEMPTS = 40;
 
@@ -36,10 +35,13 @@ export interface MedicationPhotoAttachProps {
   photoOutbox?: PhotoOutboxRepository;
   /** Test/DI seam — defaults to the browser's camera (`getUserMedia`). */
   camera?: LiveCamera;
-  className?: string;
-  /** The bottom bar's left slot (reference mockup's "Cancel") — the page decides what leaving means. */
-  leading?: React.ReactNode;
+  /** The screen's top row (close, title): the page decides what leaving means. */
+  top?: React.ReactNode;
+  /** Under the frame while there's no photo, instead of the plain instruction (e.g. right after adding the medication). */
+  intro?: string;
 }
+
+const INSTRUCTION = "Τοποθετήστε τη συσκευασία του φαρμάκου μέσα στο πλαίσιο.";
 
 type PhotoStatus = "checking" | "present" | "absent";
 
@@ -67,7 +69,8 @@ function isOfflineError(err: unknown): boolean {
 
 /**
  * Optional, non-blocking "attach a photo of your own medication package"
- * control (Phase 3-style component, not itself a full screen). Reused
+ * camera screen, full-screen in the native scanner screens' style since
+ * 2026-10-15 (`CameraViewfinder`); the page supplies the top row. Reused
  * both right after creating a medication (`app/medications/item/photo/
  * page.tsx`, reached from the Add Medication flow) and from the
  * medications list (same route, no separate detail page exists yet — see
@@ -91,7 +94,7 @@ function isOfflineError(err: unknown): boolean {
  * `designing-offline-sync` rule: a critical change must never disappear
  * from the UI, or claim success, silently).
  */
-export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl, photoCache, photoOutbox, camera, className, leading }: MedicationPhotoAttachProps) {
+export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl, photoCache, photoOutbox, camera, top, intro }: MedicationPhotoAttachProps) {
   const repo = repository ?? new DexieUserMedicationRepository();
   const fetcher = fetchImpl ?? fetch;
   const cache = photoCache ?? new DexiePhotoCacheRepository();
@@ -117,6 +120,9 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
   const [stream, setStream] = useState<MediaStream | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  /** Goes off by itself whenever the camera is released. */
+  const [torchOn, setTorchOn] = useState(false);
   const unmountedRef = useRef(false);
   const autoStartedRef = useRef(false);
   /** Camera released because the app went to the background — reopened when it's back. */
@@ -126,6 +132,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     stopStream(streamRef.current);
     streamRef.current = null;
     setStream(null);
+    setTorchOn(false);
     setCameraState((state) => (state === "live" ? "off" : state));
   }, []);
 
@@ -139,6 +146,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
       stopStream(streamRef.current);
       streamRef.current = opened;
       setStream(opened);
+      setTorchOn(false);
       setCameraState("live");
     } catch (err) {
       if (unmountedRef.current) return;
@@ -351,20 +359,35 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     }
   }
 
-  /** The shutter, while the viewfinder is live: the photo is what's framed, saved through the same path as a picked file. */
+  /** The shutter, while the viewfinder is live: the photo is what's inside the frame, saved through the same path as a picked file. */
   async function handleCapture() {
     const video = videoRef.current;
     if (!video || busy) return;
     playSound("button");
+    const videoBox = video.getBoundingClientRect();
+    const frameBox = frameRef.current?.getBoundingClientRect() ?? videoBox;
     let blob: Blob;
     try {
-      blob = await cam.capture(video, VIEWFINDER_ASPECT);
+      blob = await cam.capture(video, { x: frameBox.left - videoBox.left, y: frameBox.top - videoBox.top, width: frameBox.width, height: frameBox.height });
     } catch {
       setError("Η λήψη δεν ήταν δυνατή. Δοκιμάστε ξανά.");
       return;
     }
     stopCamera();
     await handleFileSelected(new File([blob], "medication-photo.jpg", { type: "image/jpeg" }));
+  }
+
+  async function toggleTorch() {
+    const current = streamRef.current;
+    if (!current || !cam.setTorch) return;
+    playSound("button");
+    const next = !torchOn;
+    try {
+      await cam.setTorch(current, next);
+      setTorchOn(next);
+    } catch {
+      // The camera refused: the button keeps showing what's really on.
+    }
   }
 
   async function handleRemove() {
@@ -391,38 +414,49 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     }
   }
 
+  const packageIcon = (
+    <svg viewBox="0 0 64 64" width="72" height="72" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round">
+      <path d="M10 22 32 12l22 10v24L32 56 10 46Z" />
+      <path d="M10 22 32 32l22-10M32 32v24" />
+    </svg>
+  );
+
   if (!synced) {
     return (
-      <div className={className}>
-        {pollExhausted ? (
-          <div className="flex flex-col gap-3 text-[15px] text-stone-300">
-            <p>Το φάρμακο δεν έχει συγχρονιστεί ακόμα, οπότε δεν μπορείτε να προσθέσετε φωτογραφία αυτή τη στιγμή.</p>
-            <button
-              type="button"
-              onClick={() => {
-                playSound("button");
-                setPollExhausted(false);
-                setPollNonce((n) => n + 1);
-              }}
-              className="min-h-12 self-start rounded-xl border border-white/40 px-5 font-semibold text-white"
-            >
-              Δοκιμή ξανά
-            </button>
-          </div>
-        ) : (
-          <p role="status" className="text-[15px] text-stone-300">
-            Αναμονή συγχρονισμού πριν την προσθήκη φωτογραφίας…
-          </p>
-        )}
-      </div>
+      <CameraViewfinder
+        top={top}
+        below={
+          pollExhausted ? (
+            <>
+              <p>Το φάρμακο δεν έχει συγχρονιστεί ακόμα, οπότε δεν μπορείτε να προσθέσετε φωτογραφία αυτή τη στιγμή.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  playSound("button");
+                  setPollExhausted(false);
+                  setPollNonce((n) => n + 1);
+                }}
+                className="mt-2 min-h-12 rounded-xl border border-white/40 px-5 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                Δοκιμή ξανά
+              </button>
+            </>
+          ) : (
+            <p role="status">Αναμονή συγχρονισμού πριν την προσθήκη φωτογραφίας…</p>
+          )
+        }
+      >
+        <span className="text-white/35">{packageIcon}</span>
+      </CameraViewfinder>
     );
   }
 
-  const picker = (capture: boolean) => (
+  const picker = (capture: boolean, label?: string) => (
     <input
       type="file"
       accept="image/*"
       {...(capture ? { capture: "environment" as const } : {})}
+      {...(label ? { "aria-label": label } : {})}
       className="sr-only"
       disabled={busy}
       onChange={(event) => {
@@ -436,152 +470,171 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
   );
 
   const live = cameraState === "live" && stream !== null;
+  const torchAvailable = live && stream !== null && cam.hasTorch?.(stream) === true;
+  const showingPhoto = !live && photoStatus === "present" && photoUrl !== null;
+
   const shutterLabel = busy ? "Μεταφόρτωση…" : live ? "Λήψη φωτογραφίας" : photoStatus === "present" ? "Νέα φωτογραφία" : "Προσθήκη φωτογραφίας";
   const shutterFace = (
     <>
-      <span aria-hidden="true" className="flex size-19 items-center justify-center rounded-full border-4 border-white/90 transition-transform duration-150 active:scale-95">
-        {busy ? <span className="size-7 animate-spin rounded-full border-3 border-white/30 border-t-white" /> : <span className="size-14 rounded-full bg-white" />}
+      <span aria-hidden="true" className="flex size-19 items-center justify-center rounded-full border-4 border-white/90 motion-safe:transition-transform motion-safe:duration-150 active:scale-95">
+        {busy ? <span className="size-7 animate-spin rounded-full border-3 border-white/30 border-t-white" /> : <span className="size-14.5 rounded-full bg-white" />}
       </span>
       <span className="text-[13px] font-semibold whitespace-nowrap text-white">{shutterLabel}</span>
     </>
   );
-  const shutterClasses = `flex flex-col items-center gap-2 justify-self-center ${busy ? "opacity-60" : "cursor-pointer"}`;
+  const focusRing = "rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-white";
+  const shutterClasses = `flex flex-col items-center gap-2 justify-self-center ${focusRing} ${busy ? "opacity-60" : "cursor-pointer"}`;
+  // Side buttons: 56px circles, their centres level with the 76px shutter's.
+  const sideClasses = `mt-2.5 flex flex-col items-center gap-2 justify-self-center ${focusRing}`;
+  const sideCircle = "flex size-14 items-center justify-center rounded-full motion-safe:transition-colors";
+  const sideLabel = "text-[13px] font-semibold text-white";
+
+  // Under the frame: what's happening, or else what to do.
+  const notes = [
+    pendingOp === "upload" && (
+      <p key="upload" role="status" className="text-amber-300">
+        Θα μεταφορτωθεί μόλις επανασυνδεθείτε στο διαδίκτυο.
+      </p>
+    ),
+    pendingOp === "delete" && (
+      <p key="delete" role="status" className="text-amber-300">
+        Θα αφαιρεθεί μόλις επανασυνδεθείτε στο διαδίκτυο.
+      </p>
+    ),
+    offlineNote && !pendingOp && (
+      <p key="offline" role="status">
+        Δεν ήταν δυνατή η σύνδεση για έλεγχο φωτογραφίας.
+      </p>
+    ),
+    cameraState === "blocked" && (
+      <p key="blocked" role="status">
+        Δεν δόθηκε πρόσβαση στην κάμερα — το κουμπί λήψης ανοίγει την κάμερα του κινητού.
+      </p>
+    ),
+    error && (
+      <p key="error" role="alert" className="text-red-300">
+        {error}
+      </p>
+    ),
+  ].filter(Boolean);
+  const instruction = !showingPhoto && photoStatus !== "checking" ? <p>{photoStatus === "absent" && intro ? intro : INSTRUCTION}</p> : null;
 
   return (
-    <div className={`flex flex-col gap-5 ${className ?? ""}`}>
-      {/* The viewfinder (reference mockup, screen 13): the live camera, the
-          photo, or a framed placeholder showing what to capture. */}
-      <div className="relative flex aspect-3/4 w-full items-center justify-center overflow-hidden rounded-3xl bg-stone-900">
-        {live ? (
-          <video ref={attachVideo} autoPlay muted playsInline aria-label="Κάμερα" className="h-full w-full object-cover" />
-        ) : photoStatus === "present" && photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- `photoUrl` is a local `blob:` object URL from an authenticated fetch (or a locally-cached/queued copy), never a remote asset `next/image` can optimize.
-          <img src={photoUrl} alt="Φωτογραφία φαρμάκου" className="h-full w-full object-contain" />
-        ) : (
-          // While the saved photo is looked up, the frame's own icon pulses instead of a "Φόρτωση…" line.
-          <div className={`flex flex-col items-center gap-4 px-8 text-center text-stone-400 ${photoStatus === "checking" ? "motion-safe:animate-pulse" : ""}`}>
-            <svg viewBox="0 0 64 64" width="72" height="72" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round">
-              <path d="M10 22 32 12l22 10v24L32 56 10 46Z" />
-              <path d="M10 22 32 32l22-10M32 32v24" />
-            </svg>
-            {photoStatus === "checking" ? (
-              <p role="status" className="sr-only">
-                Φόρτωση…
-              </p>
-            ) : (
-              <p className="text-[17px] font-medium text-stone-300">Φωτογραφίστε τη συσκευασία του φαρμάκου</p>
-            )}
-          </div>
-        )}
-        {/* Corner guides, as on a camera viewfinder. */}
-        <span aria-hidden="true" className="pointer-events-none absolute inset-5 rounded-2xl border-2 border-dashed border-white/15" />
-      </div>
-
-      <div className="flex min-h-6 flex-col items-center gap-1 text-center text-[15px]">
-        {pendingOp === "upload" && (
-          <p role="status" className="text-amber-300">
-            Θα μεταφορτωθεί μόλις επανασυνδεθείτε στο διαδίκτυο.
-          </p>
-        )}
-        {pendingOp === "delete" && (
-          <p role="status" className="text-amber-300">
-            Θα αφαιρεθεί μόλις επανασυνδεθείτε στο διαδίκτυο.
-          </p>
-        )}
-        {offlineNote && !pendingOp && (
-          <p role="status" className="text-stone-400">
-            Δεν ήταν δυνατή η σύνδεση για έλεγχο φωτογραφίας.
-          </p>
-        )}
-        {cameraState === "blocked" && (
-          <p role="status" className="text-stone-400">
-            Δεν δόθηκε πρόσβαση στην κάμερα — το κουμπί λήψης ανοίγει την κάμερα του κινητού.
-          </p>
-        )}
-        {error && (
-          <p role="alert" className="text-red-300">
-            {error}
-          </p>
-        )}
-        {live && photoStatus === "present" && (
-          <button
-            type="button"
-            onClick={() => {
-              playSound("button");
-              stopCamera();
-            }}
-            className="min-h-11 px-3 font-semibold text-white"
-          >
-            Ακύρωση
-          </button>
-        )}
-        {!live && photoStatus === "present" && (
-          <button
-            type="button"
-            onClick={() => {
-              playSound("button");
-              void handleRemove();
-            }}
-            disabled={busy}
-            aria-busy={busy}
-            className="min-h-11 px-3 font-semibold text-red-300 disabled:opacity-50"
-          >
-            Αφαίρεση φωτογραφίας
-          </button>
-        )}
-      </div>
-
-      {/* Bottom bar: leave · shutter · gallery. The shutter takes the photo
-          in the viewfinder; where the page can't use the camera it opens
-          the phone's camera app instead. */}
-      <div className="grid grid-cols-3 items-center">
-        <div className="justify-self-start">{leading}</div>
-        {live || cameraState === "off" ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              if (live) void handleCapture();
-              else {
+    <CameraViewfinder
+      top={top}
+      dimmed={live}
+      frameRef={frameRef}
+      background={live ? <video ref={attachVideo} autoPlay muted playsInline aria-label="Κάμερα" className="h-full w-full object-cover" /> : undefined}
+      below={
+        <>
+          {notes.length > 0 ? notes : instruction}
+          {live && photoStatus === "present" && (
+            <button
+              type="button"
+              onClick={() => {
                 playSound("button");
-                void startCamera();
-              }
-            }}
-            className={shutterClasses}
-          >
-            {shutterFace}
-          </button>
-        ) : (
+                stopCamera();
+              }}
+              className="min-h-11 px-3 font-semibold text-white focus-visible:outline-2 focus-visible:outline-white"
+            >
+              Ακύρωση
+            </button>
+          )}
+          {showingPhoto && (
+            <button
+              type="button"
+              onClick={() => {
+                playSound("button");
+                void handleRemove();
+              }}
+              disabled={busy}
+              aria-busy={busy}
+              className="min-h-11 px-3 font-semibold text-red-300 focus-visible:outline-2 focus-visible:outline-white disabled:opacity-50"
+            >
+              Αφαίρεση φωτογραφίας
+            </button>
+          )}
+        </>
+      }
+      controls={
+        // Gallery · shutter · torch. The shutter takes what's in the frame;
+        // where the page can't use the camera it opens the phone's camera app.
+        <div className="mx-auto grid max-w-sm grid-cols-3 items-start">
           <label
             onClick={() => {
               if (!busy) playSound("button");
             }}
-            className={shutterClasses}
+            className={`${sideClasses} ${busy ? "opacity-60" : "cursor-pointer"}`}
           >
-            {shutterFace}
-            {picker(true)}
+            <span aria-hidden="true" className={`${sideCircle} bg-white/15 active:bg-white/25`}>
+              <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="white" strokeWidth="1.8" strokeLinejoin="round">
+                <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+                <circle cx="9" cy="10" r="1.8" />
+                <path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5" strokeLinecap="round" />
+              </svg>
+            </span>
+            <span aria-hidden="true" className={sideLabel}>
+              Συλλογή
+            </span>
+            {picker(false, "Επιλογή από τη συλλογή")}
           </label>
-        )}
-        <label
-          onClick={() => {
-            if (!busy) playSound("button");
-          }}
-          aria-label="Επιλογή από τη συλλογή"
-          className={`flex size-14 items-center justify-center justify-self-end overflow-hidden rounded-xl border-2 border-white/70 ${busy ? "opacity-60" : "cursor-pointer"}`}
-        >
-          {photoStatus === "present" && photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- local blob: URL, see above.
-            <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+
+          {live || cameraState === "off" ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                if (live) void handleCapture();
+                else {
+                  playSound("button");
+                  void startCamera();
+                }
+              }}
+              className={shutterClasses}
+            >
+              {shutterFace}
+            </button>
           ) : (
-            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="white" strokeWidth="1.7" strokeLinejoin="round">
-              <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
-              <circle cx="9" cy="10" r="1.8" />
-              <path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5" strokeLinecap="round" />
-            </svg>
+            <label
+              onClick={() => {
+                if (!busy) playSound("button");
+              }}
+              className={shutterClasses}
+            >
+              {shutterFace}
+              {picker(true)}
+            </label>
           )}
-          {picker(false)}
-        </label>
-      </div>
-    </div>
+
+          {torchAvailable ? (
+            <button type="button" aria-pressed={torchOn} onClick={() => void toggleTorch()} className={sideClasses}>
+              <span aria-hidden="true" className={`${sideCircle} ${torchOn ? "bg-white text-stone-900" : "bg-white/15 text-white active:bg-white/25"}`}>
+                <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" strokeLinecap="round">
+                  <path d="M13 2.5 4.5 13.5H11L10 21.5 19.5 10H13Z" />
+                </svg>
+              </span>
+              <span className={sideLabel}>Φακός</span>
+            </button>
+          ) : (
+            <span aria-hidden="true" />
+          )}
+        </div>
+      }
+    >
+      {showingPhoto ? (
+        // eslint-disable-next-line @next/next/no-img-element -- `photoUrl` is a local `blob:` object URL from an authenticated fetch (or a locally-cached/queued copy), never a remote asset `next/image` can optimize.
+        <img src={photoUrl ?? undefined} alt="Φωτογραφία φαρμάκου" className="h-full w-full object-contain" />
+      ) : live ? null : (
+        // While the saved photo is looked up, the frame's icon pulses instead of a "Φόρτωση…" line.
+        <span className={`text-white/35 ${photoStatus === "checking" ? "motion-safe:animate-pulse" : ""}`}>
+          {packageIcon}
+          {photoStatus === "checking" && (
+            <span role="status" className="sr-only">
+              Φόρτωση…
+            </span>
+          )}
+        </span>
+      )}
+    </CameraViewfinder>
   );
 }

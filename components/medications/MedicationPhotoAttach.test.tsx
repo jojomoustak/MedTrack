@@ -342,7 +342,8 @@ describe("MedicationPhotoAttach — live camera in the viewfinder", () => {
     expect(await screen.findByLabelText("Κάμερα")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /λήψη φωτογραφίας/i }));
 
-    await waitFor(() => expect(capture).toHaveBeenCalledWith(expect.any(HTMLVideoElement), 3 / 4));
+    // What's inside the frame, measured on screen (all zeros in jsdom, which lays nothing out).
+    await waitFor(() => expect(capture).toHaveBeenCalledWith(expect.any(HTMLVideoElement), { x: 0, y: 0, width: 0, height: 0 }));
     expect(await screen.findByRole("img", { name: /φωτογραφία φαρμάκου/i })).toBeTruthy();
     expect(track.stop).toHaveBeenCalled();
     expect(fetchImpl.mock.calls[1][1].method).toBe("POST");
@@ -415,5 +416,47 @@ describe("MedicationPhotoAttach — live camera in the viewfinder", () => {
     expect(await screen.findByLabelText("Κάμερα")).toBeTruthy();
     unmount();
     expect(track.stop).toHaveBeenCalled();
+  });
+
+  it("offers the torch only when the camera has one, and shows whether it's on", async () => {
+    const { stream } = makeStream();
+    const setTorch = vi.fn().mockResolvedValue(undefined);
+    const camera: LiveCamera = { ...makeCamera(async () => stream).camera, hasTorch: () => true, setTorch };
+
+    render(
+      <MedicationPhotoAttach
+        userMedicationId="med-1"
+        repository={makeRepository(makeRecord())}
+        fetchImpl={vi.fn().mockResolvedValue(notFoundFetch())}
+        photoCache={makeFakePhotoCache()}
+        photoOutbox={makeFakePhotoOutbox()}
+        camera={camera}
+      />,
+    );
+
+    const torch = await screen.findByRole("button", { name: "Φακός" });
+    expect(torch.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(torch);
+    await waitFor(() => expect(torch.getAttribute("aria-pressed")).toBe("true"));
+    expect(setTorch).toHaveBeenCalledWith(stream, true);
+  });
+
+  it("no torch button for a camera without one", async () => {
+    const { stream } = makeStream();
+    const camera: LiveCamera = { ...makeCamera(async () => stream).camera, hasTorch: () => false };
+
+    render(
+      <MedicationPhotoAttach
+        userMedicationId="med-1"
+        repository={makeRepository(makeRecord())}
+        fetchImpl={vi.fn().mockResolvedValue(notFoundFetch())}
+        photoCache={makeFakePhotoCache()}
+        photoOutbox={makeFakePhotoOutbox()}
+        camera={camera}
+      />,
+    );
+
+    expect(await screen.findByLabelText("Κάμερα")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Φακός" })).toBeNull();
   });
 });
