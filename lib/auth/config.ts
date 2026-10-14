@@ -394,7 +394,7 @@ function buildAuth() {
         const content = data.user.emailVerified
           ? passwordResetEmail({ url: data.url })
           : passwordResetBlockedPendingVerificationEmail();
-        await sendEmail({ to: data.user.email, subject: content.subject, html: content.html, text: content.text });
+        await sendEmail({ to: data.user.email, ...content });
       },
       // ADR-003 §"Security review resolution" item 1's escape hatch:
       // "password-reset... immediately clears both failed_login_count and
@@ -419,7 +419,7 @@ function buildAuth() {
     emailVerification: {
       sendVerificationEmail: async ({ user, url }: { user: { email: string }; url: string }) => {
         const content = verificationEmail({ url });
-        await sendEmail({ to: user.email, subject: content.subject, html: content.html, text: content.text });
+        await sendEmail({ to: user.email, ...content });
       },
       sendOnSignUp: true,
       autoSignInAfterVerification: true,

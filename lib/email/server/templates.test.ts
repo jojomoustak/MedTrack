@@ -5,6 +5,8 @@ import {
   passwordResetEmail,
   verificationEmail,
 } from "@/lib/email/server/templates";
+import { LOGO_CONTENT_ID } from "@/lib/email/server/logo-png";
+import type { EmailContent } from "@/lib/email/server/templates";
 
 // CLAUDE.md rule 8: these are auth-only emails — none of them may ever
 // reference a medication/dose/schedule/health concept. Cheap, durable
@@ -19,13 +21,16 @@ function assertNoHealthContent(text: string) {
   }
 }
 
-function assertWellFormed(content: { subject: string; html: string; text: string }) {
+function assertWellFormed(content: EmailContent) {
   expect(content.subject.length).toBeGreaterThan(0);
   expect(content.html.length).toBeGreaterThan(0);
   expect(content.text.length).toBeGreaterThan(0);
   assertNoHealthContent(content.subject);
   assertNoHealthContent(content.html);
   assertNoHealthContent(content.text);
+  // The logo the HTML shows travels with the email, never fetched from a server.
+  expect(content.html).toContain(`src="cid:${LOGO_CONTENT_ID}"`);
+  expect(content.attachments).toEqual([expect.objectContaining({ contentId: LOGO_CONTENT_ID, contentType: "image/png" })]);
 }
 
 describe("verificationEmail", () => {
@@ -33,7 +38,9 @@ describe("verificationEmail", () => {
     const url = "https://example.com/verify-email?token=abc123&callbackURL=%2F";
     const content = verificationEmail({ url });
     assertWellFormed(content);
-    expect(content.html).toContain(url);
+    // In HTML the link's "&" is written "&amp;" (what a browser reads back as "&").
+    expect(content.html).toContain(url.replace(/&/g, "&amp;"));
+    expect(content.html).not.toContain("&callbackURL");
     expect(content.text).toContain(url);
   });
 });

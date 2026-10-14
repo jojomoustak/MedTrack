@@ -25,12 +25,15 @@ import { Resend } from "resend";
 import { getEnv } from "@/lib/config/env";
 import { ConfigError } from "@/lib/errors/app-error";
 import { logger } from "@/lib/logging/logger";
+import type { EmailAttachment } from "@/lib/email/server/templates";
 
 export interface SendEmailInput {
   to: string;
   subject: string;
   html: string;
   text: string;
+  /** Images the HTML shows in place (`cid:`), e.g. the logo. */
+  attachments?: EmailAttachment[];
 }
 
 let resendSingleton: Resend | undefined;
@@ -69,6 +72,16 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
     subject: input.subject,
     html: input.html,
     text: input.text,
+    ...(input.attachments?.length
+      ? {
+          attachments: input.attachments.map((a) => ({
+            filename: a.filename,
+            content: Buffer.from(a.content, "base64"),
+            contentId: a.contentId,
+            contentType: a.contentType,
+          })),
+        }
+      : {}),
   });
 
   if (error) {

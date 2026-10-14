@@ -75,6 +75,20 @@ describe("sendEmail", () => {
     });
   });
 
+  it("sends the logo as an inline image the HTML refers to by its content id", async () => {
+    process.env.RESEND_API_KEY = "re_test_key";
+    process.env.EMAIL_FROM = "MedTracking <noreply@example.com>";
+    __resetEnvCacheForTests();
+    sendMock.mockResolvedValue({ data: { id: "email_123" }, error: null });
+
+    await sendEmail({ ...INPUT, attachments: [{ filename: "medtrack.png", content: "iVBORw0KGgo=", contentId: "medtrack-logo", contentType: "image/png" }] });
+
+    const [payload] = sendMock.mock.calls[0];
+    expect(payload.attachments).toEqual([
+      { filename: "medtrack.png", content: Buffer.from("iVBORw0KGgo=", "base64"), contentId: "medtrack-logo", contentType: "image/png" },
+    ]);
+  });
+
   it("throws when Resend reports an error, and never leaks the recipient address in the thrown message", async () => {
     process.env.RESEND_API_KEY = "re_test_key";
     process.env.EMAIL_FROM = "MedTracking <noreply@example.com>";
