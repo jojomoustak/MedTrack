@@ -48,7 +48,7 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="π.χ. παρακεταμόλη"
+          placeholder="π.χ. Flagyl, Depon, Algofren"
           aria-label="Αναζήτηση φαρμάκου"
           className={`${FIELD_INPUT} pr-4`}
         />
