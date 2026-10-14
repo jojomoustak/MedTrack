@@ -22,9 +22,8 @@ import { isTerminalDoseEventStatus } from "@/lib/domain/dose-event";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { isTimestampBefore } from "@/lib/domain/timestamp";
 import type { MobilePlatform } from "@/lib/platform/mobile-platform";
-import { FORM_LABELS } from "@/components/medications/DetailsStep";
+import { doseQuantityLabel } from "@/lib/medications/dose-quantity-label";
 import { resolveMedicationDisplayName } from "@/lib/medications/client/use-display-names";
-import type { MedicationForm } from "@/lib/domain/user-medication";
 import { logger } from "@/lib/logging/logger";
 import { GENERATION_HORIZON_MS } from "@/lib/scheduling/client/dose-event-generator";
 
@@ -57,10 +56,13 @@ export interface NativeReminderSyncDeps {
   now?: () => Date;
 }
 
+/**
+ * The notification's second line, worded like Today's rows: "1 δισκίο",
+ * "2 δισκία". It used to print the stored decimal and the picker label —
+ * "1.000 Δισκίο", as the owner saw on their lock screen (2026-10-14).
+ */
 function doseText(dose: DoseEventRecord): string {
-  if (!dose.quantityValue || !dose.quantityUnit) return "Υπενθύμιση δόσης";
-  const label = FORM_LABELS[dose.quantityUnit as MedicationForm] ?? dose.quantityUnit;
-  return `${dose.quantityValue} ${label}`;
+  return doseQuantityLabel(dose.quantityValue, dose.quantityUnit) ?? "Υπενθύμιση δόσης";
 }
 
 export async function syncNativeRemindersNow(profileId: string, deps: NativeReminderSyncDeps): Promise<void> {

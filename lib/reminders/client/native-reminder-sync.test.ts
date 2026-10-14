@@ -82,9 +82,22 @@ describe("syncNativeRemindersNow", () => {
       scheduleId: "schedule-1",
       triggerAtEpochMs: new Date("2026-01-01T08:00:00.000Z").getTime(),
       medicationLabel: "Depon 500mg",
-      doseText: "1 Δισκίο",
+      doseText: "1 δισκίο",
     });
     expect(deps.platform.cancelRemindersForDoseEvent).not.toHaveBeenCalled();
+  });
+
+  it("words the dose like Today does — never the stored decimal (\"1.000 Δισκίο\", 2026-10-14)", async () => {
+    const deps = makeDeps([
+      makeDose({ id: "dose-1", quantityValue: "1.000", quantityUnit: "tablet" }),
+      makeDose({ id: "dose-2", quantityValue: "2.000", quantityUnit: "tablet" }),
+      makeDose({ id: "dose-3", quantityValue: "0.500", quantityUnit: "tablet" }),
+    ]);
+    await syncNativeRemindersNow("profile-1", deps);
+
+    const upsert = deps.platform.upsertReminder as ReturnType<typeof vi.fn>;
+    const texts = upsert.mock.calls.map((args) => (args[0] as { doseText: string }).doseText);
+    expect(texts).toEqual(["1 δισκίο", "2 δισκία", "0.5 δισκίο"]);
   });
 
   it("cancels, rather than upserts, a dose event that has already reached a terminal status", async () => {

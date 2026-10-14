@@ -35,17 +35,29 @@ export function isDoseActionable(dose: Pick<DoseEventRecord, "status">): boolean
  * Never awaited, and never throws into the caller: the repository
  * constructors run synchronously, as call arguments, before
  * `syncNativeRemindersNow`'s own async body starts.
+ *
+ * [finishedDoseIds]: doses the user just finished (taken / skipped /
+ * missed) — their reminders are cleared first, by id. The reconcile pass
+ * only looks back 2 hours, and since 2026-10-14 the reminder notification
+ * can't be swiped away: a dose marked later than that must still clear it.
  */
-export function refreshNativeReminders(profileId: string | null): void {
+export function refreshNativeReminders(profileId: string | null, finishedDoseIds: readonly string[] = []): void {
   if (!profileId) return;
   try {
-    void syncNativeRemindersNow(profileId, {
+    const platform = new MedianMobilePlatform();
+    const deps = {
       doseEvents: new DexieDoseEventRepository(),
       userMedications: new DexieUserMedicationRepository(),
       catalogCache: new DexieCatalogCacheRepository(),
       offlineIndex: new DexieOfflineIndexRepository(),
-      platform: new MedianMobilePlatform(),
-    }).catch((err) => logger.warn("doses.native_reminder_sync_failed", { message: err instanceof Error ? err.message : String(err) }));
+      platform,
+    };
+    void (async () => {
+      if (platform.isAvailable()) {
+        for (const doseId of finishedDoseIds) await platform.cancelRemindersForDoseEvent(doseId);
+      }
+      await syncNativeRemindersNow(profileId, deps);
+    })().catch((err) => logger.warn("doses.native_reminder_sync_failed", { message: err instanceof Error ? err.message : String(err) }));
   } catch (err) {
     logger.warn("doses.native_reminder_sync_failed", { message: err instanceof Error ? err.message : String(err) });
   }
@@ -66,24 +78,24 @@ async function transitionToTaken(doseId: string, profileId: string, status: "tak
 
 export async function recordDoseTaken(doseId: string, profileId: string): Promise<void> {
   await transitionToTaken(doseId, profileId, "taken");
-  refreshNativeReminders(profileId);
+  refreshNativeReminders(profileId, [doseId]);
 }
 
 /** The one recovery path out of `missed` — "I forgot to log it, but I did take it" (`isDoseEventTransitionAllowed`). A late dose is still a real dose, so it consumes inventory too. */
 export async function recordDoseTakenLate(doseId: string, profileId: string): Promise<void> {
   await transitionToTaken(doseId, profileId, "taken_late");
-  refreshNativeReminders(profileId);
+  refreshNativeReminders(profileId, [doseId]);
 }
 
 export async function recordDoseSkipped(doseId: string, profileId: string): Promise<void> {
   await new DexieDoseEventRepository().transition(doseId, { status: "skipped" }, newId());
-  refreshNativeReminders(profileId);
+  refreshNativeReminders(profileId, [doseId]);
 }
 
 /** The user saying "I didn't take this one" — the same `missed` status the overdue sweep would eventually set, recorded now instead. */
 export async function recordDoseMissed(doseId: string, profileId: string): Promise<void> {
   await new DexieDoseEventRepository().transition(doseId, { status: "missed" }, newId());
-  refreshNativeReminders(profileId);
+  refreshNativeReminders(profileId, [doseId]);
 }
 
 /** Non-terminal and freely repeatable: re-reminds after the user's own default snooze length. */
@@ -116,8 +128,9 @@ export function isDoseDue(dose: Pick<DoseEventRecord, "status" | "scheduledAt">,
  * the button, so no caller can do it again.
  */
 export async function recordAllDosesTaken(doses: DoseEventRecord[], profileId: string, now: Date = new Date()): Promise<void> {
-  for (const dose of doses.filter((d) => isDoseDue(d, now))) {
+  const due = doses.filter((d) => isDoseDue(d, now));
+  for (const dose of due) {
     await transitionToTaken(dose.id, profileId, "taken");
   }
-  refreshNativeReminders(profileId);
+  refreshNativeReminders(profileId, due.map((d) => d.id));
 }
