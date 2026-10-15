@@ -117,6 +117,9 @@ export function usePurchaseListItems(purchaseListId: string | null, profileId: s
       try {
         const repo = new DexiePurchaseListItemRepository();
         await repo.remove(id, newId());
+        // Gone from the screen right away, not after the reload below: the
+        // row's undo bar would otherwise flash back to the item first.
+        setItems((current) => current.filter((item) => item.id !== id));
         refresh();
       } catch (err) {
         logger.warn("lists.delete_item_failed", { message: err instanceof Error ? err.message : String(err) });

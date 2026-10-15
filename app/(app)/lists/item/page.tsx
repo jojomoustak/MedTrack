@@ -9,7 +9,7 @@ import { useMedicationsList } from "@/components/medications/use-medications-lis
 import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
 import { DexiePurchaseListRepository } from "@/lib/db-client/purchase-list-repository";
-import { UndoableDeleteButton } from "@/components/lists/UndoableDeleteButton";
+import { useUndoableDelete } from "@/components/lists/use-undoable-delete";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FIELD_INPUT, FIELD_LABEL } from "@/components/ui/field-styles";
@@ -62,6 +62,7 @@ function ItemRow({
   onToggle,
   toggleLabel,
   actions,
+  onDelete,
   footer,
 }: {
   item: PurchaseListItemRecord;
@@ -69,12 +70,31 @@ function ItemRow({
   detail: string | null;
   onToggle?: () => void;
   toggleLabel?: string;
-  actions: React.ReactNode;
+  /** The row's other actions; "Διαγραφή" always comes last. */
+  actions?: React.ReactNode;
+  onDelete: () => void | Promise<unknown>;
   footer?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const deletion = useUndoableDelete(onDelete);
   const purchased = item.status === "purchased";
   const removed = item.status === "removed";
+
+  // Deleted at once as far as the person can see, with 5 s to undo; the
+  // real delete happens when that ends, or as soon as the row goes away.
+  if (deletion.pending) {
+    return (
+      <li className="flex min-h-19 items-center gap-3 rounded-2xl bg-stone-100 py-2 pr-2 pl-4">
+        <p role="status" className="min-w-0 flex-1 truncate text-[15px] text-stone-700">
+          Το «{name}» διαγράφηκε.
+        </p>
+        <Button variant="secondary" size="sm" onClick={deletion.undo}>
+          Αναίρεση
+        </Button>
+      </li>
+    );
+  }
+
   return (
     <li className={`flex flex-col ${removed ? "rounded-2xl border-2 border-dashed border-stone-300 opacity-70" : "surface-card"}`}>
       <div className="flex min-h-19 items-center gap-2 py-2 pr-1 pl-1.5">
@@ -103,7 +123,22 @@ function ItemRow({
           <MoreIcon />
         </button>
       </div>
-      {open && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-stone-100 px-3 py-2">{actions}</div>}
+      {open && (
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-stone-100 px-3 py-2">
+          {actions}
+          <Button
+            variant="tertiary"
+            onClick={() => {
+              setOpen(false);
+              deletion.start();
+            }}
+            aria-label={`Διαγραφή "${name}"`}
+            className="min-w-12 px-0 text-red-700"
+          >
+            Διαγραφή
+          </Button>
+        </div>
+      )}
     </li>
   );
 }
@@ -305,9 +340,9 @@ export default function PurchaseListDetailPage() {
                     >
                       Δεν χρειάζεται πια
                     </Button>
-                    <UndoableDeleteButton label={`Διαγραφή "${name}"`} onConfirm={() => void deleteItem(item.id)} />
                   </>
                 }
+                onDelete={() => deleteItem(item.id)}
               />
             );
           })}
@@ -344,7 +379,7 @@ export default function PurchaseListDetailPage() {
                       </Link>
                     ) : undefined
                   }
-                  actions={<UndoableDeleteButton label={`Διαγραφή "${name}"`} onConfirm={() => void deleteItem(item.id)} />}
+                  onDelete={() => deleteItem(item.id)}
                 />
               );
             })}
@@ -379,9 +414,9 @@ export default function PurchaseListDetailPage() {
                       >
                         Επαναφορά
                       </Button>
-                      <UndoableDeleteButton label={`Διαγραφή "${name}"`} onConfirm={() => void deleteItem(item.id)} />
                     </>
                   }
+                  onDelete={() => deleteItem(item.id)}
                 />
               );
             })}
