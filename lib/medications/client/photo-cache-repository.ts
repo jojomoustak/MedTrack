@@ -21,6 +21,12 @@ export class DexiePhotoCacheRepository implements PhotoCacheRepository {
     return { userMedicationId: row.userMedicationId, blob: row.blob, contentType: row.contentType, thumbnail: row.thumbnail ?? null, etag: row.etag ?? null, cachedAt: row.cachedAt };
   }
 
+  /** Every cached thumbnail at once (the app's start-up preload, `preloadPhotoThumbnails`). Rows without one are left out. */
+  async listThumbnails(): Promise<{ userMedicationId: string; thumbnail: Blob; cachedAt: string }[]> {
+    const rows = await this.db.medicationPhotoCache.toArray();
+    return rows.flatMap((row) => (row.thumbnail ? [{ userMedicationId: row.userMedicationId, thumbnail: row.thumbnail, cachedAt: row.cachedAt }] : []));
+  }
+
   async touch(userMedicationId: string): Promise<void> {
     await this.db.medicationPhotoCache.update(userMedicationId, { lastViewedAt: new Date().toISOString() });
   }

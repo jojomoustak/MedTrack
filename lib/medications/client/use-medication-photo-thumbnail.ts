@@ -35,10 +35,34 @@ export function forgetPhotoThumbnail(userMedicationId: string): void {
   lastServerCheck.delete(userMedicationId);
 }
 
+let preload: Promise<void> | null = null;
+
+/**
+ * Reads every saved thumbnail into memory once, as the app starts
+ * (`app/(app)/layout.tsx`), so the avatars on the first screen show the
+ * photo on their first frame. Measured on the owner's phone (2026-10-15): a
+ * row drew its medicine's icon and swapped to the photo 40–70 ms later,
+ * on every launch, which read as Algofren "taking time to load". One quick
+ * storage read; an avatar drawn before it finishes loads its photo itself,
+ * as before. Never throws.
+ */
+export function preloadPhotoThumbnails(): Promise<void> {
+  preload ??= new DexiePhotoCacheRepository()
+    .listThumbnails()
+    .then((entries) => {
+      for (const { userMedicationId, thumbnail, cachedAt } of entries) {
+        if (!thumbnailUrls.has(userMedicationId)) thumbnailUrls.set(userMedicationId, { url: URL.createObjectURL(thumbnail), cachedAt });
+      }
+    })
+    .catch(() => {});
+  return preload;
+}
+
 /** Test seam. */
 export function __resetPhotoChecksForTests(): void {
   lastServerCheck.clear();
   thumbnailUrls.clear();
+  preload = null;
 }
 
 /**

@@ -10,6 +10,7 @@ import { AppBar } from "@/components/shell/AppBar";
 import { BottomNav } from "@/components/shell/BottomNav";
 import { OfflineBanner } from "@/components/sync/OfflineBanner";
 import { RouteSkeleton } from "@/components/shell/ScreenSkeletons";
+import { preloadPhotoThumbnails } from "@/lib/medications/client/use-medication-photo-thumbnail";
 
 /**
  * The authenticated app shell (Phase 3 §1): app bar + tab content +
@@ -42,6 +43,12 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
   // retry any outbox entries a previously-expired session left `failed`.
   useEffect(() => {
     if (session.status === "ready") notifySessionRestored();
+  }, [session.status]);
+
+  // Medicine photos in memory before the first screen's rows are drawn, so
+  // they appear with the row instead of swapping in a moment later.
+  useEffect(() => {
+    if (session.status === "ready") void preloadPhotoThumbnails();
   }, [session.status]);
 
   if (session.status === "signed-out") {

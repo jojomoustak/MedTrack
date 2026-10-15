@@ -10,7 +10,7 @@ const THUMB = new Blob(["thumb"], { type: "image/jpeg" });
 const makePhotoThumbnail = vi.fn(async () => THUMB);
 vi.mock("@/lib/medications/client/photo-thumbnail", () => ({ makePhotoThumbnail: () => makePhotoThumbnail() }));
 
-const { useMedicationPhotoThumbnail, __resetPhotoChecksForTests } = await import("@/lib/medications/client/use-medication-photo-thumbnail");
+const { useMedicationPhotoThumbnail, preloadPhotoThumbnails, __resetPhotoChecksForTests } = await import("@/lib/medications/client/use-medication-photo-thumbnail");
 
 const MED = "med-1";
 const FULL = new Blob(["a full-size phone photo"], { type: "image/jpeg" });
@@ -79,6 +79,23 @@ describe("medication avatars draw a small thumbnail, not the full photo (2026-10
     expect(fetchMock.mock.calls[0][1].headers).toEqual({ "If-None-Match": '"v1"' });
     // Nothing re-stored: the cached copy is the same one.
     expect((await new DexiePhotoCacheRepository(db).get(MED))?.cachedAt).toBe(cachedAt);
+  });
+
+  it("preloaded as the app starts, a saved photo is in the avatar's very first frame (2026-10-15)", async () => {
+    await new DexiePhotoCacheRepository(db).put({ userMedicationId: MED, blob: FULL, contentType: "image/jpeg", thumbnail: THUMB, etag: '"v1"' });
+    fetchMock.mockResolvedValue(new Response(null, { status: 304 }));
+
+    await preloadPhotoThumbnails();
+    const { result } = renderHook(() => useMedicationPhotoThumbnail(MED));
+
+    expect(result.current.status).toBe("present");
+    const firstUrl = result.current.url;
+    // Made from the stored thumbnail at preload (fake-indexeddb hands back a copy, so not THUMB itself).
+    expect(urlFor.has(firstUrl!)).toBe(true);
+    await flush();
+    // The same URL stays: the avatar's own check reuses the preloaded one.
+    expect(result.current.url).toBe(firstUrl);
+    expect(makePhotoThumbnail).not.toHaveBeenCalled();
   });
 
   it("a screen opened again shows the photo on its first frame, without asking the server", async () => {
