@@ -13,14 +13,20 @@ import { ButtonLink } from "@/components/ui/Button";
  * than a real phone, so matching by height had been hiding the real
  * differences). Measured at that width: centered logo lockup, then a
  * LEFT-aligned ~40px heading and ~19px subcopy, a full-bleed illustration,
- * circular step dots, a large rounded-rectangle button, and a centered
- * two-line sign-in prompt. The reference canvas is taller than any real
+ * a large rounded-rectangle button, and a centered two-line sign-in
+ * prompt. (The reference's slide dots were dropped, 2026-10-15: there are
+ * no slides, so they promised something that wasn't there.) The reference canvas is taller than any real
  * phone, so the illustration takes whatever height is left rather than a
  * fixed size — the one proportion that can't be copied 1:1.
  *
- * The dots are decorative (no swipe, no route change). Privacy is linked
- * from Register's fine print at the point of data collection; this
- * screen's extra line is the Greek-only notice §2.1 requires.
+ * Words (owner, 2026-10-15): written for someone who may be seriously
+ * ill. "Your health in your hands" and "take control" put the weight on
+ * them; the app is beside them and carries the remembering. No promise
+ * the app can't keep, and nothing clinical (CLAUDE.md rule 1).
+ *
+ * Privacy is linked from Register's fine print at the point of data
+ * collection; this screen's extra line is the Greek-only notice §2.1
+ * requires.
  */
 export default function WelcomePage() {
   return (
@@ -29,25 +35,19 @@ export default function WelcomePage() {
 
       <div className="mt-5 px-4">
         <h1 className="text-[40px] font-bold leading-[1.15] tracking-tight text-stone-900">
-          Η υγεία σας
+          Δίπλα σας,
           <br />
-          στα χέρια σας
+          κάθε μέρα
         </h1>
         <p className="mt-4 text-[19px] leading-[1.6] text-stone-700">
-          Καταγράψτε τα φάρμακά σας, μη χάνετε καμία δόση και πάρτε τον έλεγχο της υγείας σας.
+          Σας θυμίζουμε πότε είναι η ώρα για κάθε φάρμακο και κρατάμε το πρόγραμμά σας τακτοποιημένο, ώστε να έχετε ένα πράγμα λιγότερο να σκέφτεστε.
         </p>
       </div>
 
       <WelcomeIllustration className="-mx-7 mt-2 max-h-[420px] min-h-[190px] flex-1" />
 
-      <div className="mt-3 flex items-center justify-center gap-2.5" aria-hidden="true">
-        <span className="size-3 rounded-full bg-[#0F5534]" />
-        <span className="size-[9px] rounded-full bg-[#ADC6B6]" />
-        <span className="size-[9px] rounded-full bg-[#D1D8CF]" />
-      </div>
-
-      <ButtonLink href="/register" size="lg" fullWidth className="mt-5">
-        Ξεκινήστε τώρα
+      <ButtonLink href="/register" size="lg" fullWidth className="mt-6">
+        Ας ξεκινήσουμε
       </ButtonLink>
 
       <p className="mt-4 text-center text-[15px] text-stone-600">

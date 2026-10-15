@@ -25,7 +25,7 @@ export default function RegisterPage() {
         <BrandLockup iconSize={72} textClassName="text-[30px] leading-none" className="self-center" />
 
         <h1 className="mt-7 text-[27px] font-bold leading-tight tracking-tight text-stone-900">Δημιουργία λογαριασμού</h1>
-        <p className="mt-2 text-lg leading-snug text-stone-600">Εγγραφείτε στο MedTrack και αναλάβετε τον έλεγχο της υγείας σας.</p>
+        <p className="mt-2 text-lg leading-snug text-stone-600">Λίγα στοιχεία μόνο, και θα σας βοηθάμε να θυμάστε τα φάρμακά σας.</p>
 
         <div className="mt-6">
           <RegisterForm />
