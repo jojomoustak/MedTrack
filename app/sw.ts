@@ -174,7 +174,15 @@ const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
-  navigationPreload: true,
+  // Off (2026-10-15): in Android WebView a page load with navigation
+  // preload fails outright when the phone is offline. The preload's
+  // network error ends the navigation before this worker can answer from
+  // its saved copy, so opening MedTrack in airplane mode showed the
+  // "Χρειάζεται σύνδεση" page although every screen was saved. Found with
+  // logging on the owner's phone (main-frame ERR_INTERNET_DISCONNECTED at
+  // launch) and confirmed: the same offline reload works with preload off.
+  // Online it only saved a few ms of worker start-up.
+  navigationPreload: false,
   runtimeCaching: [
     // Health-data-bearing endpoints: never cached (module doc above).
     {
@@ -283,5 +291,12 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(Promise.all(RETIRED_CACHES.map((name) => caches.delete(name))));
+  event.waitUntil(
+    Promise.all([
+      ...RETIRED_CACHES.map((name) => caches.delete(name)),
+      // Turned on by earlier versions of this worker, and kept by the
+      // registration until something turns it off (see navigationPreload above).
+      self.registration.navigationPreload?.disable().catch(() => undefined),
+    ]),
+  );
 });
