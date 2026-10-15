@@ -7,13 +7,17 @@
  *   fresh install, a second device, or a reinstall shows an empty
  *   Today/Calendar until the user navigates away and back (found
  *   2026-10-04 with a fresh browser profile).
+ * - `"pull-progress"`: one page of a longer pull was stored, more are
+ *   coming (2026-10-15): screens show what has arrived so far, but nothing
+ *   reacts to it as a finished restore (the sync manager doesn't generate
+ *   doses from half-restored schedules; it waits for `"pull"`).
  * - `"scheduling"`: the sync manager's scheduling tick generated upcoming
  *   doses or swept overdue ones.
  *
  * The source lets the sync manager re-run its scheduling tick after a pull
  * without re-triggering itself from its own notification.
  */
-export type LocalDataSource = "pull" | "scheduling";
+export type LocalDataSource = "pull" | "pull-progress" | "scheduling";
 type Listener = (source: LocalDataSource) => void;
 
 const listeners = new Set<Listener>();

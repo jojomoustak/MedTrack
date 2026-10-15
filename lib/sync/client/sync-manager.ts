@@ -291,6 +291,12 @@ export function createSyncManager(): SyncManager {
       // device's edits) must generate their upcoming doses — and native
       // reminders — now, not at the next periodic tick up to 45 min later.
       unsubscribeLocalData = onLocalDataHydrated((source) => {
+        // Part of a longer restore: names for the medicines that arrived,
+        // but no doses from schedules whose own doses are still on the way.
+        if (source === "pull-progress") {
+          void refreshCatalogNamesNow();
+          return;
+        }
         if (source !== "pull") return;
         void runSchedulingTickNow();
         // A restore brings medications but not their catalog names — fetch them now, not after the full offline index.

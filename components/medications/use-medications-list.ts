@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { hydrateLocalDataFromServer } from "@/lib/sync/client/hydrate-local-data";
 import { readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
+import { onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
 export type MedicationsListStatus = "loading" | "ready";
@@ -35,6 +36,13 @@ function catchUpIsDue(profileId: string): boolean {
   lastCatchUpAt.set(profileId, Date.now());
   return true;
 }
+
+/**
+ * Longest a first restore may keep the list on its loading placeholders
+ * before showing what is stored (possibly nothing): a stalled network must
+ * not leave the screen loading forever. Pages that arrive later still show.
+ */
+export const FIRST_RESTORE_WAIT_MS = 8000;
 
 /** Test seam: the next mount catches up again. */
 export function __resetCatchUpForTests(): void {
@@ -70,12 +78,32 @@ export function useMedicationsList(profileId: string | null): MedicationsListSta
       setState((prev) => (prev.status === "ready" && prev.medications === medications ? prev : { status: "ready", medications }));
     }
 
+    // A restore stores its pages one at a time: show each as it lands.
+    const unsubscribe = onLocalDataHydrated(() => {
+      void repo.list(profileId!).then((list) => {
+        if (!cancelled && list.length > 0) publish(list);
+      });
+    });
+    let giveUpTimer: ReturnType<typeof setTimeout> | undefined;
+
     async function load() {
       const local = await repo.list(profileId!);
       if (cancelled) return;
-      publish(local);
+      const due = catchUpIsDue(profileId!);
+      // Nothing stored yet and a pull about to run: a first restore (just
+      // signed in, new phone, cleared data). Keep the loading placeholders
+      // rather than show "no medicines" until the medicines arrive
+      // (owner-reported after signing out and in, 2026-10-15).
+      const firstRestore = local.length === 0 && due;
+      if (firstRestore) {
+        giveUpTimer = setTimeout(() => {
+          if (!cancelled) void repo.list(profileId!).then((list) => !cancelled && publish(list));
+        }, FIRST_RESTORE_WAIT_MS);
+      } else {
+        publish(local);
+      }
 
-      if (!catchUpIsDue(profileId!)) return;
+      if (!due) return;
       await hydrateLocalDataFromServer({ userMedication: repo, profileId: profileId! });
       if (cancelled) return;
       publish(await repo.list(profileId!));
@@ -84,6 +112,8 @@ export function useMedicationsList(profileId: string | null): MedicationsListSta
     void load();
     return () => {
       cancelled = true;
+      unsubscribe();
+      if (giveUpTimer) clearTimeout(giveUpTimer);
     };
   }, [profileId, key]);
 

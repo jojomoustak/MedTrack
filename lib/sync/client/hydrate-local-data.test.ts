@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { MedTrackingDexie } from "@/lib/db-client/dexie";
+import { MedTrackingDexie, __setClientDbForTests } from "@/lib/db-client/dexie";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
 import { DexieDoseEventRepository } from "@/lib/db-client/dose-event-repository";
@@ -44,12 +44,15 @@ describe("hydrateLocalDataFromServer", () => {
 
   beforeEach(() => {
     db = new MedTrackingDexie(`test-hydrate-${crypto.randomUUID()}`);
+    // The app's database is this one, as in the app: each page is stored in one transaction on it.
+    __setClientDbForTests(db);
     userMedication = new DexieUserMedicationRepository(db);
     medicationSchedule = new DexieMedicationScheduleRepository(db);
     doseEvent = new DexieDoseEventRepository(db);
   });
 
   afterEach(async () => {
+    __setClientDbForTests(undefined);
     await db.delete();
   });
 
@@ -271,6 +274,26 @@ describe("hydrateLocalDataFromServer", () => {
       expect(await cursorStore.get("profile-1")).toBe(100);
       expect(await db.favorite.count()).toBe(100);
     });
+  });
+
+  it("a long restore lets screens show each full page as it lands, then signals the finished pull once (2026-10-15)", async () => {
+    const sources: string[] = [];
+    const unsubscribe = onLocalDataHydrated((source) => sources.push(source));
+    try {
+      const { pullChanges } = fakeFeed(3, 200, true);
+      await hydrateLocalDataFromServer({ pullChanges, favorite: new DexieFavoriteRepository(db) });
+      expect(sources).toEqual(["pull-progress", "pull-progress", "pull-progress", "pull"]);
+      expect(await db.favorite.count()).toBe(600);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it("asks for the server's largest page", async () => {
+    const limits: (number | undefined)[] = [];
+    const { pullChanges } = fakeFeed(1);
+    await hydrateLocalDataFromServer({ pullChanges: (cursor, fetchImpl, limit) => (limits.push(limit), pullChanges(cursor)) });
+    expect(limits[0]).toBe(200);
   });
 
   it("signals local views when it applied changes, and stays quiet when there was nothing new", async () => {

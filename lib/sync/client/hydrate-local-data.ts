@@ -61,6 +61,7 @@ import type { FavoriteRecord } from "@/lib/domain/favorite";
 import type { RecentlyUsedEventRecord } from "@/lib/domain/recently-used-event";
 import type { PurchaseListItemRecord, PurchaseListRecord } from "@/lib/domain/entities";
 import { getCachedProfileId } from "@/lib/auth/client/use-current-profile";
+import { getClientDb, type MedTrackingDexie } from "@/lib/db-client/dexie";
 import { logger } from "@/lib/logging/logger";
 
 export interface HydrateLocalDataDeps {
@@ -84,10 +85,19 @@ export interface HydrateLocalDataDeps {
   cursorStore?: DexieSyncPullCursorRepository;
   /** Who is signed in right now — injectable for tests; defaults to `getCachedProfileId`. */
   currentProfileId?: () => string | null;
+  /** The database the repositories write to: each page is stored in one transaction on it. Defaults to the app's. */
+  db?: MedTrackingDexie;
 }
 
 /** Upper bound on pages per call — only spreads a very large first restore across calls; progress is saved per page, so nothing is skipped. */
 const MAX_PAGES_PER_CALL = 100;
+
+/**
+ * Changes per request: the server's maximum. A first restore after signing
+ * in measured 672 changes on the owner's phone (2026-10-15), mostly dose and
+ * "recently used" history: 8 round trips of ~0.3-0.5 s at 100 per page.
+ */
+const PAGE_SIZE = 200;
 
 const inFlight = new Map<string, Promise<void>>();
 
@@ -119,6 +129,21 @@ async function runHydration(deps: HydrateLocalDataDeps): Promise<void> {
   const profileId = deps.profileId;
   const cursorStore = profileId ? (deps.cursorStore ?? new DexieSyncPullCursorRepository()) : null;
   const currentProfileId = deps.currentProfileId ?? getCachedProfileId;
+  const db = deps.db ?? getClientDb();
+  // Every table a page can write to (each repository's applyRemote touches
+  // only its own), so a whole page is stored in one transaction instead of
+  // one per change: on a phone that was most of a first restore's time.
+  const pageTables = [
+    db.userMedication,
+    db.medicationSchedule,
+    db.doseEvent,
+    db.medicationPackage,
+    db.inventoryTransaction,
+    db.favorite,
+    db.recentlyUsedEvent,
+    db.purchaseList,
+    db.purchaseListItem,
+  ];
   let applied = 0;
 
   try {
@@ -129,38 +154,43 @@ async function runHydration(deps: HydrateLocalDataDeps): Promise<void> {
       // fetching, and again before storing, rather than file one user's
       // records — or cursor — under another's profile.
       if (profileId && currentProfileId() !== profileId) return stopForProfileSwitch(applied);
-      const response = await pull(cursor);
+      const response = await pull(cursor, fetch, PAGE_SIZE);
       if (profileId && ((response.profileId !== undefined && response.profileId !== profileId) || currentProfileId() !== profileId)) {
         return stopForProfileSwitch(applied);
       }
-      for (const change of response.changes) {
-        if (!change.record) continue;
-        if (change.entityType === "userMedication") {
-          await userMedication.applyRemote(change.record as unknown as UserMedicationRecord);
-        } else if (change.entityType === "medicationSchedule") {
-          await medicationSchedule.applyRemote(change.record as unknown as MedicationScheduleRecord);
-        } else if (change.entityType === "doseEvent") {
-          await doseEvent.applyRemote(change.record as unknown as DoseEventRecord);
-        } else if (change.entityType === "medicationPackage") {
-          await medicationPackage.applyRemote(change.record as unknown as MedicationPackageRecord);
-        } else if (change.entityType === "medicationInventoryTransaction") {
-          await inventoryTransaction.applyRemote(change.record as unknown as InventoryTransactionRecord);
-        } else if (change.entityType === "favorite") {
-          await favorite.applyRemote(change.record as unknown as FavoriteRecord);
-        } else if (change.entityType === "recentlyUsedEvent") {
-          await recentlyUsedEvent.applyRemote(change.record as unknown as RecentlyUsedEventRecord);
-        } else if (change.entityType === "purchaseList") {
-          await purchaseList.applyRemote(change.record as unknown as PurchaseListRecord);
-        } else if (change.entityType === "purchaseListItem") {
-          await purchaseListItem.applyRemote(change.record as unknown as PurchaseListItemRecord);
+      await db.transaction("rw", pageTables, async () => {
+        for (const change of response.changes) {
+          if (!change.record) continue;
+          if (change.entityType === "userMedication") {
+            await userMedication.applyRemote(change.record as unknown as UserMedicationRecord);
+          } else if (change.entityType === "medicationSchedule") {
+            await medicationSchedule.applyRemote(change.record as unknown as MedicationScheduleRecord);
+          } else if (change.entityType === "doseEvent") {
+            await doseEvent.applyRemote(change.record as unknown as DoseEventRecord);
+          } else if (change.entityType === "medicationPackage") {
+            await medicationPackage.applyRemote(change.record as unknown as MedicationPackageRecord);
+          } else if (change.entityType === "medicationInventoryTransaction") {
+            await inventoryTransaction.applyRemote(change.record as unknown as InventoryTransactionRecord);
+          } else if (change.entityType === "favorite") {
+            await favorite.applyRemote(change.record as unknown as FavoriteRecord);
+          } else if (change.entityType === "recentlyUsedEvent") {
+            await recentlyUsedEvent.applyRemote(change.record as unknown as RecentlyUsedEventRecord);
+          } else if (change.entityType === "purchaseList") {
+            await purchaseList.applyRemote(change.record as unknown as PurchaseListRecord);
+          } else if (change.entityType === "purchaseListItem") {
+            await purchaseListItem.applyRemote(change.record as unknown as PurchaseListItemRecord);
+          }
         }
-      }
+      });
       applied += response.changes.length;
       if (response.nextCursor === cursor || response.changes.length === 0) break;
       cursor = response.nextCursor;
       // Saved only after the whole page is applied: an interrupted pass
       // resumes at this page, never past records it didn't store.
       if (cursorStore && profileId) await cursorStore.set(profileId, cursor);
+      // A full page means more are coming: screens show what has arrived so
+      // far (medicines after the first page of a restore, not the last).
+      if (response.changes.length >= PAGE_SIZE) notifyLocalDataHydrated("pull-progress");
     }
   } catch (err) {
     logger.warn("sync.hydrate.local_data_failed", { message: (err as Error).message });

@@ -5,6 +5,7 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { MedTrackingDexie, __setClientDbForTests } from "@/lib/db-client/dexie";
 import { clearSnapshots } from "@/lib/client-cache/snapshot";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
+import { notifyLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
 const hydrate = vi.fn(async () => {});
@@ -97,6 +98,40 @@ describe("screens remember what they showed (2026-10-09)", () => {
     expect(again.result.current.medications).toHaveLength(2);
     await flush();
     expect(again.result.current.medications).toHaveLength(3);
+  });
+
+  it("right after signing in (nothing stored yet), shows loading, not 'no medicines', until the restore brings them (2026-10-15)", async () => {
+    await db.userMedication.clear();
+    let finishRestore = () => {};
+    hydrate.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishRestore = resolve;
+        }),
+    );
+
+    const { result } = renderHook(() => useMedicationsList(PROFILE_ID));
+    await flush();
+    expect(result.current.status).toBe("loading");
+
+    // A first page lands mid-restore: its medicines show straight away.
+    await db.userMedication.put(med("a", "Metformin"));
+    act(() => notifyLocalDataHydrated("pull-progress"));
+    await flush();
+    expect(result.current.status).toBe("ready");
+    expect(result.current.medications.map((m) => m.id)).toEqual(["a"]);
+
+    await db.userMedication.put(med("b", "Vitamin D"));
+    await act(async () => finishRestore());
+    await flush();
+    expect(result.current.medications.map((m) => m.id).sort()).toEqual(["a", "b"]);
+  });
+
+  it("a new account with nothing to restore still ends on its empty list", async () => {
+    await db.userMedication.clear();
+    const { result } = renderHook(() => useMedicationsList(PROFILE_ID));
+    await flush();
+    expect(result.current).toEqual({ status: "ready", medications: [] });
   });
 
   it("asks the server at most once a minute, not on every screen", async () => {
