@@ -40,7 +40,7 @@
  * against `baseVersion`) is deliberately NEVER bumped by a photo write —
  * see `setUserMedicationPhotoBlobKey`.
  */
-import { del, get, put } from "@vercel/blob";
+import { del, get, list, put } from "@vercel/blob";
 import { sql } from "drizzle-orm";
 import { getDb, type Db, type TestableDb } from "@/lib/db/client";
 import { withProfileScope } from "@/lib/db/rls";
@@ -50,6 +50,12 @@ import { ConfigError, NotFoundError } from "@/lib/errors/app-error";
 import { validateMedicationPhotoUpload } from "@/lib/validation/medication-photo";
 import { logger } from "@/lib/logging/logger";
 import { pseudonymize } from "@/lib/logging/redact";
+import { makeThumbnailOrNull, putThumbnail, thumbnailPathnameFor } from "@/lib/medications/server/photo-thumbnails";
+
+/** A photo and its thumbnail (which may not exist: older photos, a failed make), always deleted together. */
+function withThumbnail(photoBlobKey: string): string[] {
+  return [photoBlobKey, thumbnailPathnameFor(photoBlobKey)];
+}
 
 export interface UploadMedicationPhotoInput {
   profileId: string;
@@ -197,7 +203,13 @@ export async function uploadMedicationPhoto(input: UploadMedicationPhotoInput, d
   const pathname = medicationPhotoPathname(input.profileId, input.userMedicationId);
   // `@vercel/blob`'s `PutBody` doesn't include a bare `Uint8Array` (only
   // `Buffer`/`Blob`/`Readable`/etc.) — a plain, zero-copy wrap, not a data copy.
-  const uploaded = await put(pathname, Buffer.from(input.file.bytes.buffer, input.file.bytes.byteOffset, input.file.bytes.byteLength), {
+  const photoBytes = Buffer.from(input.file.bytes.buffer, input.file.bytes.byteOffset, input.file.bytes.byteLength);
+  // Its small thumbnail, for avatars (`photo-thumbnails.ts`), made before
+  // anything is stored, so all that's left after the database points at the
+  // new photo is one quick write. Best-effort: without one the photo is
+  // still saved, and the thumbnail is made the first time a device asks.
+  const thumbnail = await makeThumbnailOrNull(photoBytes);
+  const uploaded = await put(pathname, photoBytes, {
     access: "private",
     addRandomSuffix: true,
     contentType,
@@ -208,9 +220,11 @@ export async function uploadMedicationPhoto(input: UploadMedicationPhotoInput, d
   const medicationRef = pseudonymize(input.userMedicationId);
   logger.info("medication.photo.uploaded", { medicationRef });
 
+  if (thumbnail) await putThumbnail(uploaded.pathname, thumbnail);
+
   if (owned.photoBlobKey) {
     try {
-      await del(owned.photoBlobKey);
+      await del(withThumbnail(owned.photoBlobKey));
     } catch (err) {
       logger.warn("medication.photo.previous_blob_cleanup_failed", {
         medicationRef,
@@ -276,7 +290,7 @@ export async function deleteMedicationPhoto(params: { profileId: string; userMed
   const medicationRef = pseudonymize(params.userMedicationId);
   try {
     assertBlobConfigured();
-    await del(owned.photoBlobKey);
+    await del(withThumbnail(owned.photoBlobKey));
     logger.info("medication.photo.deleted", { medicationRef });
   } catch (err) {
     logger.warn("medication.photo.delete_blob_failed", { medicationRef, error: err instanceof Error ? err.message : String(err) });
@@ -309,5 +323,27 @@ export async function collectMedicationPhotoBlobKeysForProfile(profileId: string
 /** Deletes one blob by its stored pathname/key. Exposed standalone (not wrapped in try/catch here) so callers like `deleteAccount` control their own best-effort/logging policy around it. */
 export async function deleteMedicationPhotoBlobByKey(blobKey: string): Promise<void> {
   assertBlobConfigured();
-  await del(blobKey);
+  // One call, and it throws: account deletion logs the key of anything left
+  // behind for the runbook (security review, 2026-10-15).
+  await del(withThumbnail(blobKey));
+}
+
+/**
+ * Everything stored under a profile's photo folder, whether or not a row
+ * still points at it: thumbnails or photos left behind by a race (a backfill
+ * meeting a replacement, an interrupted upload). Account deletion's final
+ * sweep after the per-key deletes. Throws on failure, for the caller to log.
+ */
+export async function deleteAllMedicationPhotoBlobsForProfile(profileId: string): Promise<number> {
+  assertBlobConfigured();
+  let cursor: string | undefined;
+  let deleted = 0;
+  do {
+    const page = await list({ prefix: `medication-photos/${profileId}/`, cursor, limit: 1000 });
+    const pathnames = page.blobs.map((blob) => blob.pathname);
+    if (pathnames.length > 0) await del(pathnames);
+    deleted += pathnames.length;
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor);
+  return deleted;
 }

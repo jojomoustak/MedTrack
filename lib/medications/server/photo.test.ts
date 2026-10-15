@@ -7,12 +7,15 @@ vi.mock("@vercel/blob", () => ({
   put: vi.fn(),
   get: vi.fn(),
   del: vi.fn(),
+  list: vi.fn(),
 }));
 
 // Imported AFTER the mock so these bindings are the mocked functions.
-import { del, get, put } from "@vercel/blob";
+import { del, get, list, put } from "@vercel/blob";
 import {
   collectMedicationPhotoBlobKeysForProfile,
+  deleteAllMedicationPhotoBlobsForProfile,
+  deleteMedicationPhotoBlobByKey,
   deleteMedicationPhoto,
   getMedicationPhoto,
   uploadMedicationPhoto,
@@ -150,7 +153,26 @@ describe("uploadMedicationPhoto", () => {
     expect(pathname).toBe(`medication-photos/${PROFILE_ID}/${MEDICATION_ID}`);
     expect(options).toMatchObject({ access: "private", addRandomSuffix: true, contentType: "image/jpeg" });
 
-    expect(del).toHaveBeenCalledWith("medication-photos/old-key");
+    expect(del).toHaveBeenCalledWith(["medication-photos/old-key", "medication-photos/old-key.thumb.jpg"]);
+  });
+
+  it("stores the photo's small thumbnail beside it, and removes the replaced photo's thumbnail (2026-10-15)", async () => {
+    const sharp = (await import("sharp")).default;
+    const realJpeg = new Uint8Array(await sharp({ create: { width: 640, height: 480, channels: 3, background: "#c33" } }).jpeg().toBuffer());
+    const db = buildFakeDb([
+      ["set_config_result", selectResult({ id: MEDICATION_ID, photo_blob_key: "medication-photos/old-key" })],
+      ["set_config_result", { rowCount: 1 }],
+    ]);
+    vi.mocked(put).mockResolvedValue({ pathname: "medication-photos/new-key" } as never);
+
+    await uploadMedicationPhoto({ profileId: PROFILE_ID, userMedicationId: MEDICATION_ID, file: { bytes: realJpeg, contentType: "image/jpeg", size: realJpeg.length } }, db);
+
+    expect(put).toHaveBeenCalledTimes(2);
+    const [thumbPath, , thumbOptions] = vi.mocked(put).mock.calls[1];
+    expect(thumbPath).toBe("medication-photos/new-key.thumb.jpg");
+    expect(thumbOptions).toMatchObject({ access: "private", addRandomSuffix: false, contentType: "image/jpeg" });
+    // The replaced photo and its thumbnail go together.
+    expect(del).toHaveBeenCalledWith(["medication-photos/old-key", "medication-photos/old-key.thumb.jpg"]);
   });
 
   it("does not throw if cleaning up the PREVIOUS blob fails — the new photo already saved successfully", async () => {
@@ -247,7 +269,7 @@ describe("deleteMedicationPhoto", () => {
       ["set_config_result", { rowCount: 1 }],
     ]);
     await deleteMedicationPhoto({ profileId: PROFILE_ID, userMedicationId: MEDICATION_ID }, db);
-    expect(del).toHaveBeenCalledWith("medication-photos/real");
+    expect(del).toHaveBeenCalledWith(["medication-photos/real", "medication-photos/real.thumb.jpg"]);
   });
 
   it("throws NotFoundError for a medication that isn't owned by this profile / doesn't exist", async () => {
@@ -265,5 +287,25 @@ describe("collectMedicationPhotoBlobKeysForProfile", () => {
   it("returns an empty array when nothing has a photo (the common case)", async () => {
     const db = buildFakeDb([["set_config_result", { rows: [] }]]);
     await expect(collectMedicationPhotoBlobKeysForProfile(PROFILE_ID, db)).resolves.toEqual([]);
+  });
+});
+
+describe("account deletion's photo cleanup (2026-10-15)", () => {
+  it("deletes a photo and its thumbnail in one call that throws on failure, so the key gets logged", async () => {
+    vi.mocked(del).mockRejectedValueOnce(new Error("blob outage"));
+    await expect(deleteMedicationPhotoBlobByKey("medication-photos/p/k")).rejects.toThrow();
+    expect(del).toHaveBeenCalledWith(["medication-photos/p/k", "medication-photos/p/k.thumb.jpg"]);
+  });
+
+  it("sweeps everything still under the profile's photo folder, page by page", async () => {
+    vi.mocked(list)
+      .mockResolvedValueOnce({ blobs: [{ pathname: `medication-photos/${PROFILE_ID}/a` }, { pathname: `medication-photos/${PROFILE_ID}/a.thumb.jpg` }], hasMore: true, cursor: "c1" } as never)
+      .mockResolvedValueOnce({ blobs: [{ pathname: `medication-photos/${PROFILE_ID}/orphan.thumb.jpg` }], hasMore: false } as never);
+
+    expect(await deleteAllMedicationPhotoBlobsForProfile(PROFILE_ID)).toBe(3);
+
+    expect(vi.mocked(list).mock.calls[0][0]).toMatchObject({ prefix: `medication-photos/${PROFILE_ID}/` });
+    expect(vi.mocked(list).mock.calls[1][0]).toMatchObject({ cursor: "c1" });
+    expect(del).toHaveBeenCalledWith([`medication-photos/${PROFILE_ID}/orphan.thumb.jpg`]);
   });
 });

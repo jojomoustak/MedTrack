@@ -16,7 +16,7 @@ import { ALLOWED_MEDICATION_PHOTO_CONTENT_TYPES, MAX_MEDICATION_PHOTO_BYTES } fr
 import { playSound } from "@/lib/sound/client/play-sound";
 import { browserLiveCamera, stopStream, type LiveCamera } from "@/lib/camera/client/live-camera";
 import { makePhotoThumbnail, shrinkPhotoForUpload } from "@/lib/medications/client/photo-thumbnail";
-import { forgetPhotoThumbnail } from "@/lib/medications/client/use-medication-photo-thumbnail";
+import { removeLocalPhotoThumbnail, setLocalPhotoThumbnail, syncPhotoThumbnails } from "@/lib/medications/client/use-medication-photo-thumbnail";
 import { CameraViewfinder } from "@/components/medications/CameraViewfinder";
 
 const POLL_INTERVAL_MS = 1500;
@@ -279,14 +279,14 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
           clearBlob();
           setPhotoStatus("absent");
           await cache.remove(userMedicationId);
-          forgetPhotoThumbnail(userMedicationId);
+          await removeLocalPhotoThumbnail(userMedicationId);
           return;
         }
         showBlob(result.blob);
         setPhotoStatus("present");
         const thumbnail = await makePhotoThumbnail(result.blob);
         await cache.put({ userMedicationId, blob: result.blob, contentType: result.blob.type || "application/octet-stream", thumbnail, etag: result.etag });
-        forgetPhotoThumbnail(userMedicationId);
+        await setLocalPhotoThumbnail(userMedicationId, thumbnail);
       } catch (err) {
         if (cancelled) return;
         if (cached) return; // already showing a good cached copy — degrade silently
@@ -338,7 +338,9 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
       try {
         const { etag } = await uploadPhotoRequest(userMedicationId, file, fetcher);
         await cache.put({ userMedicationId, blob: file, contentType: file.type, thumbnail, etag });
-        forgetPhotoThumbnail(userMedicationId);
+        await setLocalPhotoThumbnail(userMedicationId, thumbnail);
+        // The server's own thumbnail and version for it, for every device.
+        void syncPhotoThumbnails();
         setPendingOp(null);
         setRefreshNonce((n) => n + 1);
       } catch (err) {
@@ -347,7 +349,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
           // Optimistic local display — but the pending badge below is what
           // keeps this honest rather than silently claiming "saved".
           await cache.put({ userMedicationId, blob: file, contentType: file.type, thumbnail });
-          forgetPhotoThumbnail(userMedicationId);
+          await setLocalPhotoThumbnail(userMedicationId, thumbnail);
           setPendingOp("upload");
           setRefreshNonce((n) => n + 1);
         } else {
@@ -396,14 +398,14 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     try {
       await deletePhotoRequest(userMedicationId, fetcher);
       await cache.remove(userMedicationId);
-      forgetPhotoThumbnail(userMedicationId);
+      await removeLocalPhotoThumbnail(userMedicationId);
       setPendingOp(null);
       setRefreshNonce((n) => n + 1);
     } catch (err) {
       if (isOfflineError(err)) {
         await outbox.enqueue({ userMedicationId, operation: "delete" });
         await cache.remove(userMedicationId);
-        forgetPhotoThumbnail(userMedicationId);
+        await removeLocalPhotoThumbnail(userMedicationId);
         setPendingOp("delete");
         setRefreshNonce((n) => n + 1);
       } else {

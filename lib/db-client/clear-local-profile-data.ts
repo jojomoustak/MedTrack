@@ -54,6 +54,7 @@ export async function clearAllLocalProfileData(db: MedTrackingDexie = getClientD
       db.recentlyUsedEvent,
       db.unresolvedScan,
       db.medicationPhotoCache,
+      db.photoThumbnail,
       db.photoOutboxEntry,
       db.medicationPackage,
       db.inventoryTransaction,
@@ -75,6 +76,7 @@ export async function clearAllLocalProfileData(db: MedTrackingDexie = getClientD
         db.recentlyUsedEvent.clear(),
         db.unresolvedScan.clear(),
         db.medicationPhotoCache.clear(),
+        db.photoThumbnail.clear(),
         db.photoOutboxEntry.clear(),
       ]);
     },

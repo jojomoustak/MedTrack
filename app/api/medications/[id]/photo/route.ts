@@ -16,7 +16,8 @@ import { NextResponse } from "next/server";
 import { requireSessionFromRequest } from "@/lib/auth/session";
 import { deleteMedicationPhoto, getMedicationPhoto, uploadMedicationPhoto } from "@/lib/medications/server/photo";
 import { toSafeErrorResponse } from "@/lib/errors/http";
-import { ValidationError } from "@/lib/errors/app-error";
+import { RateLimitedError, ValidationError } from "@/lib/errors/app-error";
+import { isRateLimited } from "@/lib/catalog/server/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -25,6 +26,10 @@ const PHOTO_FORM_FIELD = "photo";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireSessionFromRequest(request);
+    // Every upload decodes and resizes an image on the server (its thumbnail): bounded per account.
+    if (isRateLimited(`photo-upload:${session.accountId}`)) {
+      throw new RateLimitedError("Πολλές μεταφορτώσεις. Δοκιμάστε ξανά σε λίγο.");
+    }
     const { id } = await params;
 
     let formData: FormData;

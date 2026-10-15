@@ -88,6 +88,20 @@ export interface OfflineIndexMetaRecord {
  * `lib/medications/client/photo-cache-repository.ts`) rather than
  * cached forever, for the same reason.
  */
+/**
+ * A medication photo's small thumbnail, as avatars show it (2026-10-15):
+ * every photo's, not just recently viewed ones, since they're ~10 KB each.
+ * Filled by one request for all of them (`syncPhotoThumbnails`); the full
+ * photo stays in `medicationPhotoCache`, for the photo screen only.
+ */
+export interface LocalPhotoThumbnail {
+  userMedicationId: string;
+  /** The server's version of the photo it was made from; null for one made on this device and not confirmed by the server yet. */
+  version: string | null;
+  blob: Blob;
+  updatedAt: string;
+}
+
 export interface LocalMedicationPhotoCache {
   userMedicationId: string;
   blob: Blob;
@@ -158,6 +172,7 @@ export class MedTrackingDexie extends Dexie {
   offlineIndexMeta!: EntityTable<OfflineIndexMetaRecord, "id">;
   learnedGtinMapping!: EntityTable<LearnedGtinMapping, "gtin">;
   medicationPhotoCache!: EntityTable<LocalMedicationPhotoCache, "userMedicationId">;
+  photoThumbnail!: EntityTable<LocalPhotoThumbnail, "userMedicationId">;
   photoOutboxEntry!: EntityTable<LocalPhotoOutboxEntry, "userMedicationId">;
   medicationPackage!: EntityTable<MedicationPackageRecord, "id">;
   inventoryTransaction!: EntityTable<InventoryTransactionRecord, "id">;
@@ -277,6 +292,23 @@ export class MedTrackingDexie extends Dexie {
     this.version(9).stores({
       syncPullCursor: "profileId",
     });
+
+    // v10: every photo's thumbnail in a table of its own (2026-10-15), so
+    // avatars never need the full photo or the network. Seeded from the
+    // thumbnails the photo cache already holds (version unknown: the next
+    // thumbnail sync confirms or replaces them), so nothing flickers after
+    // the update.
+    this.version(10)
+      .stores({
+        photoThumbnail: "userMedicationId",
+      })
+      .upgrade(async (tx) => {
+        const now = new Date().toISOString();
+        const cached = await tx.table<LocalMedicationPhotoCache>("medicationPhotoCache").toArray();
+        await tx.table<LocalPhotoThumbnail>("photoThumbnail").bulkPut(
+          cached.flatMap((row) => (row.thumbnail ? [{ userMedicationId: row.userMedicationId, version: null, blob: row.thumbnail, updatedAt: now }] : [])),
+        );
+      });
 
     // Single choke point for "a new outbox entry was durably written" —
     // every repository's write path (direct `enqueue()`, or a raw

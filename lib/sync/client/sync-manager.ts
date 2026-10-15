@@ -65,6 +65,7 @@ import { onOfflineIndexUpdated } from "@/lib/catalog/client/offline-index-signal
 import { DexiePhotoOutboxRepository } from "@/lib/medications/client/photo-outbox-repository";
 import { DexiePhotoCacheRepository } from "@/lib/medications/client/photo-cache-repository";
 import { drainPhotoOutbox, type PhotoDrainSummary } from "@/lib/medications/client/photo-outbox-worker";
+import { syncPhotoThumbnails } from "@/lib/medications/client/use-medication-photo-thumbnail";
 import { onPhotoOutboxWrite } from "@/lib/medications/client/photo-outbox-signal";
 import { getCachedProfileId } from "@/lib/auth/client/use-current-profile";
 import { sweepMissedDoseEvents, topUpDoseEventWindow } from "@/lib/scheduling/client/dose-event-generator";
@@ -141,6 +142,15 @@ export function createSyncManager(): SyncManager {
   let runningSchedulingTick = false;
   let schedulingTickRequested = false;
   let unsubscribeLocalData: (() => void) | undefined;
+  let unsubscribeForeground: (() => void) | undefined;
+  let lastThumbnailSyncAt = 0;
+
+  /** Every photo thumbnail this device lacks, in one request (`syncPhotoThumbnails`). Only when someone is signed in, like the other syncs. */
+  function syncPhotoThumbnailsNow(): void {
+    if (!getCachedProfileId()) return;
+    lastThumbnailSyncAt = Date.now();
+    void syncPhotoThumbnails();
+  }
   let unsubscribeNetwork: (() => void) | undefined;
   let unsubscribeOutbox: (() => void) | undefined;
   let unsubscribePhotoOutbox: (() => void) | undefined;
@@ -204,6 +214,8 @@ export function createSyncManager(): SyncManager {
       if (summary.attempted > 0) {
         logger.info("sync.manager.photo_outbox_drained", { ...summary });
       }
+      // A queued photo reached the server: its thumbnail and version, for avatars.
+      if (summary.synced > 0) syncPhotoThumbnailsNow();
       return summary;
     } finally {
       drainingPhotoOutbox = false;
@@ -282,6 +294,7 @@ export function createSyncManager(): SyncManager {
           void syncOfflineIndexNow();
           void syncLearnedMappingsNow();
           void drainPhotoOutboxNow();
+          syncPhotoThumbnailsNow();
         }
       });
       unsubscribeOutbox = onOutboxWrite(() => void drainNow());
@@ -299,6 +312,8 @@ export function createSyncManager(): SyncManager {
         }
         if (source !== "pull") return;
         void runSchedulingTickNow();
+        // A restore (signing in, a new phone): the restored medicines' photos.
+        syncPhotoThumbnailsNow();
         // A restore brings medications but not their catalog names — fetch them now, not after the full offline index.
         void refreshCatalogNamesNow();
       });
@@ -321,7 +336,17 @@ export function createSyncManager(): SyncManager {
         void syncOfflineIndexNow();
         void syncLearnedMappingsNow();
         void drainPhotoOutboxNow();
+        syncPhotoThumbnailsNow();
       });
+      // Back in the foreground: a photo added or removed on another device
+      // shows here (at most once a minute).
+      const onVisibility = () => {
+        if (document.visibilityState === "visible" && Date.now() - lastThumbnailSyncAt > 60_000) syncPhotoThumbnailsNow();
+      };
+      if (typeof document !== "undefined") {
+        document.addEventListener("visibilitychange", onVisibility);
+        unsubscribeForeground = () => document.removeEventListener("visibilitychange", onVisibility);
+      }
       schedulingTickTimer = setInterval(() => void runSchedulingTickNow(), SCHEDULING_TICK_INTERVAL_MS);
     },
     stop() {
@@ -332,6 +357,7 @@ export function createSyncManager(): SyncManager {
       unsubscribeSessionRestored?.();
       unsubscribeLocalData?.();
       unsubscribeCatalogNames?.();
+      unsubscribeForeground?.();
       if (schedulingTickTimer) clearInterval(schedulingTickTimer);
     },
     drainNow,

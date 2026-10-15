@@ -309,7 +309,7 @@ import { getDb, type Db, type TestableDb } from "@/lib/db/client";
 import { withProfileScope } from "@/lib/db/rls";
 import * as schema from "@/lib/db/schema";
 import { hashAccountId } from "@/lib/account/server/account-id-hash";
-import { collectMedicationPhotoBlobKeysForProfile, deleteMedicationPhotoBlobByKey } from "@/lib/medications/server/photo";
+import { collectMedicationPhotoBlobKeysForProfile, deleteAllMedicationPhotoBlobsForProfile, deleteMedicationPhotoBlobByKey } from "@/lib/medications/server/photo";
 import { logger } from "@/lib/logging/logger";
 
 export type DeletionMethod = "user_initiated" | "admin" | "legal_request";
@@ -391,6 +391,14 @@ export async function deleteAccount(request: DeleteAccountRequest, dbOverride?: 
           error: err instanceof Error ? err.message : String(err),
         });
       }
+    }
+    // Then everything still under the profile's photo folder, whether or not
+    // a row points at it: a thumbnail or photo left behind by a race (security
+    // review, 2026-10-15). Same rule: logged, never blocks the erasure.
+    try {
+      await deleteAllMedicationPhotoBlobsForProfile(profileId);
+    } catch (err) {
+      logger.warn("account.delete.photo_folder_sweep_failed", { accountIdHash, error: err instanceof Error ? err.message : String(err) });
     }
 
     await withProfileScope(

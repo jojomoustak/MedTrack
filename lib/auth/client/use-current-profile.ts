@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { clearSnapshots } from "@/lib/client-cache/snapshot";
+import { notifyProfileCleared } from "@/lib/auth/client/profile-cleared-signal";
 
 export type CurrentProfileState =
   | { status: "loading" }
@@ -75,9 +76,11 @@ export function getCachedProfileId(): string | null {
 }
 
 export function clearCachedProfile(): void {
-  // Same moment, same reason: the screens' in-memory snapshots and the
-  // remembered greeting name belong to the profile being signed out.
+  // Same moment, same reason: the screens' in-memory snapshots, photo
+  // thumbnails and the remembered greeting name belong to the profile being
+  // signed out.
   clearSnapshots();
+  notifyProfileCleared();
   try {
     localStorage.removeItem(CACHED_PROFILE_KEY);
     localStorage.removeItem(CACHED_FIRST_NAME_KEY);
