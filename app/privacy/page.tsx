@@ -7,17 +7,15 @@ import { BrandWordmark } from "@/components/shell/BrandMark";
  * `/welcome`/`/login`/`/register`) — required to exist at a stable URL
  * before the Google OAuth consent screen can leave "Testing" status
  * (ADR-003 addendum A.8) and before this app can be submitted to the Play
- * Store. Content is a DRAFT reflecting what this codebase actually does
- * today (verified against `lib/account/server/delete-account.ts`,
+ * Store. Content reflects what this codebase actually does today
+ * (verified against `lib/account/server/delete-account.ts`,
  * `lib/account/server/export-account-data.ts`, `lib/logging/redact.ts`,
  * `lib/db/rls.ts`, and the processor list in `docs/product/
- * phase-0-product-definition.md` §10/§12) — NOT a finalized legal
- * document. `docs/product/phase-0-product-definition.md` §12 explicitly
- * tracks retention periods and a full processor inventory as open,
- * not-yet-legally-reviewed decisions; this page must be reviewed by the
- * user (and, before a real public launch, by a lawyer) before the
- * placeholder contact details below are filled in and the draft notice is
- * removed.
+ * phase-0-product-definition.md` §10/§12). The owner reviewed it, removed
+ * the "draft" notice and gave the contact address (2026-10-15); it has not
+ * had a legal review, which a wider public launch should still get
+ * (retention periods and the full processor inventory remain open in
+ * phase-0 §12).
  *
  * Presentation matched to the reference mockup (2026-10-04): back arrow
  * beside the compact wordmark, a large bold title, larger body text,
@@ -40,17 +38,6 @@ export default function PrivacyPage() {
           <p className="mt-1 text-lg text-stone-500">
             Τελευταία ενημέρωση: 15 Οκτ 2026
           </p>
-        </div>
-
-        <div
-          role="note"
-          className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
-        >
-          <strong>Προσχέδιο.</strong> Αυτό το κείμενο περιγράφει με ακρίβεια τι
-          κάνει η εφαρμογή σήμερα, αλλά δεν έχει ακόμα ελεγχθεί από νομικό
-          σύμβουλο και τα στοιχεία επικοινωνίας παρακάτω είναι προσωρινά. Πρέπει
-          να αντικατασταθούν πριν η εφαρμογή γίνει διαθέσιμη σε πραγματικούς
-          χρήστες πέρα από δοκιμαστική χρήση.
         </div>
 
         <section className="flex flex-col gap-2">
@@ -216,9 +203,9 @@ export default function PrivacyPage() {
           <p className="text-[17px] leading-relaxed text-stone-700">
             Για ερωτήσεις σχετικά με το απόρρητο ή για να ασκήσετε τα δικαιώματά
             σας:{" "}
-            <span className="font-medium">
-              [προσωρινό placeholder email επικοινωνίας]
-            </span>
+            <a href="mailto:jojomoustak@gmail.com" className="font-semibold text-accent-700 underline underline-offset-2">
+              jojomoustak@gmail.com
+            </a>
             .
           </p>
         </section>
