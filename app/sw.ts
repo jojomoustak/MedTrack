@@ -159,6 +159,7 @@ const APP_SCREENS = [
   "/lists/item",
   "/profile",
   "/profile/delete",
+  "/profile/report",
   "/welcome",
   "/register",
   "/forgot-password",

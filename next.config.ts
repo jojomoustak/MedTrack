@@ -42,7 +42,10 @@ const SECURITY_HEADERS = [
       // Google account photos (Profile avatar, for accounts linked to Google).
       "img-src 'self' blob: data: https://*.googleusercontent.com",
       "font-src 'self' data:",
-      "connect-src 'self'",
+      // `blob:`: the Android app (Median) saves a file made on the phone (the
+      // doctor's report, the data export) by reading it from its `blob:`
+      // address, which `'self'` doesn't cover (2026-10-16).
+      "connect-src 'self' blob:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -57,6 +60,14 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   env: { NEXT_PUBLIC_SOUND_REVISIONS: soundRevisions() },
+  // jsPDF's optional HTML/SVG extras, unused by the doctor's report (see the stand-in's doc).
+  turbopack: {
+    resolveAlias: {
+      html2canvas: "./lib/reports/client/pdf-unused-extra.ts",
+      canvg: "./lib/reports/client/pdf-unused-extra.ts",
+      dompurify: "./lib/reports/client/pdf-unused-extra.ts",
+    },
+  },
   experimental: {
     // Every screen is prebuilt and only changes with a deploy, so a screen
     // prefetched once stays usable for 30 minutes instead of the default 5

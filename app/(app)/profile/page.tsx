@@ -8,6 +8,7 @@ import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
 import { clearAllLocalProfileData, hasPendingLocalWork } from "@/lib/db-client/clear-local-profile-data";
 import { cancelAllNativeReminders } from "@/lib/reminders/client/native-reminder-sync";
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
+import { saveFile } from "@/lib/platform/save-file";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Button } from "@/components/ui/Button";
 import { EmailVerificationBanner } from "@/components/profile/EmailVerificationBanner";
@@ -38,6 +39,7 @@ const ROW = "flex min-h-16 w-full items-center gap-4 px-4 text-left text-[17px] 
  * - "Link Google account" (ADR-003 addendum A.5) is an authenticated
  *   `linkSocial()` — the only way a Google identity can be attached to an
  *   existing account.
+ * - "Report for the doctor" (`/profile/report`) is a PDF made on the phone.
  * - Data export (GDPR Art. 15/20) is a one-shot download.
  * - "Delete account / health data" (CLAUDE.md rule 9) stays visually
  *   distinct from routine rows — red, a warning icon AND explicit text,
@@ -60,13 +62,7 @@ export default function ProfilePage() {
     try {
       const res = await fetch("/api/account/export");
       if (!res.ok) throw new Error("export request failed");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `medtrack-export-${profileId}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      saveFile(await res.blob(), `medtrack-export-${profileId}.json`);
     } catch {
       setExportError("Η λήψη απέτυχε. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.");
     } finally {
@@ -148,6 +144,14 @@ export default function ProfilePage() {
       </div>
 
       <nav aria-label="Ρυθμίσεις" className="surface-card divide-y divide-stone-100 overflow-hidden">
+        <Link href="/profile/report" onClick={() => playSound("button")} className={ROW}>
+          <RowIcon>
+            <path d="M6.5 3.5h7l4 4V20a.5.5 0 0 1-.5.5H7a.5.5 0 0 1-.5-.5Z" />
+            <path d="M13.5 3.5v4h4M9 12h6M9 15.5h6" />
+          </RowIcon>
+          <span className="flex-1">Αναφορά για τον γιατρό</span>
+          <ChevronIcon />
+        </Link>
         <button type="button" onClick={handleExport} disabled={exporting} aria-busy={exporting} className={`${ROW} disabled:opacity-60`}>
           <RowIcon>
             <path d="M12 4v11m0 0-4-4m4 4 4-4" />
