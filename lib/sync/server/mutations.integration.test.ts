@@ -132,6 +132,98 @@ describe.skipIf(!connectionString)("sync API against a real Postgres instance", 
     expect((conflictResult[0].serverRecord as { name?: string })?.name).toBe("Device A's edit");
   });
 
+  describe("purchaseList delete (2026-10-17: lists couldn't be deleted)", () => {
+    async function listWithItems(ctx: { profileId: string; accountId: string }, labels: string[]) {
+      const listId = randomUUID();
+      await applyMutations({ ...ctx, db }, [{ clientMutationId: randomUUID(), entityType: "purchaseList", entityId: listId, operation: "create", payload: { name: "Φαρμακείο" } }]);
+      const itemIds: string[] = [];
+      for (const label of labels) {
+        const itemId = randomUUID();
+        itemIds.push(itemId);
+        const [result] = await applyMutations({ ...ctx, db }, [
+          { clientMutationId: randomUUID(), entityType: "purchaseListItem", entityId: itemId, operation: "create", payload: { purchaseListId: listId, label } },
+        ]);
+        expect(result.result).toBe("applied");
+      }
+      return { listId, itemIds };
+    }
+
+    it("deletes the list and its items in one step, and other devices pull both", async () => {
+      const ctx = await seedAccountAndProfile();
+      const { listId, itemIds } = await listWithItems(ctx, ["Algofren", "Βαμβάκι"]);
+      const other = await listWithItems(ctx, ["Γάλα"]);
+      const before = await pullChanges(ctx.profileId, ctx.accountId, 0, 500, db);
+
+      const [result] = await applyMutations({ ...ctx, db }, [
+        { clientMutationId: randomUUID(), entityType: "purchaseList", entityId: listId, operation: "delete", payload: {}, baseVersion: 1 },
+      ]);
+
+      expect(result.result).toBe("applied");
+      expect(result.serverRecord).toMatchObject({ id: listId, version: 2 });
+      expect((result.serverRecord as { deletedAt?: string | null }).deletedAt).toBeTruthy();
+
+      const items = await adminPool.query("SELECT id, deleted_at, version FROM purchase_list_item WHERE purchase_list_id = $1", [listId]);
+      expect(items.rows).toHaveLength(2);
+      expect(items.rows.every((row) => row.deleted_at !== null && row.version === 2)).toBe(true);
+      const untouched = await adminPool.query("SELECT deleted_at FROM purchase_list_item WHERE purchase_list_id = $1", [other.listId]);
+      expect(untouched.rows.map((row) => row.deleted_at)).toEqual([null]);
+
+      const pulled = await pullChanges(ctx.profileId, ctx.accountId, before.nextCursor, 500, db);
+      const deletes = pulled.changes.filter((c) => c.operation === "delete").map((c) => [c.entityType, c.entityId]);
+      expect(deletes).toEqual(expect.arrayContaining([["purchaseList", listId], ...itemIds.map((id) => ["purchaseListItem", id])]));
+      expect(deletes).toHaveLength(3);
+      for (const change of pulled.changes) expect((change.record as { deletedAt?: string | null } | undefined)?.deletedAt).toBeTruthy();
+    });
+
+    it("wins over a rename made elsewhere, and a later rename of the deleted list is a conflict", async () => {
+      const ctx = await seedAccountAndProfile();
+      const { listId } = await listWithItems(ctx, []);
+      await applyMutations({ ...ctx, db }, [
+        { clientMutationId: randomUUID(), entityType: "purchaseList", entityId: listId, operation: "update", payload: { name: "Renamed elsewhere" }, baseVersion: 1 },
+      ]);
+
+      // Built on version 1: the rename moved it to 2, the deletion still goes through.
+      const [deleted] = await applyMutations({ ...ctx, db }, [
+        { clientMutationId: randomUUID(), entityType: "purchaseList", entityId: listId, operation: "delete", payload: {}, baseVersion: 1 },
+      ]);
+      expect(deleted.result).toBe("applied");
+      expect(deleted.serverRecord).toMatchObject({ version: 3 });
+
+      const [rename] = await applyMutations({ ...ctx, db }, [
+        { clientMutationId: randomUUID(), entityType: "purchaseList", entityId: listId, operation: "update", payload: { name: "Too late" }, baseVersion: 3 },
+      ]);
+      expect(rename.result).toBe("conflict");
+    });
+
+    it("deleting again changes nothing", async () => {
+      const ctx = await seedAccountAndProfile();
+      const { listId } = await listWithItems(ctx, ["Algofren"]);
+      await applyMutations({ ...ctx, db }, [{ clientMutationId: randomUUID(), entityType: "purchaseList", entityId: listId, operation: "delete", payload: {} }]);
+
+      const [again] = await applyMutations({ ...ctx, db }, [{ clientMutationId: randomUUID(), entityType: "purchaseList", entityId: listId, operation: "delete", payload: {} }]);
+      expect(again.result).toBe("applied");
+      expect(again.serverRecord).toMatchObject({ version: 2 });
+      const log = await adminPool.query("SELECT count(*)::int AS n FROM sync_change_log WHERE entity_id = $1 AND operation = 'delete'", [listId]);
+      expect(log.rows[0].n).toBe(1);
+    });
+
+    it("can't delete another profile's list", async () => {
+      const owner = await seedAccountAndProfile();
+      const intruder = await seedAccountAndProfile();
+      const { listId } = await listWithItems(owner, ["Algofren"]);
+
+      const [result] = await applyMutations({ ...intruder, db }, [
+        { clientMutationId: randomUUID(), entityType: "purchaseList", entityId: listId, operation: "delete", payload: {} },
+      ]);
+
+      expect(result.serverRecord).toBeUndefined();
+      const list = await adminPool.query("SELECT deleted_at FROM purchase_list WHERE id = $1", [listId]);
+      expect(list.rows[0].deleted_at).toBeNull();
+      const items = await adminPool.query("SELECT deleted_at FROM purchase_list_item WHERE purchase_list_id = $1", [listId]);
+      expect(items.rows.map((row) => row.deleted_at)).toEqual([null]);
+    });
+  });
+
   it("idempotency: replaying the exact same clientMutationId returns the cached result without double-applying", async () => {
     const { accountId, profileId } = await seedAccountAndProfile();
     const listId = randomUUID();

@@ -52,6 +52,8 @@ export interface PurchaseListRepository {
   create(input: { id: string; profileId: string; name: string; clientMutationId: string }): Promise<PurchaseListRecord>;
   /** Local edit: bumps the local `version` optimistically and enqueues an outbox entry carrying the version it was BASED ON (`baseVersion`), so the server can detect a real conflict. */
   rename(id: string, name: string, clientMutationId: string): Promise<PurchaseListRecord>;
+  /** Local delete: tombstones the list and its items and enqueues one outbox entry, all in one transaction (the server tombstones the items too). */
+  remove(id: string, clientMutationId: string): Promise<PurchaseListRecord>;
   /** Applies a record pulled/acked from the server — never generates a new outbox entry. */
   applyRemote(record: PurchaseListRecord): Promise<void>;
   /** Marks the row `conflict` (Phase 1 §5's "surfaced conflict on true divergence") rather than silently overwriting it. */

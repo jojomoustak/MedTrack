@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { usePurchaseListItems } from "@/lib/lists/client/use-purchase-list-items";
@@ -10,6 +11,9 @@ import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
 import { DexiePurchaseListRepository } from "@/lib/db-client/purchase-list-repository";
 import { useUndoableDelete } from "@/components/lists/use-undoable-delete";
+import { DeleteListSection } from "@/components/lists/DeleteListSection";
+import { newId } from "@/lib/domain/ids";
+import { logger } from "@/lib/logging/logger";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FIELD_INPUT, FIELD_LABEL } from "@/components/ui/field-styles";
@@ -147,7 +151,8 @@ function ItemRow({
  * Phase 3 §2.7 Lists — one list's items (reference mockup, screen 20). Add
  * free text, or tap one of your medications to add it linked; tick items
  * off as bought; "no longer needed" and delete (with undo) sit behind each
- * row's "⋯". A bought medication offers "add to stock" (Phase 13).
+ * row's "⋯". A bought medication offers "add to stock" (Phase 13). The
+ * whole list can be deleted at the bottom (2026-10-17).
  */
 export default function PurchaseListDetailPage() {
   const params = { id: usePathId(2) };
@@ -163,6 +168,9 @@ export default function PurchaseListDetailPage() {
   const [showPrice, setShowPrice] = useState(false);
   const [priceEuros, setPriceEuros] = useState("");
   const [adding, setAdding] = useState(false);
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -194,6 +202,22 @@ export default function PurchaseListDetailPage() {
     setPriceEuros("");
     setShowPrice(false);
     setAdding(false);
+  }
+
+  /** Saved on this phone at once, offline too, and sent with the next sync; then back to the lists. */
+  async function deleteList() {
+    if (deleting) return;
+    playSound("button");
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await new DexiePurchaseListRepository().remove(listId, newId());
+      router.replace("/lists");
+    } catch (err) {
+      logger.warn("lists.delete_list_failed", { message: err instanceof Error ? err.message : String(err) });
+      setDeleteError("Η λίστα δεν διαγράφηκε. Δοκιμάστε ξανά.");
+      setDeleting(false);
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -422,6 +446,12 @@ export default function PurchaseListDetailPage() {
             })}
           </ul>
         </section>
+      )}
+
+      {list && list.deletedAt === null && status === "ready" && (
+        <div className="pt-4">
+          <DeleteListSection listName={list.name} itemCount={items.length} onConfirmDelete={() => void deleteList()} deleting={deleting} error={deleteError} />
+        </div>
       )}
     </div>
   );

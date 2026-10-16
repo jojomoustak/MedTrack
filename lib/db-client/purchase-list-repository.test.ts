@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MedTrackingDexie } from "@/lib/db-client/dexie";
 import { DexieOutboxRepository } from "@/lib/db-client/outbox-repository";
 import { DexiePurchaseListRepository } from "@/lib/db-client/purchase-list-repository";
+import { DexiePurchaseListItemRepository } from "@/lib/db-client/purchase-list-item-repository";
 
 describe("DexiePurchaseListRepository (optimistic concurrency)", () => {
   let db: MedTrackingDexie;
@@ -97,5 +98,58 @@ describe("DexiePurchaseListRepository (optimistic concurrency)", () => {
     expect(stored?.name).toBe("Server-authoritative name");
     expect(stored?.version).toBe(5);
     expect(stored?.syncState).toBe("synced");
+  });
+
+  describe("remove() (2026-10-17: lists couldn't be deleted)", () => {
+    async function listWithItems(name: string, labels: string[]) {
+      const id = crypto.randomUUID();
+      await repo.create({ id, profileId, name, clientMutationId: crypto.randomUUID() });
+      const items = new DexiePurchaseListItemRepository(db, outbox);
+      const created = [];
+      for (const label of labels) {
+        created.push(await items.create({ id: crypto.randomUUID(), clientMutationId: crypto.randomUUID(), purchaseListId: id, label, profileId }));
+      }
+      return { id, items: created };
+    }
+
+    it("tombstones the list and every item on it, and sends one delete for the list", async () => {
+      const target = await listWithItems("Φαρμακείο", ["Algofren", "Βαμβάκι"]);
+      const other = await listWithItems("Σούπερ μάρκετ", ["Γάλα"]);
+      const before = (await outbox.listPending(new Date().toISOString(), profileId)).length;
+
+      const deleteMutationId = crypto.randomUUID();
+      const deleted = await repo.remove(target.id, deleteMutationId);
+
+      expect(deleted).toMatchObject({ syncState: "pending", version: 2, clientMutationId: deleteMutationId });
+      expect(deleted.deletedAt).not.toBeNull();
+      expect((await repo.list(profileId)).map((l) => l.name)).toEqual(["Σούπερ μάρκετ"]);
+
+      const targetItems = await db.purchaseListItem.where("purchaseListId").equals(target.id).toArray();
+      expect(targetItems.every((item) => item.deletedAt === deleted.deletedAt && item.version === 2)).toBe(true);
+      const otherItems = await db.purchaseListItem.where("purchaseListId").equals(other.id).toArray();
+      expect(otherItems.map((item) => item.deletedAt)).toEqual([null]);
+
+      const pending = await outbox.listPending(new Date().toISOString(), profileId);
+      expect(pending).toHaveLength(before + 1);
+      const entry = pending.find((e) => e.clientMutationId === deleteMutationId);
+      expect(entry).toMatchObject({ entityType: "purchaseList", entityId: target.id, operation: "delete", profileId, payload: {} });
+    });
+
+    it("leaves an item that was already deleted as it was", async () => {
+      const target = await listWithItems("Φαρμακείο", ["Algofren"]);
+      await new DexiePurchaseListItemRepository(db, outbox).remove(target.items[0].id, crypto.randomUUID());
+      const removedAt = (await db.purchaseListItem.get(target.items[0].id))?.deletedAt;
+
+      await repo.remove(target.id, crypto.randomUUID());
+
+      const item = await db.purchaseListItem.get(target.items[0].id);
+      expect(item?.deletedAt).toBe(removedAt);
+      expect(item?.version).toBe(2);
+    });
+
+    it("throws for a list that doesn't exist locally, writing nothing", async () => {
+      await expect(repo.remove(crypto.randomUUID(), crypto.randomUUID())).rejects.toThrow("not found locally");
+      expect(await outbox.listPending(new Date().toISOString(), profileId)).toHaveLength(0);
+    });
   });
 });

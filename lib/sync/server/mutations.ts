@@ -326,6 +326,60 @@ async function applyRecentlyUsedEventMutation(ctx: MutationContext, mutation: Sy
 }
 
 async function applyPurchaseListMutation(ctx: MutationContext, mutation: SyncMutationRequest): Promise<SyncMutationResult> {
+  // Delete (owner-reported 2026-10-17: lists couldn't be deleted at all).
+  // The deletion wins over any other edit: a list's only other edit is its
+  // name, and the person asked for the whole list to go, so there's no
+  // version check and never a conflict; deleting again is a no-op. Its
+  // items go with it, in the same statement, each logged as deleted so
+  // every other device removes them too. Scoped to this profile in the
+  // statement itself as well as by RLS: a delete is never taken on trust.
+  if (mutation.operation === "delete") {
+    const [rows] = await withProfileScope(
+      ctx.profileId,
+      (db) => [
+        db.execute(sql`
+        WITH updated AS (
+          UPDATE purchase_list
+          SET deleted_at = now(), version = version + 1, updated_at = now(), client_mutation_id = ${mutation.clientMutationId}::uuid
+          WHERE id = ${mutation.entityId}::uuid AND profile_id = ${ctx.profileId}::uuid AND deleted_at IS NULL
+          RETURNING *
+        ),
+        deleted_items AS (
+          UPDATE purchase_list_item
+          SET deleted_at = now(), version = version + 1, updated_at = now(), client_mutation_id = ${mutation.clientMutationId}::uuid
+          WHERE purchase_list_id = ${mutation.entityId}::uuid AND profile_id = ${ctx.profileId}::uuid AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM updated)
+          RETURNING profile_id, id, version
+        ),
+        current_row AS (
+          SELECT * FROM updated
+          UNION ALL
+          SELECT * FROM purchase_list WHERE id = ${mutation.entityId}::uuid AND profile_id = ${ctx.profileId}::uuid AND NOT EXISTS (SELECT 1 FROM updated)
+        ),
+        recorded AS (
+          INSERT INTO sync_mutation (client_mutation_id, profile_id, entity_type, entity_id, result, response_snapshot)
+          SELECT ${mutation.clientMutationId}::uuid, ${ctx.profileId}::uuid, 'purchaseList', ${mutation.entityId}::uuid, 'applied', to_jsonb(current_row.*)
+          FROM current_row
+          RETURNING 1
+        ),
+        logged AS (
+          INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation, server_version, occurred_at)
+          SELECT profile_id, 'purchaseList', id, 'delete', version, now() FROM updated
+          RETURNING 1
+        ),
+        logged_items AS (
+          INSERT INTO sync_change_log (profile_id, entity_type, entity_id, operation, server_version, occurred_at)
+          SELECT profile_id, 'purchaseListItem', id, 'delete', version, now() FROM deleted_items
+          RETURNING 1
+        )
+        SELECT current_row.* FROM current_row;
+      `),
+      ],
+      { db: ctx.db },
+    );
+    const record = (rows as { rows?: Record<string, unknown>[] }).rows?.[0];
+    return { clientMutationId: mutation.clientMutationId, result: "applied", serverRecord: record };
+  }
+
   const payload = mutation.payload as { name?: string };
   const name = payload.name;
   if (!name || typeof name !== "string") {

@@ -105,6 +105,55 @@ export class DexiePurchaseListRepository implements PurchaseListRepository {
     return updated;
   }
 
+  /**
+   * Deletes a list and everything on it (owner-reported 2026-10-17: lists
+   * couldn't be deleted). One outbox entry for the list: the server deletes
+   * its items in the same step and logs each, so they aren't sent one by
+   * one. Here they're tombstoned with it, in one transaction, so nothing of
+   * the list is left showing on this phone either, offline included.
+   */
+  async remove(id: string, clientMutationId: string): Promise<PurchaseListRecord> {
+    const existing = await this.db.purchaseList.get(id);
+    if (!existing) {
+      throw new Error(`Cannot delete purchase list ${id}: not found locally.`);
+    }
+
+    const now = new Date().toISOString();
+    const deleted: PurchaseListRecord = { ...existing, deletedAt: now, updatedAt: now, version: existing.version + 1, clientMutationId, syncState: "pending" };
+
+    const outboxEntry: OutboxEntry<Record<string, never>> = {
+      clientMutationId,
+      entityType: "purchaseList",
+      entityId: id,
+      operation: "delete",
+      profileId: existing.profileId,
+      payload: {},
+      // Not checked by the server: a deletion wins over a rename (`applyPurchaseListMutation`).
+      baseVersion: existing.version,
+      createdAt: now,
+      seq: nextOutboxSeq(),
+      status: "pending",
+      attempts: 0,
+      nextAttemptAt: now,
+    };
+
+    await this.db.transaction("rw", this.db.purchaseList, this.db.purchaseListItem, this.db.outbox, async () => {
+      await this.db.purchaseList.put(deleted);
+      await this.db.purchaseListItem
+        .where("purchaseListId")
+        .equals(id)
+        .filter((item) => item.deletedAt === null)
+        .modify((item) => {
+          item.deletedAt = now;
+          item.updatedAt = now;
+          item.version += 1;
+        });
+      await this.db.outbox.put(outboxEntry as unknown as OutboxEntry);
+    });
+
+    return deleted;
+  }
+
   async applyRemote(record: PurchaseListRecord): Promise<void> {
     await this.db.purchaseList.put({ ...record, syncState: "synced" });
   }
