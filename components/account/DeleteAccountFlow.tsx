@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { FIELD_INPUT } from "@/components/ui/field-styles";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
 import { clearAllLocalProfileData } from "@/lib/db-client/clear-local-profile-data";
+import { cancelAllNativeReminders } from "@/lib/reminders/client/native-reminder-sync";
+import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import { createNetworkMonitor } from "@/lib/sync/client/network";
 import { playSound } from "@/lib/sound/client/play-sound";
 
@@ -100,6 +102,8 @@ export function DeleteAccountFlow() {
       // offline session render a deleted user's local IndexedDB data to
       // whoever opens the app next (see clearCachedProfile's doc comment).
       clearCachedProfile();
+      // The deleted account's reminders stop on this phone too (2026-10-16).
+      await cancelAllNativeReminders(getDefaultMobilePlatform());
       // Offline audit (2026-08-29): unlike plain sign-out, it's always
       // safe to wipe every local table unconditionally here -- the
       // account no longer exists server-side, so nothing still queued

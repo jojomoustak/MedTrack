@@ -220,6 +220,15 @@ export interface MobilePlatform {
   cancelRemindersForDoseEvent(doseEventId: string): Promise<NativeReminderCommandResult>;
 
   /**
+   * Cancels and deletes every native reminder on this phone, stops any
+   * ringing and takes their notifications down: the profile signed out or
+   * deleted the account (2026-10-16; reminders kept firing after sign-out,
+   * showing the signed-out person's medicines). Signing in again re-arms
+   * the new profile's through the usual reconcile pass.
+   */
+  cancelAllReminders(): Promise<NativeReminderCommandResult>;
+
+  /**
    * Invokes this app's own native Google Sign-In command (Android
    * Credential Manager / native account picker — never a WebView-hosted
    * Google page, which Google's own policy blocks inside an embedded

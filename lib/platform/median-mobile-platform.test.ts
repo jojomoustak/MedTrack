@@ -293,3 +293,24 @@ describe("MedianMobilePlatform.signInWithGoogle()", () => {
     await assertion;
   });
 });
+
+describe("MedianMobilePlatform.cancelAllReminders() (2026-10-16)", () => {
+  beforeEach(() => {
+    (window as unknown as { median?: unknown }).median = {};
+    stubLocation();
+  });
+
+  afterEach(() => {
+    delete (window as unknown as { median?: unknown }).median;
+    vi.useRealTimers();
+  });
+
+  it("navigates to the cancelAllReminders command and resolves the native result", async () => {
+    const location = stubLocation();
+    const promise = new MedianMobilePlatform().cancelAllReminders();
+    expect(new URL(location.href).pathname).toBe("/cancelAllReminders");
+
+    invokeNativeCallback({ status: "ok" }, false, "CancelAllReminders");
+    await expect(promise).resolves.toEqual({ status: "ok" });
+  });
+});

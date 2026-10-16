@@ -272,6 +272,7 @@ export function createSyncManager(): SyncManager {
         catalogCache: new DexieCatalogCacheRepository(),
         offlineIndex: new DexieOfflineIndexRepository(),
         platform: new MedianMobilePlatform(),
+        isStillSignedIn: () => getCachedProfileId() === profileId,
       });
     } catch (err) {
       logger.warn("sync.manager.scheduling_tick_failed", { message: err instanceof Error ? err.message : String(err) });

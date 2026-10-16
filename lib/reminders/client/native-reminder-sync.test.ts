@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { syncNativeRemindersNow } from "@/lib/reminders/client/native-reminder-sync";
+import { cancelAllNativeReminders, syncNativeRemindersNow } from "@/lib/reminders/client/native-reminder-sync";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
@@ -185,5 +185,51 @@ describe("syncNativeRemindersNow", () => {
     await syncNativeRemindersNow("profile-1", deps);
 
     expect(deps.doseEvents.listForProfileInRange).toHaveBeenCalledWith("profile-1", "2025-12-31T22:00:00.000Z", "2026-01-04T00:00:00.000Z");
+  });
+});
+
+describe("signing out stops this phone's reminders (2026-10-16)", () => {
+  it("a reconcile pass stops arming the moment its profile is signed out", async () => {
+    let signedIn = true;
+    const doses = [makeDose({ id: "d1" }), makeDose({ id: "d2" }), makeDose({ id: "d3" })];
+    const upsertReminder = vi.fn(async () => {
+      signedIn = false; // signed out right after the first reminder was armed
+      return { status: "ok" as const };
+    });
+    const deps = makeDeps(doses, {
+      isStillSignedIn: () => signedIn,
+      platform: { isAvailable: () => true, upsertReminder, cancelRemindersForDoseEvent: vi.fn().mockResolvedValue({ status: "ok" }) },
+    });
+
+    await syncNativeRemindersNow("profile-1", deps);
+
+    expect(upsertReminder).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancelAllNativeReminders asks the phone to drop every reminder", async () => {
+    const platform = { isAvailable: () => true, cancelAllReminders: vi.fn().mockResolvedValue({ status: "ok" }) };
+    await cancelAllNativeReminders(platform);
+    expect(platform.cancelAllReminders).toHaveBeenCalledTimes(1);
+  });
+
+  it("does nothing outside the app, and never throws", async () => {
+    const browser = { isAvailable: () => false, cancelAllReminders: vi.fn() };
+    await cancelAllNativeReminders(browser);
+    expect(browser.cancelAllReminders).not.toHaveBeenCalled();
+
+    const failing = { isAvailable: () => true, cancelAllReminders: vi.fn().mockRejectedValue(new Error("bridge gone")) };
+    await expect(cancelAllNativeReminders(failing)).resolves.toBeUndefined();
+  });
+
+  it("never holds signing out up: gives up waiting after a few seconds", async () => {
+    vi.useFakeTimers();
+    try {
+      const hanging = { isAvailable: () => true, cancelAllReminders: vi.fn(() => new Promise<never>(() => {})) };
+      const done = cancelAllNativeReminders(hanging);
+      await vi.advanceTimersByTimeAsync(3000);
+      await expect(done).resolves.toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

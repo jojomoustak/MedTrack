@@ -54,6 +54,8 @@ export interface NativeReminderSyncDeps {
   offlineIndex: Pick<OfflineIndexRepository, "getById">;
   platform: Pick<MobilePlatform, "isAvailable" | "upsertReminder" | "cancelRemindersForDoseEvent">;
   now?: () => Date;
+  /** Whether `profileId` is still signed in: a pass that started just before signing out stops arming at once (`cancelAllNativeReminders`). */
+  isStillSignedIn?: () => boolean;
 }
 
 /**
@@ -63,6 +65,32 @@ export interface NativeReminderSyncDeps {
  */
 function doseText(dose: DoseEventRecord): string {
   return doseQuantityLabel(dose.quantityValue, dose.quantityUnit) ?? "Υπενθύμιση δόσης";
+}
+
+/** Longest signing out waits for the phone to drop its reminders before going on anyway. */
+const CANCEL_ALL_WAIT_MS = 3000;
+
+/**
+ * Every reminder on this phone stops: armed alarms, stored reminders (so
+ * nothing re-arms after a reboot), the ringing and the notification. For
+ * signing out and deleting the account only, never for an expired session:
+ * someone whose session lapsed still takes their medicines, and their
+ * reminders must keep coming until they sign in again (safety first,
+ * CLAUDE.md). A no-op outside the native app; never throws, and never holds
+ * signing out up for more than a few seconds.
+ */
+export async function cancelAllNativeReminders(platform: Pick<MobilePlatform, "isAvailable" | "cancelAllReminders">): Promise<void> {
+  if (!platform.isAvailable()) return;
+  try {
+    const result = await Promise.race([
+      platform.cancelAllReminders(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), CANCEL_ALL_WAIT_MS)),
+    ]);
+    if (result === null) logger.warn("reminders.cancel_all.timed_out", {});
+    else if (result.status !== "ok") logger.warn("reminders.cancel_all.failed", { errorCode: result.errorCode });
+  } catch (err) {
+    logger.warn("reminders.cancel_all.failed", { message: err instanceof Error ? err.message : String(err) });
+  }
 }
 
 export async function syncNativeRemindersNow(profileId: string, deps: NativeReminderSyncDeps): Promise<void> {
@@ -76,6 +104,7 @@ export async function syncNativeRemindersNow(profileId: string, deps: NativeRemi
   const medicationNameCache = new Map<string, string>();
 
   for (const dose of doseEvents) {
+    if (deps.isStillSignedIn && !deps.isStillSignedIn()) return;
     try {
       if (isTerminalDoseEventStatus(dose.status)) {
         await deps.platform.cancelRemindersForDoseEvent(dose.id);

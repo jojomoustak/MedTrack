@@ -289,6 +289,10 @@ export class MedianMobilePlatform implements MobilePlatform {
     });
   }
 
+  cancelAllReminders(): Promise<NativeReminderCommandResult> {
+    return callBridgeCommand("cancelAllReminders", "CancelAllReminders", normalizeNativeReminderCommandResult, REMINDER_COMMAND_TIMEOUT_MS);
+  }
+
   /**
    * `median://medtracking/signInWithGoogle` — this app's own native
    * command (see the interface doc for why this is a custom bridge

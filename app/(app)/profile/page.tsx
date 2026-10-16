@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
 import { clearAllLocalProfileData, hasPendingLocalWork } from "@/lib/db-client/clear-local-profile-data";
+import { cancelAllNativeReminders } from "@/lib/reminders/client/native-reminder-sync";
+import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { EmailVerificationBanner } from "@/components/profile/EmailVerificationBanner";
 import { ReminderPermissionToggle } from "@/components/profile/ReminderPermissionToggle";
@@ -80,6 +82,11 @@ export default function ProfilePage() {
     // shell from rendering again without a fresh login; wiping Dexie below
     // is a second, best-effort layer.
     clearCachedProfile();
+
+    // Reminders live natively and kept firing after signing out, showing this
+    // person's medicines (owner-reported, 2026-10-16): stop every one on this
+    // phone. Local, so it works offline too; never holds signing out up.
+    await cancelAllNativeReminders(getDefaultMobilePlatform());
 
     // Offline audit (2026-08-29): wiping local data unconditionally would
     // silently discard any not-yet-synced write — and once signOut()
