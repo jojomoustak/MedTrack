@@ -3,6 +3,7 @@
 import { getClientDb } from "@/lib/db-client/dexie";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
 import { DexieInventoryTransactionRepository } from "@/lib/db-client/inventory-transaction-repository";
+import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-schedule-repository";
 import { DexieCatalogCacheRepository } from "@/lib/db-client/catalog-cache-repository";
 import { DexieOfflineIndexRepository } from "@/lib/db-client/offline-index-repository";
 import { cacheMissingCatalogProducts } from "@/lib/catalog/client/cache-missing-catalog-products";
@@ -20,8 +21,9 @@ const UNKNOWN_CATALOG_NAME = "Φάρμακο από κατάλογο";
  */
 export async function loadDoctorReport(profileId: string, range: ReportRange, personName: string | null): Promise<DoctorReport> {
   const db = getClientDb();
-  const [medications, transactions, profileDoses] = await Promise.all([
+  const [medications, schedules, transactions, profileDoses] = await Promise.all([
     new DexieUserMedicationRepository(db).list(profileId),
+    new DexieMedicationScheduleRepository(db).list(profileId),
     new DexieInventoryTransactionRepository(db).listForProfile(profileId),
     // Every dose, not only scheduled ones: one recorded with no scheduled time is placed by when it was taken.
     db.doseEvent.where("profileId").equals(profileId).toArray(),
@@ -57,6 +59,7 @@ export async function loadDoctorReport(profileId: string, range: ReportRange, pe
     names,
     fullNames,
     strengths,
+    schedules,
     doseEvents: profileDoses,
     transactions,
   });

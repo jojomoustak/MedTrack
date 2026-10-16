@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { DoctorReport, DoctorReportDose } from "@/lib/reports/doctor-report";
-import { loadReportFonts, renderDoctorReportPdf, reportFileName } from "@/lib/reports/client/render-doctor-report-pdf";
+import type { DoctorReport, DoctorReportDose, StatusCounts } from "@/lib/reports/doctor-report";
+import { loadReportFonts, percentLabel, renderDoctorReportPdf, reportFileName } from "@/lib/reports/client/render-doctor-report-pdf";
 
 const fontFile = (name: string) => readFileSync(path.join(process.cwd(), "public", "fonts", name));
 const FONTS = { regular: fontFile("Manrope-Regular.ttf").toString("base64"), bold: fontFile("Manrope-Bold.ttf").toString("base64") };
@@ -20,11 +20,37 @@ function report(doseCount: number): DoctorReport {
       takenAt: i % 7 === 0 ? null : at,
     };
   });
+  const counts = (list: DoctorReportDose[]): StatusCounts => ({
+    total: list.length,
+    taken: list.filter((d) => d.status === "taken").length,
+    takenLate: 0,
+    skipped: 0,
+    missed: list.filter((d) => d.status === "missed").length,
+    unrecorded: 0,
+  });
   return {
     personName: "Μαρία Παπαδοπούλου",
     range: { from: new Date(2026, 9, 1), to: new Date(2026, 9, 31, 23, 59) },
     createdAt: new Date(2026, 9, 31, 18, 5),
-    medicines: [{ name: "FLAGYL CAPS 500MG/CAP BTX30", strength: "500 mg", form: "Κάψουλα", treatment: "Ενεργό", stock: "24 κάψουλες" }],
+    summary: {
+      overall: counts(doses),
+      daysWithDoses: new Set(doses.map((d) => d.day)).size,
+      daysAllTaken: 0,
+      byMedicine: ["FLAGYL 500mg", "Αλγοφρέν"].map((label) => ({ label, counts: counts(doses.filter((d) => d.medicine === label)) })),
+      byTimeOfDay: [{ label: "Πρωί (05:00–11:59)", counts: counts(doses) }],
+      byPeriodUnit: "week",
+      byPeriod: [{ label: "01/10 – 04/10", counts: counts(doses) }],
+    },
+    medicines: [
+      {
+        name: "FLAGYL CAPS 500MG/CAP BTX30",
+        details: "500 mg · Κάψουλα",
+        schedule: ["2 φορές την ημέρα · 08:00, 20:00 · 1 κάψουλα"],
+        treatment: "Ενεργό",
+        stock: "24 κάψουλες",
+        stockDays: 12,
+      },
+    ],
     doses,
   };
 }
@@ -41,7 +67,6 @@ describe("renderDoctorReportPdf", () => {
     // Both weights embedded (not a built-in font, which has no Greek).
     expect(raw.match(/\/FontFile2/g)).toHaveLength(2);
     expect(raw).toContain("/BaseFont /Manrope");
-    expect(raw.match(/\/Type \/Page\b/g)).toHaveLength(1);
   });
 
   it("runs onto more pages for a long period", async () => {
@@ -53,6 +78,10 @@ describe("renderDoctorReportPdf", () => {
     const empty = { ...report(0), medicines: [] };
     const raw = await pdfText(await renderDoctorReportPdf(empty, FONTS));
     expect(raw.startsWith("%PDF-")).toBe(true);
+  });
+
+  it("shows a share as a whole percentage, never rounding to 0% or 100% when that isn't exactly so", () => {
+    expect([percentLabel(null), percentLabel(0), percentLabel(1), percentLabel(4 / 7), percentLabel(0.996), percentLabel(0.003)]).toEqual(["—", "0%", "100%", "57%", "99%", "1%"]);
   });
 
   it("names the file by its period, in Latin letters", () => {

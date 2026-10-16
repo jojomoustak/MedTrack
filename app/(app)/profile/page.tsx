@@ -8,7 +8,6 @@ import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
 import { clearAllLocalProfileData, hasPendingLocalWork } from "@/lib/db-client/clear-local-profile-data";
 import { cancelAllNativeReminders } from "@/lib/reminders/client/native-reminder-sync";
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
-import { saveFile } from "@/lib/platform/save-file";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Button } from "@/components/ui/Button";
 import { EmailVerificationBanner } from "@/components/profile/EmailVerificationBanner";
@@ -40,7 +39,9 @@ const ROW = "flex min-h-16 w-full items-center gap-4 px-4 text-left text-[17px] 
  *   `linkSocial()` — the only way a Google identity can be attached to an
  *   existing account.
  * - "Report for the doctor" (`/profile/report`) is a PDF made on the phone.
- * - Data export (GDPR Art. 15/20) is a one-shot download.
+ *   The JSON data download that used to sit beside it was removed at the
+ *   owner's request (2026-10-17); `/api/account/export` stays for when a
+ *   self-service GDPR export (Art. 15/20) is wanted again.
  * - "Delete account / health data" (CLAUDE.md rule 9) stays visually
  *   distinct from routine rows — red, a warning icon AND explicit text,
  *   never color alone — and leads to the multi-step flow at
@@ -50,25 +51,8 @@ export default function ProfilePage() {
   const { data } = authClient.useSession();
   const router = useRouter();
   const profileId = useProfileId();
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
   /** Changes not sent yet: signing out asks first (2026-10-16). */
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
-
-  async function handleExport() {
-    playSound("button");
-    setExportError(null);
-    setExporting(true);
-    try {
-      const res = await fetch("/api/account/export");
-      if (!res.ok) throw new Error("export request failed");
-      saveFile(await res.blob(), `medtrack-export-${profileId}.json`);
-    } catch {
-      setExportError("Η λήψη απέτυχε. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.");
-    } finally {
-      setExporting(false);
-    }
-  }
 
   /**
    * Changes not sent yet stay on this phone after signing out (see below)
@@ -152,14 +136,6 @@ export default function ProfilePage() {
           <span className="flex-1">Αναφορά για τον γιατρό</span>
           <ChevronIcon />
         </Link>
-        <button type="button" onClick={handleExport} disabled={exporting} aria-busy={exporting} className={`${ROW} disabled:opacity-60`}>
-          <RowIcon>
-            <path d="M12 4v11m0 0-4-4m4 4 4-4" />
-            <path d="M5 17v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2" />
-          </RowIcon>
-          <span className="flex-1">{exporting ? "Λήψη…" : "Λήψη των δεδομένων μου"}</span>
-          <ChevronIcon />
-        </button>
         <Link href="/privacy" onClick={() => playSound("button")} className={ROW}>
           <RowIcon>
             <path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6Z" />
@@ -169,11 +145,6 @@ export default function ProfilePage() {
           <ChevronIcon />
         </Link>
       </nav>
-      {exportError && (
-        <p role="alert" className="-mt-2 text-[15px] font-medium text-red-700">
-          {exportError}
-        </p>
-      )}
 
       <section className="surface-card flex flex-col gap-3 p-4" aria-labelledby="account-heading">
         <h2 id="account-heading" className="text-[17px] font-semibold text-stone-900">

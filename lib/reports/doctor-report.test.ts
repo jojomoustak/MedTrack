@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { DoseEventRecord, DoseEventStatus } from "@/lib/domain/dose-event";
 import type { InventoryTransactionRecord } from "@/lib/domain/inventory-transaction";
+import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
-import { buildDoctorReport, parseLocalDate, reportRange, type DoctorReportInput } from "@/lib/reports/doctor-report";
+import { buildDoctorReport, parseLocalDate, reportRange, takenShare, type DoctorReportInput } from "@/lib/reports/doctor-report";
 
 function medication(id: string, overrides: Partial<UserMedicationRecord> = {}): UserMedicationRecord {
   return {
@@ -71,6 +72,32 @@ function stock(userMedicationId: string, quantityDelta: string): InventoryTransa
   };
 }
 
+function schedule(userMedicationId: string, overrides: Partial<MedicationScheduleRecord> = {}): MedicationScheduleRecord {
+  return {
+    id: `schedule-${userMedicationId}`,
+    profileId: "profile-1",
+    userMedicationId,
+    scheduleKind: "multiple_times_daily",
+    timeAnchor: "wall_clock",
+    startDate: "2026-09-01",
+    endDate: null,
+    timezone: "Europe/Athens",
+    doseQuantityValue: "1",
+    doseQuantityUnit: "tablet",
+    timesOfDay: ["20:00:00", "08:00:00"],
+    weekdaysMask: null,
+    intervalHours: null,
+    anchorAt: null,
+    createdAt: "2026-09-01T08:00:00.000Z",
+    updatedAt: "2026-09-01T08:00:00.000Z",
+    version: 1,
+    deletedAt: null,
+    clientMutationId: `cm-schedule-${userMedicationId}`,
+    syncState: "synced",
+    ...overrides,
+  };
+}
+
 const NOW = new Date(2026, 9, 16, 12, 0); // 16 Oct 2026, 12:00 local
 const RANGE = { from: new Date(2026, 9, 1), to: new Date(2026, 9, 16, 23, 59, 59, 999) };
 
@@ -84,6 +111,7 @@ function input(overrides: Partial<DoctorReportInput> = {}): DoctorReportInput {
     names: new Map(medications.map((m) => [m.id, m.customName ?? m.id])),
     fullNames: new Map(medications.map((m) => [m.id, `${m.customName ?? m.id} (full)`])),
     strengths: new Map(medications.map((m) => [m.id, "500 mg"])),
+    schedules: [],
     doseEvents: [],
     transactions: [],
     ...overrides,
@@ -204,7 +232,94 @@ describe("buildDoctorReport", () => {
       // More taken than was ever entered: none left, never a negative count.
       ["Zinadol (full)", "Ενεργό", "0 δισκία"],
     ]);
-    expect(report.medicines[0]).toMatchObject({ strength: "500 mg", form: "Δισκίο" });
+    expect(report.medicines[0]).toMatchObject({ details: "500 mg · Δισκίο", schedule: [], stockDays: null });
+  });
+
+  it("gives each medicine its running schedules, and how long its stock lasts at that rate", () => {
+    const report = buildDoctorReport(
+      input({
+        medications: [medication("Algofren"), medication("Paused", { treatmentState: "paused" })],
+        schedules: [
+          schedule("Algofren"),
+          // Ended, or deleted: not running.
+          { ...schedule("Algofren"), id: "ended", endDate: "2026-10-01" },
+          { ...schedule("Algofren"), id: "deleted", deletedAt: "2026-10-02T00:00:00.000Z" },
+          schedule("Paused", { scheduleKind: "prn", timeAnchor: null, timesOfDay: null, doseQuantityValue: "2" }),
+        ],
+        transactions: [stock("Algofren", "30"), stock("Paused", "10")],
+      }),
+    );
+    expect(report.medicines.map((m) => [m.name, m.schedule, m.stock, m.stockDays])).toEqual([
+      // 30 tablets at 2 a day.
+      ["Algofren (full)", ["2 φορές την ημέρα · 08:00, 20:00 · 1 δισκίο"], "30 δισκία", 15],
+      // Not being taken now: no estimate.
+      ["Paused (full)", ["Όταν χρειάζεται · 2 δισκία"], "10 δισκία", null],
+    ]);
+  });
+
+  it("sums up how every dose ended: overall, per medicine, by time of day and by week", () => {
+    const report = buildDoctorReport(
+      input({
+        doseEvents: [
+          dose("Algofren", at(3, 8), "taken", at(3, 8, 5)),
+          dose("Flagyl", at(3, 8), "taken_late", at(3, 11)),
+          dose("Flagyl", at(3, 20), "missed"),
+          dose("Algofren", at(4, 8), "skipped"),
+          dose("Algofren", at(5, 8), "reminded"),
+          dose("Algofren", at(6, 8), "taken", at(6, 8)),
+          dose("Algofren", at(6, 21), "taken", at(6, 21)),
+        ],
+      }),
+    );
+    const { summary } = report;
+    expect(summary.overall).toEqual({ total: 7, taken: 3, takenLate: 1, skipped: 1, missed: 1, unrecorded: 1 });
+    expect(takenShare(summary.overall)).toBeCloseTo(4 / 7);
+    // Days 3–6 had doses; only on the 6th were they all taken.
+    expect([summary.daysWithDoses, summary.daysAllTaken]).toEqual([4, 1]);
+    expect(summary.byMedicine).toEqual([
+      { label: "Algofren", counts: { total: 5, taken: 3, takenLate: 0, skipped: 1, missed: 0, unrecorded: 1 } },
+      { label: "Flagyl", counts: { total: 2, taken: 0, takenLate: 1, skipped: 0, missed: 1, unrecorded: 0 } },
+    ]);
+    expect(summary.byTimeOfDay.map((row) => [row.label, row.counts.total])).toEqual([
+      ["Πρωί (05:00–11:59)", 5],
+      ["Απόγευμα (17:00–20:59)", 1],
+      ["Βράδυ (21:00–23:59)", 1],
+    ]);
+    // 1–16 October, Monday to Sunday, cut to the period.
+    expect(summary.byPeriodUnit).toBe("week");
+    expect(summary.byPeriod.map((row) => [row.label, row.counts.total])).toEqual([
+      ["01/10 – 04/10", 4],
+      ["05/10 – 11/10", 3],
+      ["12/10 – 16/10", 0],
+    ]);
+  });
+
+  it("goes month by month for a longer period", () => {
+    const range = reportRange("6m", NOW);
+    if (!range.ok) throw new Error("range");
+    const report = buildDoctorReport(input({ range: range.range }));
+    expect(report.summary.byPeriodUnit).toBe("month");
+    expect(report.summary.byPeriod.map((row) => row.label)).toEqual([
+      "Απρίλιος 2026",
+      "Μάιος 2026",
+      "Ιούνιος 2026",
+      "Ιούλιος 2026",
+      "Αύγουστος 2026",
+      "Σεπτέμβριος 2026",
+      "Οκτώβριος 2026",
+    ]);
+  });
+
+  it("counts a dose with no scheduled time, but not under a time of day", () => {
+    const report = buildDoctorReport(input({ doseEvents: [dose("Flagyl", null, "taken", at(12, 15))] }));
+    expect(report.summary.overall.total).toBe(1);
+    expect(report.summary.byTimeOfDay).toEqual([]);
+  });
+
+  it("has nothing to share out of no doses", () => {
+    const report = buildDoctorReport(input());
+    expect(takenShare(report.summary.overall)).toBeNull();
+    expect([report.summary.daysWithDoses, report.summary.daysAllTaken]).toEqual([0, 0]);
   });
 
   it("carries who it's for and when it was made", () => {

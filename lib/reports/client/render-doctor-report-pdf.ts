@@ -1,5 +1,6 @@
 import type { jsPDF as JsPdf } from "jspdf";
-import { DOSE_STATUS_LABELS, type DoctorReport, type DoctorReportDoseStatus } from "@/lib/reports/doctor-report";
+import type { CellHookData, RowInput } from "jspdf-autotable";
+import { DOSE_STATUS_LABELS, takenShare, type DoctorReport, type DoctorReportDoseStatus, type StatusCounts, type SummaryRow } from "@/lib/reports/doctor-report";
 
 /** The app's own typeface, with Greek (`public/fonts/`, SIL Open Font License). Base64 TrueType, as jsPDF takes it. */
 export interface ReportFonts {
@@ -29,17 +30,22 @@ type Rgb = [number, number, number];
 
 const INK: Rgb = [28, 25, 23]; // stone-900
 const MUTED: Rgb = [87, 83, 78]; // stone-600
+const FAINT: Rgb = [168, 162, 158]; // stone-400
 const RULE: Rgb = [231, 229, 228]; // stone-200
 const DAY_FILL: Rgb = [245, 245, 244]; // stone-100
 const ACCENT: Rgb = [4, 120, 87]; // accent-700
 const ACCENT_FILL: Rgb = [236, 253, 245]; // accent-50
 
+const TAKEN_COLOR: Rgb = [6, 95, 70];
+const SKIPPED_COLOR: Rgb = [180, 83, 9];
+const MISSED_COLOR: Rgb = [185, 28, 28];
+
 /** Taken in the app's green; not taken in colour too, but always written out: the word carries it, in black-and-white print as well. */
 const STATUS_COLORS: Record<DoctorReportDoseStatus, Rgb> = {
-  taken: [6, 95, 70],
-  taken_late: [6, 95, 70],
-  skipped: [180, 83, 9],
-  missed: [185, 28, 28],
+  taken: TAKEN_COLOR,
+  taken_late: TAKEN_COLOR,
+  skipped: SKIPPED_COLOR,
+  missed: MISSED_COLOR,
   unrecorded: MUTED,
 };
 
@@ -58,6 +64,18 @@ function timeLabel(date: Date): string {
   return date.toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 }
 
+/** "93%". Never rounds up to 100% or down to 0% when that isn't exactly so. */
+export function percentLabel(share: number | null): string {
+  if (share === null) return "—";
+  if (share === 0 || share === 1) return `${share * 100}%`;
+  return `${Math.min(99, Math.max(1, Math.round(share * 100)))}%`;
+}
+
+function daysLabel(days: number): string {
+  if (days < 1) return "για λιγότερο από 1 ημέρα";
+  return days === 1 ? "για ≈ 1 ημέρα" : `για ≈ ${days} ημέρες`;
+}
+
 export function periodLabel(report: Pick<DoctorReport, "range">): string {
   return `${longDate(report.range.from)} – ${longDate(report.range.to)}`;
 }
@@ -72,10 +90,24 @@ function lastTableEnd(doc: JsPdf): number {
   return (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
 }
 
+/** Columns of every summary table after its first: how the doses ended. */
+const COUNT_HEAD = ["Δόσεις", "Ελήφθη", "Ελήφθη αργότερα", "Παραλείφθηκε", "Χάθηκε", "Δεν καταγράφηκε", "Ποσοστό λήψης"];
+
+function countCells(counts: StatusCounts): string[] {
+  return [counts.total, counts.taken, counts.takenLate, counts.skipped, counts.missed, counts.unrecorded].map(String).concat(percentLabel(takenShare(counts)));
+}
+
+function addCounts(rows: SummaryRow[]): StatusCounts {
+  const sum: StatusCounts = { total: 0, taken: 0, takenLate: 0, skipped: 0, missed: 0, unrecorded: 0 };
+  for (const { counts } of rows) for (const key of Object.keys(sum) as (keyof StatusCounts)[]) sum[key] += counts[key];
+  return sum;
+}
+
 /**
- * Draws the report as an A4 PDF: who and when, the medicines with today's
- * stock, then every dose of the period, one shaded band per day.
- * jsPDF is loaded only here, when a report is made.
+ * Draws the report as an A4 PDF: who and when; a summary (key figures, then
+ * counts per medicine, time of day and week or month); the medicines with
+ * their schedule and stock; then every dose of the period, one shaded band
+ * per day. jsPDF is loaded only here, when a report is made.
  */
 export async function renderDoctorReportPdf(report: DoctorReport, fonts: ReportFonts): Promise<Blob> {
   const [{ jsPDF }, { autoTable }] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
@@ -90,6 +122,7 @@ export async function renderDoctorReportPdf(report: DoctorReport, fonts: ReportF
   const pageHeight = doc.internal.pageSize.getHeight();
   const contentWidth = pageWidth - PAGE_MARGIN * 2;
   const right = pageWidth - PAGE_MARGIN;
+  const { summary } = report;
 
   // Who, which days, made when.
   let y = PAGE_MARGIN + 2;
@@ -125,11 +158,16 @@ export async function renderDoctorReportPdf(report: DoctorReport, fonts: ReportF
     bodyStyles: { lineColor: RULE, lineWidth: { bottom: 0.1 } },
   };
 
-  function sectionHeading(title: string, detail: string) {
-    if (y > pageHeight - 50) {
+  /** A new page when less than `room` mm is left. */
+  function ensureRoom(room: number) {
+    if (y > pageHeight - PAGE_MARGIN - 6 - room) {
       doc.addPage();
       y = PAGE_MARGIN + 4;
     }
+  }
+
+  function sectionHeading(title: string, detail: string) {
+    ensureRoom(34);
     doc.setFont("Manrope", "bold").setFontSize(13).setTextColor(...INK);
     doc.text(title, PAGE_MARGIN, y);
     doc.setFont("Manrope", "normal").setFontSize(9.5).setTextColor(...MUTED);
@@ -137,34 +175,138 @@ export async function renderDoctorReportPdf(report: DoctorReport, fonts: ReportF
     y += 3;
   }
 
-  // The medicines, with what's left of each today.
-  sectionHeading("Φάρμακα", `Απόθεμα όπως ήταν στις ${longDate(report.createdAt)}`);
+  function subheading(title: string) {
+    ensureRoom(26);
+    doc.setFont("Manrope", "bold").setFontSize(10.5).setTextColor(...INK);
+    doc.text(title, PAGE_MARGIN, y);
+    y += 2;
+  }
+
+  /** A summary table: one row per medicine, time of day or week; the count columns right-aligned, zeros faint. */
+  function summaryTable(firstColumn: string, rows: SummaryRow[], withTotal: boolean) {
+    const numeric = { halign: "right" as const };
+    autoTable(doc, {
+      ...tableBase,
+      startY: y,
+      styles: { ...tableBase.styles, fontSize: 9, cellPadding: { top: 1.8, bottom: 1.8, left: 1.5, right: 1.5 } },
+      headStyles: { ...tableBase.headStyles, fontSize: 8, valign: "bottom" },
+      footStyles: { fontStyle: "bold", textColor: INK, lineColor: INK, lineWidth: { top: 0.3 } },
+      head: [[firstColumn, ...COUNT_HEAD]],
+      body: rows.map((row) => [row.label, ...countCells(row.counts)]),
+      foot: withTotal ? [["Σύνολο", ...countCells(addCounts(rows))]] : undefined,
+      showFoot: "lastPage",
+      columnStyles: {
+        0: { fontStyle: "bold" },
+        1: { ...numeric, cellWidth: 14 },
+        2: { ...numeric, cellWidth: 15 },
+        3: { ...numeric, cellWidth: 17 },
+        4: { ...numeric, cellWidth: 24 },
+        5: { ...numeric, cellWidth: 15 },
+        6: { ...numeric, cellWidth: 22 },
+        7: { ...numeric, cellWidth: 17, fontStyle: "bold" },
+      },
+      didParseCell: (data: CellHookData) => {
+        if (data.column.index > 0 && data.section !== "body") data.cell.styles.halign = "right";
+        if (data.section !== "body" || data.column.index < 2 || data.column.index > 6) return;
+        if (data.cell.raw === "0") data.cell.styles.textColor = FAINT;
+        else if (data.column.index === 4) data.cell.styles.textColor = SKIPPED_COLOR;
+        else if (data.column.index === 5) data.cell.styles.textColor = MISSED_COLOR;
+      },
+    });
+    y = lastTableEnd(doc) + 8;
+  }
+
+  // ── Summary: the key figures, then counts by medicine, time of day and week/month.
+  const overall = summary.overall;
+  sectionHeading("Σύνοψη", overall.total === 1 ? "1 δόση" : `${overall.total} δόσεις σε ${summary.daysWithDoses} ${summary.daysWithDoses === 1 ? "ημέρα" : "ημέρες"}`);
+  if (overall.total === 0) {
+    y += 5;
+    doc.setFont("Manrope", "normal").setFontSize(10).setTextColor(...MUTED).text("Δεν καταγράφηκαν δόσεις σε αυτή την περίοδο.", PAGE_MARGIN, y);
+    y += 12;
+  } else {
+    y += 2;
+    const notTaken = overall.skipped + overall.missed;
+    const figures: { label: string; value: string; detail: string; fill: Rgb; color: Rgb }[] = [
+      { label: "Ελήφθησαν", value: percentLabel(takenShare(overall)), detail: `${overall.taken + overall.takenLate} από ${overall.total} δόσεις`, fill: ACCENT_FILL, color: TAKEN_COLOR },
+      { label: "Ελήφθησαν αργότερα", value: String(overall.takenLate), detail: "μετρούν στις ληφθείσες", fill: DAY_FILL, color: INK },
+      { label: "Δεν ελήφθησαν", value: String(notTaken), detail: `${overall.skipped} παραλείφθηκαν · ${overall.missed} χάθηκαν`, fill: DAY_FILL, color: notTaken > 0 ? MISSED_COLOR : INK },
+      { label: "Δεν καταγράφηκαν", value: String(overall.unrecorded), detail: "η ώρα τους πέρασε χωρίς σημείωση", fill: DAY_FILL, color: INK },
+    ];
+    const gap = 3;
+    const boxWidth = (contentWidth - gap * (figures.length - 1)) / figures.length;
+    const boxHeight = 25;
+    figures.forEach((figure, i) => {
+      const x = PAGE_MARGIN + i * (boxWidth + gap);
+      doc.setFillColor(...figure.fill).roundedRect(x, y, boxWidth, boxHeight, 2, 2, "F");
+      doc.setFont("Manrope", "normal").setFontSize(8.5).setTextColor(...MUTED).text(figure.label, x + 3.5, y + 6);
+      doc.setFont("Manrope", "bold").setFontSize(18).setTextColor(...figure.color).text(figure.value, x + 3.5, y + 14.5);
+      const detail = doc.setFont("Manrope", "normal").setFontSize(7.5).setTextColor(...MUTED).splitTextToSize(figure.detail, boxWidth - 7) as string[];
+      doc.text(detail.slice(0, 2), x + 3.5, y + 19.5);
+    });
+    y += boxHeight + 6;
+    doc.setFont("Manrope", "normal").setFontSize(10).setTextColor(...INK);
+    doc.text(`Ημέρες με όλες τις δόσεις ληφθείσες: ${summary.daysAllTaken} από ${summary.daysWithDoses}`, PAGE_MARGIN, y);
+    y += 9;
+
+    subheading("Ανά φάρμακο");
+    summaryTable("Φάρμακο", summary.byMedicine, summary.byMedicine.length > 1);
+
+    if (summary.byTimeOfDay.length > 0) {
+      subheading("Ανά ώρα της ημέρας");
+      summaryTable("Ώρα", summary.byTimeOfDay, false);
+    }
+
+    subheading(summary.byPeriodUnit === "week" ? "Ανά εβδομάδα" : "Ανά μήνα");
+    summaryTable(summary.byPeriodUnit === "week" ? "Εβδομάδα" : "Μήνας", summary.byPeriod, false);
+
+    const footnote = doc
+      .setFont("Manrope", "normal")
+      .setFontSize(8.5)
+      .setTextColor(...MUTED)
+      .splitTextToSize(
+        "Ποσοστό λήψης: οι δόσεις που σημειώθηκαν ως ληφθείσες, στην ώρα τους ή αργότερα, προς όλες τις δόσεις. «Δεν καταγράφηκε»: η ώρα της δόσης πέρασε χωρίς να σημειωθεί τίποτα. Οι αριθμοί δείχνουν μόνο όσα καταγράφηκαν στην εφαρμογή.",
+        contentWidth,
+      ) as string[];
+    ensureRoom(footnote.length * 4);
+    y -= 3;
+    doc.text(footnote, PAGE_MARGIN, y);
+    y += footnote.length * 3.8 + 10;
+  }
+
+  // ── The medicines: what they are, their schedule, what's left of each today.
+  sectionHeading("Φάρμακα", `Απόθεμα στις ${longDate(report.createdAt)} · οι ημέρες είναι εκτίμηση`);
   if (report.medicines.length === 0) {
     y += 5;
-    doc.setFontSize(10).setTextColor(...MUTED).text("Δεν υπάρχουν φάρμακα σε αυτή την περίοδο.", PAGE_MARGIN, y);
+    doc.setFont("Manrope", "normal").setFontSize(10).setTextColor(...MUTED).text("Δεν υπάρχουν φάρμακα σε αυτή την περίοδο.", PAGE_MARGIN, y);
     y += 12;
   } else {
     autoTable(doc, {
       ...tableBase,
       startY: y,
-      head: [["Φάρμακο", "Περιεκτικότητα", "Μορφή", "Κατάσταση", "Απόθεμα σήμερα"]],
-      body: report.medicines.map((m) => [m.name, m.strength ?? "—", m.form ?? "—", m.treatment, m.stock ?? "Δεν καταγράφεται"]),
+      head: [["Φάρμακο", "Περιεκτικότητα", "Πρόγραμμα", "Κατάσταση", "Απόθεμα σήμερα"]],
+      body: report.medicines.map((m): RowInput => [
+        m.name,
+        m.details ?? "—",
+        m.schedule.length > 0 ? m.schedule.join("\n") : "Χωρίς πρόγραμμα",
+        m.treatment,
+        m.stock === null ? "Δεν καταγράφεται" : m.stockDays === null ? m.stock : `${m.stock}\n${daysLabel(m.stockDays)}`,
+      ]),
       columnStyles: {
         0: { fontStyle: "bold" },
-        1: { cellWidth: 31 },
-        2: { cellWidth: 22 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 47 },
         3: { cellWidth: 24 },
-        4: { cellWidth: 33 },
+        4: { cellWidth: 31 },
       },
     });
     y = lastTableEnd(doc) + 12;
   }
 
-  // Every dose of the period, in order, a shaded band for every other day.
+  // ── Every dose of the period, in order, a shaded band for every other day.
   sectionHeading("Ιστορικό δόσεων", report.doses.length === 1 ? "1 δόση" : `${report.doses.length} δόσεις`);
   if (report.doses.length === 0) {
     y += 5;
-    doc.setFontSize(10).setTextColor(...MUTED).text("Δεν καταγράφηκαν δόσεις σε αυτή την περίοδο.", PAGE_MARGIN, y);
+    doc.setFont("Manrope", "normal").setFontSize(10).setTextColor(...MUTED).text("Δεν καταγράφηκαν δόσεις σε αυτή την περίοδο.", PAGE_MARGIN, y);
   } else {
     const dayIndex: number[] = [];
     const firstOfDay: boolean[] = [];

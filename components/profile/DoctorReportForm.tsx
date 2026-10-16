@@ -28,9 +28,9 @@ function daysAgo(days: number): Date {
 }
 
 /**
- * «Αναφορά για τον γιατρό» (owner's request, 2026-10-16): a PDF of the
- * medicines, their stock today and every dose of a chosen period, to show
- * or send to a doctor. Made on the phone from what's on it, so it works
+ * «Αναφορά για τον γιατρό» (owner's request, 2026-10-16): a PDF with a
+ * summary of the doses, the medicines with their schedule and stock today,
+ * and every dose of a chosen period, to show or send to a doctor. Made on the phone from what's on it, so it works
  * offline and includes changes not sent yet (`lib/reports/`).
  */
 export function DoctorReportForm() {
@@ -76,7 +76,7 @@ export function DoctorReportForm() {
       <div>
         <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Αναφορά για τον γιατρό</h1>
         <p className="mt-2 text-[16px] leading-relaxed text-stone-700">
-          Ένα PDF με τα φάρμακά σας, το απόθεμά τους σήμερα και κάθε δόση της περιόδου που θα διαλέξετε, για να το δείξετε ή να το στείλετε στον γιατρό σας.
+          Ένα PDF με σύνοψη των δόσεων, τα φάρμακά σας με το πρόγραμμα και το απόθεμά τους, και κάθε δόση της περιόδου που θα διαλέξετε, για να το δείξετε ή να το στείλετε στον γιατρό σας.
         </p>
       </div>
 

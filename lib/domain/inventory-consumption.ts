@@ -251,8 +251,10 @@ export function computeRefillProjection(
   );
   const observedMilliPerDay = observedDoses.reduce((sum, t) => sum + Math.abs(toMilliUnits(t.quantityDelta)), 0) / OBSERVED_WINDOW_DAYS;
 
+  // A schedule that has ended no longer uses stock (it used to count still, doubling the rate after a schedule change; 2026-10-17).
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const scheduledOccurrences = schedules
-    .filter((s) => s.userMedicationId === userMedicationId && s.deletedAt === null && s.scheduleKind !== "prn")
+    .filter((s) => s.userMedicationId === userMedicationId && s.deletedAt === null && s.scheduleKind !== "prn" && (s.endDate === null || s.endDate >= today))
     .reduce((sum, s) => sum + scheduledOccurrencesPerDay(s) * toMilliUnits(s.doseQuantityValue), 0);
 
   let basis: RefillProjectionBasis;

@@ -154,15 +154,17 @@ export default function PrivacyPage() {
           </h2>
           <ul className="flex flex-col gap-3 [&>li]:relative [&>li]:pl-5 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[0.62em] [&>li]:before:size-2 [&>li]:before:rounded-full [&>li]:before:bg-accent-600 text-[17px] leading-relaxed text-stone-700">
             <li>
-              <strong>Πρόσβαση/Φορητότητα:</strong> μπορείτε να κατεβάσετε όλα
-              τα δεδομένα σας ανά πάσα στιγμή από το{" "}
+              <strong>Πρόσβαση/Φορητότητα:</strong> μπορείτε να ζητήσετε
+              αντίγραφο όλων των δεδομένων σας στο email της ενότητας 7. Από
+              το{" "}
               <Link
                 href="/profile"
                 className="font-semibold text-accent-700"
               >
                 Προφίλ
-              </Link>
-              .
+              </Link>{" "}
+              μπορείτε επίσης να δημιουργήσετε, στο κινητό σας, μια αναφορά
+              PDF με τα φάρμακα και τις δόσεις σας.
             </li>
             <li>
               <strong>Διόρθωση:</strong> μπορείτε να επεξεργαστείτε τα φάρμακα

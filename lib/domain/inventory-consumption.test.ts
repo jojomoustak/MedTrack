@@ -336,6 +336,17 @@ describe("computeRefillProjection", () => {
     expect(result.basis).toBe("none");
   });
 
+  it("leaves out a schedule that has ended, and keeps one that ends today", () => {
+    const transactions = [txn({ quantityDelta: "30" })];
+    const schedules = [
+      schedule({ id: "ended", timesOfDay: ["08:00:00"], endDate: "2026-01-14" }),
+      schedule({ id: "ends-today", timesOfDay: ["20:00:00"], endDate: "2026-01-15" }),
+    ];
+    const result = computeRefillProjection(MED, transactions, schedules, new Date(2026, 0, 15, 12));
+    expect(result.basis).toBe("scheduled");
+    expect(result.daysRemaining).toBe(30);
+  });
+
   it("floors daysRemaining rather than rounding (conservative)", () => {
     const transactions = [txn({ quantityDelta: "10" })];
     const schedules = [schedule({ timesOfDay: ["08:00:00", "20:00:00", "23:00:00"] })]; // 3/day -> 3.33 days, should floor to 3
