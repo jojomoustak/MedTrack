@@ -56,14 +56,18 @@ function statusText(dose: DoseEventRecord): string {
   }
 }
 
-/** An action that can't be undone once written — asks once more before it's recorded. */
+/**
+ * An action that can't be undone once written — asks once more before it's
+ * recorded. The button says only the action, the question carries the rest:
+ * "Ναι, παράλειψη" and the like wrapped onto two lines (owner, 2026-10-17).
+ */
 type FinalAction = "taken" | "taken_late" | "skipped" | "missed";
 
 const CONFIRM_TEXT: Record<FinalAction, { question: string; confirm: string }> = {
-  taken: { question: "Καταγραφή της δόσης ως ελήφθη τώρα;", confirm: "Ναι, την πήρα" },
-  taken_late: { question: "Καταγραφή ότι την πήρατε αργότερα;", confirm: "Ναι, την πήρα" },
-  skipped: { question: "Παράλειψη αυτής της δόσης;", confirm: "Ναι, παράλειψη" },
-  missed: { question: "Σήμανση αυτής της δόσης ως χαμένης;", confirm: "Ναι, χάθηκε" },
+  taken: { question: "Καταγραφή της δόσης ως ελήφθη τώρα;", confirm: "Την πήρα" },
+  taken_late: { question: "Καταγραφή ότι την πήρατε αργότερα;", confirm: "Την πήρα" },
+  skipped: { question: "Παράλειψη αυτής της δόσης;", confirm: "Παράλειψη" },
+  missed: { question: "Σήμανση αυτής της δόσης ως χαμένης;", confirm: "Χάθηκε" },
 };
 
 function DetailIcon({ children }: { children: React.ReactNode }) {

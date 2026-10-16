@@ -22,7 +22,7 @@ describe("DeleteListSection", () => {
     expect(document.activeElement?.textContent).toBe("Άκυρο");
     expect(onConfirmDelete).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Ναι, διαγραφή" }));
+    fireEvent.click(screen.getByRole("button", { name: "Διαγραφή" }));
     expect(onConfirmDelete).toHaveBeenCalledTimes(1);
   });
 

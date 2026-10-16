@@ -74,7 +74,7 @@ export function DeleteListSection({
               Άκυρο
             </Button>
             <Button variant="danger" onClick={onConfirmDelete} disabled={deleting} aria-busy={deleting} size="lg" className="flex-1">
-              {deleting ? "Διαγραφή…" : "Ναι, διαγραφή"}
+              {deleting ? "Διαγραφή…" : "Διαγραφή"}
             </Button>
           </div>
         </div>

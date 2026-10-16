@@ -223,7 +223,7 @@ export default function TodayPage() {
                 Ακύρωση
               </Button>
               <Button size="lg" onClick={() => void handleMarkAllTaken()} disabled={markingAll} aria-busy={markingAll} fullWidth>
-                {markingAll ? "Καταγραφή…" : "Ναι, ελήφθησαν"}
+                {markingAll ? "Καταγραφή…" : "Ελήφθησαν"}
               </Button>
             </div>
           </div>
