@@ -21,7 +21,7 @@ describe("DexieLearnedMappingRepository (OCR-fallback task spec §12-§16)", () 
 
   beforeEach(() => {
     db = new MedTrackingDexie(`test-learned-mapping-${crypto.randomUUID()}`);
-    repo = new DexieLearnedMappingRepository(db);
+    repo = new DexieLearnedMappingRepository(db, () => "profile-1");
   });
 
   afterEach(async () => {
@@ -81,5 +81,36 @@ describe("DexieLearnedMappingRepository (OCR-fallback task spec §12-§16)", () 
 
     expect(await repo.listUnsynced()).toEqual([]);
     expect((await repo.getByGtin(mapping.gtin))?.syncedAt).toBe(syncedAt);
+  });
+
+  describe("per profile (2026-10-16: they were per phone, shared with the next person signed in)", () => {
+    const mapping = { gtin: "05201048000563", catalogProductId: "algofren", evidenceType: "USER_CONFIRMED" as const, confirmedAt: "2026-10-16T10:00:00.000Z", syncedAt: null };
+
+    it("another profile on the same phone never gets this profile's boxes, nor uploads them", async () => {
+      await repo.save(mapping);
+      const other = new DexieLearnedMappingRepository(db, () => "profile-2");
+
+      expect(await other.getByGtin(mapping.gtin)).toBeNull();
+      expect(await other.listUnsynced()).toEqual([]);
+      expect(await repo.getByGtin(mapping.gtin)).toEqual(mapping);
+    });
+
+    it("two profiles can each identify the same box, each their own way", async () => {
+      const other = new DexieLearnedMappingRepository(db, () => "profile-2");
+      await repo.save(mapping);
+      await other.save({ ...mapping, catalogProductId: "algofren-forte" });
+
+      expect((await repo.getByGtin(mapping.gtin))?.catalogProductId).toBe("algofren");
+      expect((await other.getByGtin(mapping.gtin))?.catalogProductId).toBe("algofren-forte");
+    });
+
+    it("signed out: nothing to find, nothing saved", async () => {
+      await repo.save(mapping);
+      const signedOut = new DexieLearnedMappingRepository(db, () => null);
+
+      expect(await signedOut.getByGtin(mapping.gtin)).toBeNull();
+      expect(await signedOut.listUnsynced()).toEqual([]);
+      await expect(signedOut.save(mapping)).rejects.toThrow();
+    });
   });
 });

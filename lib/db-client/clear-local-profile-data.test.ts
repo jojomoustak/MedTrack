@@ -80,7 +80,8 @@ describe("clearAllLocalProfileData", () => {
       updatedAt: new Date().toISOString(),
       cachedAt: new Date().toISOString(),
     });
-    await db.learnedGtinMapping.put({
+    await db.learnedGtinMappingByProfile.put({
+      profileId: "profile-1",
       gtin: "12345678901234",
       catalogProductId: "catalog-1",
       evidenceType: "USER_CONFIRMED",
@@ -121,7 +122,12 @@ describe("clearAllLocalProfileData", () => {
     await clearAllLocalProfileData(db);
 
     expect(await db.catalogProductCache.count()).toBe(1);
-    expect(await db.learnedGtinMapping.count()).toBe(1);
+  });
+
+  it("clears the boxes this profile identified: they're its own, not shared catalog data (2026-10-16)", async () => {
+    await clearAllLocalProfileData(db);
+
+    expect(await db.learnedGtinMappingByProfile.count()).toBe(0);
   });
 });
 
@@ -137,6 +143,15 @@ describe("hasPendingLocalWork", () => {
   });
 
   it("is false with an empty outbox and photo outbox", async () => {
+    expect(await hasPendingLocalWork(db)).toBe(false);
+  });
+
+  it("is true while a box this profile identified hasn't been uploaded yet, and false once it has (2026-10-16)", async () => {
+    const row = { profileId: "profile-1", gtin: "05201048000563", catalogProductId: "algofren", evidenceType: "USER_CONFIRMED" as const, confirmedAt: "2026-10-16T10:00:00.000Z", syncedAt: null };
+    await db.learnedGtinMappingByProfile.put(row);
+    expect(await hasPendingLocalWork(db)).toBe(true);
+
+    await db.learnedGtinMappingByProfile.put({ ...row, syncedAt: "2026-10-16T10:00:05.000Z" });
     expect(await hasPendingLocalWork(db)).toBe(false);
   });
 

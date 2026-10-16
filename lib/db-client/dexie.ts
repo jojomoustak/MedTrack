@@ -15,7 +15,7 @@
  * Nothing outside `lib/db-client/` may import `dexie` or touch this
  * class directly — always go through a repository (ADR-008).
  */
-import Dexie, { type EntityTable } from "dexie";
+import Dexie, { type EntityTable, type Table } from "dexie";
 import { outboxEntryProfileId, type OutboxEntry } from "@/lib/domain/outbox";
 import { getCachedProfileId } from "@/lib/auth/client/use-current-profile";
 import type { PurchaseListItemRecord, PurchaseListRecord, UserPreferencesRecord } from "@/lib/domain/entities";
@@ -94,6 +94,16 @@ export interface OfflineIndexMetaRecord {
  * Filled by one request for all of them (`syncPhotoThumbnails`); the full
  * photo stays in `medicationPhotoCache`, for the photo screen only.
  */
+/**
+ * A box this profile identified itself (`LearnedGtinMapping`), stored per
+ * profile (2026-10-16): they used to be per phone, so whoever signed in next
+ * on the same phone got the previous person's boxes as plain matches, and
+ * any not uploaded yet were uploaded under the new person's account.
+ */
+export interface LocalLearnedGtinMapping extends LearnedGtinMapping {
+  profileId: string;
+}
+
 export interface LocalPhotoThumbnail {
   userMedicationId: string;
   /** The server's version of the photo it was made from; null for one made on this device and not confirmed by the server yet. */
@@ -170,7 +180,7 @@ export class MedTrackingDexie extends Dexie {
   unresolvedScan!: EntityTable<LocalUnresolvedScan, "id">;
   offlineIndexEntry!: EntityTable<LocalOfflineIndexEntry, "id">;
   offlineIndexMeta!: EntityTable<OfflineIndexMetaRecord, "id">;
-  learnedGtinMapping!: EntityTable<LearnedGtinMapping, "gtin">;
+  learnedGtinMappingByProfile!: Table<LocalLearnedGtinMapping, [string, string]>;
   medicationPhotoCache!: EntityTable<LocalMedicationPhotoCache, "userMedicationId">;
   photoThumbnail!: EntityTable<LocalPhotoThumbnail, "userMedicationId">;
   photoOutboxEntry!: EntityTable<LocalPhotoOutboxEntry, "userMedicationId">;
@@ -309,6 +319,26 @@ export class MedTrackingDexie extends Dexie {
           cached.flatMap((row) => (row.thumbnail ? [{ userMedicationId: row.userMedicationId, version: null, blob: row.thumbnail, updatedAt: now }] : [])),
         );
       });
+
+    // v11/v12: box identifications per profile (`LocalLearnedGtinMapping`).
+    // The ones already on this phone were made by whoever is signed in
+    // (one person per phone until now), so they move to that profile; with
+    // nobody signed in they're dropped: they're on the server already if
+    // they were uploaded, and otherwise only a re-identification is lost.
+    // Two versions, so the old table is still there while the rows move.
+    this.version(11)
+      .stores({
+        learnedGtinMappingByProfile: "[profileId+gtin], profileId",
+      })
+      .upgrade(async (tx) => {
+        const profileId = getCachedProfileId();
+        if (!profileId) return;
+        const old = await tx.table<LearnedGtinMapping>("learnedGtinMapping").toArray();
+        await tx.table<LocalLearnedGtinMapping>("learnedGtinMappingByProfile").bulkPut(old.map((row) => ({ ...row, profileId })));
+      });
+    this.version(12).stores({
+      learnedGtinMapping: null,
+    });
 
     // Single choke point for "a new outbox entry was durably written" —
     // every repository's write path (direct `enqueue()`, or a raw

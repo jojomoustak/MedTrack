@@ -24,11 +24,12 @@ import { getClientDb, type MedTrackingDexie } from "@/lib/db-client/dexie";
  * previous user's packages and stock ledger after sign-out. The pull
  * cursor (v9) is cleared too, so the next sign-in restores from 0.
  *
- * Deliberately does NOT touch `catalogProductCache`, `offlineIndexEntry`,
- * `offlineIndexMeta`, or `learnedGtinMapping` — those hold shared
- * reference/catalog data (which GTIN maps to which public product), not
- * this profile's own data, and are actively useful to keep for whoever
- * uses this device next (including the same user signing back in).
+ * Deliberately does NOT touch `catalogProductCache`, `offlineIndexEntry`
+ * or `offlineIndexMeta` — shared reference/catalog data, not this
+ * profile's own, and actively useful to whoever uses this device next.
+ * Box identifications (`learnedGtinMappingByProfile`) ARE this profile's
+ * own and are cleared (2026-10-16; they used to be kept and shared with the
+ * next person on the phone).
  *
  * IMPORTANT for callers: this unconditionally destroys anything still
  * queued in `outbox`/`photoOutboxEntry` that hasn't reached the server
@@ -56,6 +57,7 @@ export async function clearAllLocalProfileData(db: MedTrackingDexie = getClientD
       db.medicationPhotoCache,
       db.photoThumbnail,
       db.photoOutboxEntry,
+      db.learnedGtinMappingByProfile,
       db.medicationPackage,
       db.inventoryTransaction,
       db.syncPullCursor,
@@ -78,6 +80,7 @@ export async function clearAllLocalProfileData(db: MedTrackingDexie = getClientD
         db.medicationPhotoCache.clear(),
         db.photoThumbnail.clear(),
         db.photoOutboxEntry.clear(),
+        db.learnedGtinMappingByProfile.clear(),
       ]);
     },
   );
@@ -93,6 +96,11 @@ export async function clearAllLocalProfileData(db: MedTrackingDexie = getClientD
  * safe (nothing lost) or would silently discard real unsynced work.
  */
 export async function hasPendingLocalWork(db: MedTrackingDexie = getClientDb()): Promise<boolean> {
-  const [outboxCount, photoOutboxCount] = await Promise.all([db.outbox.count(), db.photoOutboxEntry.count()]);
-  return outboxCount > 0 || photoOutboxCount > 0;
+  const [outboxCount, photoOutboxCount, unsentBoxes] = await Promise.all([
+    db.outbox.count(),
+    db.photoOutboxEntry.count(),
+    // A box identification not uploaded yet is unsent work too (2026-10-16).
+    db.learnedGtinMappingByProfile.filter((row) => row.syncedAt === null).count(),
+  ]);
+  return outboxCount > 0 || photoOutboxCount > 0 || unsentBoxes > 0;
 }

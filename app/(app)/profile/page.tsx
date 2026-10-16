@@ -9,6 +9,7 @@ import { clearAllLocalProfileData, hasPendingLocalWork } from "@/lib/db-client/c
 import { cancelAllNativeReminders } from "@/lib/reminders/client/native-reminder-sync";
 import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { Button } from "@/components/ui/Button";
 import { EmailVerificationBanner } from "@/components/profile/EmailVerificationBanner";
 import { ReminderPermissionToggle } from "@/components/profile/ReminderPermissionToggle";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
@@ -49,6 +50,8 @@ export default function ProfilePage() {
   const profileId = useProfileId();
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  /** Changes not sent yet: signing out asks first (2026-10-16). */
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
 
   async function handleExport() {
     playSound("button");
@@ -71,8 +74,21 @@ export default function ProfilePage() {
     }
   }
 
-  async function handleSignOut() {
+  /**
+   * Changes not sent yet stay on this phone after signing out (see below)
+   * and go out once this person signs in again, but nothing used to say so:
+   * now they're told first, and choose (owner's request, 2026-10-16).
+   */
+  async function requestSignOut() {
     playSound("button");
+    if (await hasPendingLocalWork()) {
+      setConfirmingSignOut(true);
+      return;
+    }
+    await handleSignOut();
+  }
+
+  async function handleSignOut() {
     // Cleared locally first, unconditionally: this is what
     // useCurrentProfile's offline fallback reads, so if the signOut()
     // network call below fails (offline right after tapping this), a
@@ -162,9 +178,39 @@ export default function ProfilePage() {
         <GoogleAuthButton mode="link" callbackURL="/profile" label="Σύνδεση λογαριασμού Google" />
       </section>
 
+      {confirmingSignOut ? (
+        <section className="surface-card flex flex-col gap-3 p-4" aria-labelledby="unsent-heading">
+          <h2 id="unsent-heading" className="text-[17px] font-semibold text-stone-900">
+            Κάποιες αλλαγές σας δεν έχουν σταλεί ακόμα
+          </h2>
+          <p className="text-[15px] leading-relaxed text-stone-700">
+            Αν αποσυνδεθείτε τώρα, θα μείνουν σε αυτό το κινητό, χωρίς να τις βλέπει κανείς άλλος, και θα σταλούν μόλις ξανασυνδεθείτε με αυτόν τον λογαριασμό. Αν συνδεθείτε πρώτα στο διαδίκτυο, θα σταλούν σε λίγα δευτερόλεπτα.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                playSound("button");
+                setConfirmingSignOut(false);
+              }}
+            >
+              Πίσω
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                playSound("button");
+                void handleSignOut();
+              }}
+            >
+              Αποσύνδεση
+            </Button>
+          </div>
+        </section>
+      ) : (
       <button
         type="button"
-        onClick={handleSignOut}
+        onClick={() => void requestSignOut()}
         className="flex min-h-16 w-full items-center gap-4 rounded-2xl bg-red-50 px-4 text-left text-[17px] font-semibold text-red-700 transition-transform active:scale-[0.99]"
       >
         <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -173,6 +219,7 @@ export default function ProfilePage() {
         </svg>
         Αποσύνδεση
       </button>
+      )}
 
       <Link
         href="/profile/delete"
