@@ -5,6 +5,7 @@ import { newId } from "@/lib/domain/ids";
 import { DexiePurchaseListItemRepository } from "@/lib/db-client/purchase-list-item-repository";
 import type { PurchaseListItemRecord } from "@/lib/domain/entities";
 import { logger } from "@/lib/logging/logger";
+import { onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
 
 export interface AddPurchaseListItemInput {
   label?: string | null;
@@ -32,6 +33,10 @@ export function usePurchaseListItems(purchaseListId: string | null, profileId: s
   const [nonce, setNonce] = useState(0);
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
+  // Data from the server (a restore on a new phone, a change on another
+  // device) re-reads the open screen; it used to stay on what it first
+  // read, e.g. no lists at all until the tab was left and reopened (2026-10-17).
+  useEffect(() => onLocalDataHydrated((source) => source !== "scheduling" && refresh()), [refresh]);
 
   useEffect(() => {
     if (!purchaseListId) return;

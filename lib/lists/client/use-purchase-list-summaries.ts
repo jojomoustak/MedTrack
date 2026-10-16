@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
+import { onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
 import { DexiePurchaseListItemRepository } from "@/lib/db-client/purchase-list-item-repository";
 import type { PurchaseListRecord } from "@/lib/domain/entities";
 
@@ -34,6 +35,10 @@ export function usePurchaseListSummaries(lists: PurchaseListRecord[]): { status:
     setEntries(readSnapshot<[string, PurchaseListSummary][]>(snapshotKey) ?? null);
   }
 
+  // Items from the server (see `usePurchaseLists`) re-count.
+  const [nonce, setNonce] = useState(0);
+  useEffect(() => onLocalDataHydrated((source) => source !== "scheduling" && setNonce((n) => n + 1)), []);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -54,7 +59,7 @@ export function usePurchaseListSummaries(lists: PurchaseListRecord[]): { status:
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-fetches when the actual set of list ids changes (listIdsKey), not on every new `lists` array reference from the parent's own re-renders.
-  }, [listIdsKey]);
+  }, [listIdsKey, nonce]);
 
   const summaries = useMemo(() => new Map(entries ?? []), [entries]);
   return { status: entries ? "ready" : "loading", summaries };
