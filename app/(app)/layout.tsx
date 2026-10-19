@@ -11,6 +11,7 @@ import { BottomNav } from "@/components/shell/BottomNav";
 import { OfflineBanner } from "@/components/sync/OfflineBanner";
 import { RouteSkeleton } from "@/components/shell/ScreenSkeletons";
 import { preloadPhotoThumbnails } from "@/lib/medications/client/use-medication-photo-thumbnail";
+import { catchUpWithServer } from "@/lib/sync/client/catch-up";
 
 /**
  * The authenticated app shell (Phase 3 §1): app bar + tab content +
@@ -50,6 +51,21 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
   useEffect(() => {
     if (session.status === "ready") void preloadPhotoThumbnails();
   }, [session.status]);
+
+  // What changed on the server, whatever screen is open: on sign-in, at
+  // launch and on every return to the foreground (at most once a minute,
+  // `lib/sync/client/catch-up.ts`). Only the medicines screens used to ask,
+  // so Lists opened first stayed empty on a new phone (2026-10-19).
+  const signedInProfileId = session.status === "ready" ? session.profileId : null;
+  useEffect(() => {
+    if (!signedInProfileId) return;
+    void catchUpWithServer(signedInProfileId);
+    function onVisible() {
+      if (document.visibilityState === "visible") void catchUpWithServer(signedInProfileId!);
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [signedInProfileId]);
 
   if (session.status === "signed-out") {
     // Redirect is in flight (see effect above) — render nothing rather

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DexieUserMedicationRepository } from "@/lib/db-client/user-medication-repository";
-import { hydrateLocalDataFromServer } from "@/lib/sync/client/hydrate-local-data";
+import { catchUpWithServer } from "@/lib/sync/client/catch-up";
 import { readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
 import { onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
@@ -15,29 +15,6 @@ export interface MedicationsListState {
 }
 
 /**
- * Opening a screen is not news from the server: catch up at most once a
- * minute per profile, and again whenever the app comes back to the
- * foreground (2026-10-09). This used to pull on every screen that listed
- * medications — a server round trip, and a redraw of every name, strength
- * and schedule after it, on each tap.
- */
-const CATCH_UP_EVERY_MS = 60_000;
-const lastCatchUpAt = new Map<string, number>();
-
-if (typeof document !== "undefined") {
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") lastCatchUpAt.clear();
-  });
-}
-
-function catchUpIsDue(profileId: string): boolean {
-  const last = lastCatchUpAt.get(profileId);
-  if (last !== undefined && Date.now() - last < CATCH_UP_EVERY_MS) return false;
-  lastCatchUpAt.set(profileId, Date.now());
-  return true;
-}
-
-/**
  * Longest a first restore may keep the list on its loading placeholders
  * before showing what is stored (possibly nothing): a stalled network must
  * not leave the screen loading forever. Pages that arrive later still show.
@@ -45,9 +22,7 @@ function catchUpIsDue(profileId: string): boolean {
 export const FIRST_RESTORE_WAIT_MS = 8000;
 
 /** Test seam: the next mount catches up again. */
-export function __resetCatchUpForTests(): void {
-  lastCatchUpAt.clear();
-}
+export { __resetCatchUpForTests } from "@/lib/sync/client/catch-up";
 
 /**
  * Local-first: reads whatever's already in Dexie immediately (works
@@ -89,12 +64,13 @@ export function useMedicationsList(profileId: string | null): MedicationsListSta
     async function load() {
       const local = await repo.list(profileId!);
       if (cancelled) return;
-      const due = catchUpIsDue(profileId!);
-      // Nothing stored yet and a pull about to run: a first restore (just
+      // At most once a minute (`lib/sync/client/catch-up.ts`), shared with the app shell's own catch-up.
+      const pass = catchUpWithServer(profileId!);
+      // Nothing stored yet and a pull under way: a first restore (just
       // signed in, new phone, cleared data). Keep the loading placeholders
       // rather than show "no medicines" until the medicines arrive
       // (owner-reported after signing out and in, 2026-10-15).
-      const firstRestore = local.length === 0 && due;
+      const firstRestore = local.length === 0 && pass !== null;
       if (firstRestore) {
         giveUpTimer = setTimeout(() => {
           if (!cancelled) void repo.list(profileId!).then((list) => !cancelled && publish(list));
@@ -103,8 +79,8 @@ export function useMedicationsList(profileId: string | null): MedicationsListSta
         publish(local);
       }
 
-      if (!due) return;
-      await hydrateLocalDataFromServer({ userMedication: repo, profileId: profileId! });
+      if (!pass) return;
+      await pass;
       if (cancelled) return;
       publish(await repo.list(profileId!));
     }
