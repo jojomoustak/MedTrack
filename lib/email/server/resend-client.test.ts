@@ -67,7 +67,7 @@ describe("sendEmail", () => {
 
     expect(sendMock).toHaveBeenCalledTimes(1);
     expect(sendMock).toHaveBeenCalledWith({
-      from: "MedTracking <noreply@example.com>",
+      from: "MedTrack <noreply@example.com>",
       to: INPUT.to,
       subject: INPUT.subject,
       html: INPUT.html,
@@ -87,6 +87,12 @@ describe("sendEmail", () => {
     expect(payload.attachments).toEqual([
       { filename: "medtrack.png", content: Buffer.from("iVBORw0KGgo=", "base64"), contentId: "medtrack-logo", contentType: "image/png" },
     ]);
+  });
+
+  it("is always from «MedTrack», keeping only the configured address", async () => {
+    const { senderOf } = await import("@/lib/email/server/resend-client");
+    expect(senderOf("MedTracking <noreply@example.com>")).toBe("MedTrack <noreply@example.com>");
+    expect(senderOf("noreply@example.com")).toBe("MedTrack <noreply@example.com>");
   });
 
   it("throws when Resend reports an error, and never leaks the recipient address in the thrown message", async () => {

@@ -36,7 +36,7 @@ export interface EmailContent {
   attachments: EmailAttachment[];
 }
 
-const BRAND = "MedTrack";
+export const BRAND = "MedTrack";
 
 /**
  * Both links last Better Auth's default hour (`resetPasswordTokenExpiresIn`

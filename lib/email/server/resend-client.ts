@@ -25,7 +25,7 @@ import { Resend } from "resend";
 import { getEnv } from "@/lib/config/env";
 import { ConfigError } from "@/lib/errors/app-error";
 import { logger } from "@/lib/logging/logger";
-import type { EmailAttachment } from "@/lib/email/server/templates";
+import { BRAND, type EmailAttachment } from "@/lib/email/server/templates";
 
 export interface SendEmailInput {
   to: string;
@@ -45,6 +45,16 @@ function assertResendConfigured(): { apiKey: string; from: string } {
     throw new ConfigError("Η αποστολή email δεν έχει ρυθμιστεί ακόμα σε αυτό το περιβάλλον. Δοκιμάστε ξανά αργότερα.");
   }
   return { apiKey: env.RESEND_API_KEY, from: env.EMAIL_FROM };
+}
+
+/**
+ * Every email is from "MedTrack", whatever name `EMAIL_FROM` carries
+ * (owner, 2026-10-20: the inbox said "MedTracking"); only its address is
+ * taken from there.
+ */
+export function senderOf(configured: string): string {
+  const address = /<([^>]+)>/.exec(configured)?.[1]?.trim() ?? configured.trim();
+  return `${BRAND} <${address}>`;
 }
 
 /** Lazy singleton, re-created only if the configured API key ever changes (e.g. across test runs that swap `process.env`). */
@@ -67,7 +77,7 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
   const client = getResendClient(apiKey);
 
   const { error } = await client.emails.send({
-    from,
+    from: senderOf(from),
     to: input.to,
     subject: input.subject,
     html: input.html,
