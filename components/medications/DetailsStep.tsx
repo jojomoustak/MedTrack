@@ -62,6 +62,11 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
   const [strengthValue, setStrengthValue] = useState(catalogProduct?.strengthValue ?? "");
   const [strengthUnit, setStrengthUnit] = useState(catalogProduct?.strengthUnit ?? "");
   const [inventoryUnit, setInventoryUnit] = useState<MedicationForm>((catalogProduct?.form as MedicationForm | null) ?? "tablet");
+  // The stock is counted in the form chosen above (tablets in tablets), so
+  // it isn't asked again: it follows the form until the person changes it
+  // themselves (owner-reported 2026-10-20: «Δισκίο» was asked twice).
+  const [changingUnit, setChangingUnit] = useState(false);
+  const [unitChosen, setUnitChosen] = useState(false);
 
   // The product is chosen by its full description (search, confirmation); from here on it goes by its everyday name.
   const displayName = catalogProduct ? shortCatalogName(catalogProduct.name) : (manualName ?? "");
@@ -91,6 +96,7 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
               onClick={() => {
                 playSound("button");
                 setForm(option);
+                if (!unitChosen) setInventoryUnit(option);
               }}
               className={`min-h-12 rounded-xl px-4 py-2 text-[15px] font-semibold transition duration-200 active:scale-95 ${
                 form === option ? "bg-accent-700 text-white" : "bg-surface-muted text-stone-700"
@@ -125,13 +131,38 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
         </div>
       </fieldset>
 
-      <SelectField label="Μονάδα αποθέματος" value={inventoryUnit} onChange={(e) => setInventoryUnit(e.target.value as MedicationForm)}>
-        {FORM_OPTIONS.map((option) => (
-          <option key={option} value={option}>
-            {FORM_LABELS[option]}
-          </option>
-        ))}
-      </SelectField>
+      {changingUnit ? (
+        <SelectField
+          label="Μονάδα αποθέματος"
+          value={inventoryUnit}
+          onChange={(e) => {
+            setInventoryUnit(e.target.value as MedicationForm);
+            setUnitChosen(true);
+          }}
+        >
+          {FORM_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {FORM_LABELS[option]}
+            </option>
+          ))}
+        </SelectField>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[15px] text-stone-700">
+            Μονάδα αποθέματος: <span className="font-semibold text-stone-900">{FORM_LABELS[inventoryUnit]}</span>
+          </p>
+          <Button
+            variant="tertiary"
+            onClick={() => {
+              playSound("button");
+              setChangingUnit(true);
+            }}
+            className="min-h-11 px-0 underline"
+          >
+            Αλλαγή
+          </Button>
+        </div>
+      )}
 
       <Button type="submit" size="lg" fullWidth>
         Συνέχεια
