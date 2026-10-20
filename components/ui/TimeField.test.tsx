@@ -29,7 +29,7 @@ describe("TimeField", () => {
   it("shows no time until one is chosen", () => {
     render(<Harness />);
     expect(screen.getByRole("button", { name: "Ώρα δόσης 1: χωρίς ώρα" })).toBeTruthy();
-    expect(screen.getByText("--:--")).toBeTruthy();
+    expect(screen.getByText("Επιλέξτε ώρα")).toBeTruthy();
     expect(screen.queryByRole("spinbutton")).toBeNull();
   });
 
@@ -50,7 +50,8 @@ describe("TimeField", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ώρα δόσης 1: 18:00" }));
     const [hours, minutes] = screen.getAllByRole("spinbutton");
 
-    fireEvent.click(screen.getByText("57"));
+    // The wheel turns past the end, so each number is there more than once.
+    fireEvent.click(screen.getAllByText("57")[0]);
     expect(onValue).toHaveBeenLastCalledWith("18:57");
 
     fireEvent.keyDown(hours, { key: "ArrowDown" });
@@ -59,6 +60,26 @@ describe("TimeField", () => {
     fireEvent.keyDown(minutes, { key: "ArrowDown" });
     fireEvent.keyDown(minutes, { key: "ArrowDown" });
     expect(onValue).toHaveBeenLastCalledWith("19:00");
+  });
+
+  it("names the part of the day beside the time", () => {
+    render(<Harness initial="20:30" />);
+    expect(screen.getByText("Βράδυ")).toBeTruthy();
+    cleanup();
+    render(<Harness initial="07:15" />);
+    expect(screen.getByText("Πρωί")).toBeTruthy();
+  });
+
+  it("turns past the end: down from 59 is 00, up from 00 is 23", () => {
+    const onValue = vi.fn();
+    render(<Harness initial="00:59" onValue={onValue} />);
+    fireEvent.click(screen.getByRole("button", { name: "Ώρα δόσης 1: 00:59" }));
+    const [hours, minutes] = screen.getAllByRole("spinbutton");
+
+    fireEvent.keyDown(minutes, { key: "ArrowDown" });
+    expect(onValue).toHaveBeenLastCalledWith("00:00");
+    fireEvent.keyDown(hours, { key: "ArrowUp" });
+    expect(onValue).toHaveBeenLastCalledWith("23:00");
   });
 
   it("«Έτοιμο» closes it, keeping the time", () => {

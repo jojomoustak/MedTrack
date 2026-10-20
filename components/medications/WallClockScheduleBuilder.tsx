@@ -4,6 +4,7 @@ import { useState } from "react";
 import { WEEKDAY_BIT } from "@/lib/domain/medication-schedule";
 import { ALL_WEEKDAYS_MASK } from "@/lib/domain/schedule-draft";
 import { Button } from "@/components/ui/Button";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { TimeField } from "@/components/ui/TimeField";
 
@@ -28,6 +29,19 @@ const WEEKDAYS: { bit: number; abbr: string; full: string }[] = [
   { bit: WEEKDAY_BIT.saturday, abbr: "Σα", full: "Σάββατο" },
   { bit: WEEKDAY_BIT.sunday, abbr: "Κυ", full: "Κυριακή" },
 ];
+
+const WEEKDAYS_ONLY = WEEKDAYS.slice(0, 5).reduce((mask, { bit }) => mask | (1 << bit), 0);
+const WEEKEND_ONLY = WEEKDAYS.slice(5).reduce((mask, { bit }) => mask | (1 << bit), 0);
+
+/** The chosen days read back in words under the circles, so a two-letter «Τε» or «Πε» slip shows. */
+export function describeDays(mask: number): string {
+  if (mask === 0) return "Πατήστε τις μέρες που χρειάζεστε.";
+  if (mask === ALL_WEEKDAYS_MASK) return "Κάθε μέρα";
+  if (mask === WEEKDAYS_ONLY) return "Δευτέρα έως Παρασκευή";
+  if (mask === WEEKEND_ONLY) return "Κάθε Σάββατο και Κυριακή";
+  const names = WEEKDAYS.filter(({ bit }) => mask & (1 << bit)).map(({ full }) => full);
+  return `Κάθε ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} και ${names[names.length - 1]}`}`;
+}
 
 /** Phase 3 §2.5's "Wall-clock builder" — covers daily/multiple_times_daily/specific_weekdays; `scheduleKind` itself is derived from these values (`deriveWallClockScheduleKind`), never chosen here. */
 export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallClockScheduleBuilderProps) {
@@ -77,8 +91,8 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <h2 className="text-[22px] font-bold tracking-tight text-stone-900">Σταθερές ώρες</h2>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-[17px] font-semibold text-stone-800">Ώρες δόσης</legend>
+      <fieldset className="flex flex-col gap-2.5">
+        <legend className="mb-2.5 text-[17px] font-semibold text-stone-800">Ποιες ώρες;</legend>
         {times.map((time, index) => (
           <TimeField
             key={index}
@@ -112,50 +126,47 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
         </button>
       </fieldset>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-[17px] font-semibold text-stone-800">Ποιες ημέρες;</legend>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => { playSound("button"); setSpecificDays(false); }}
-            aria-pressed={!specificDays}
-            className={`min-h-12 flex-1 rounded-xl px-4 py-2 text-[15px] font-semibold ${
-              !specificDays ? "bg-accent-700 text-white" : "bg-surface-muted text-stone-700"
-            }`}
-          >
-            Κάθε μέρα
-          </button>
-          <button
-            type="button"
-            onClick={() => { playSound("button"); setSpecificDays(true); }}
-            aria-pressed={specificDays}
-            className={`min-h-12 flex-1 rounded-xl px-4 py-2 text-[15px] font-semibold ${
-              specificDays ? "bg-accent-700 text-white" : "bg-surface-muted text-stone-700"
-            }`}
-          >
-            Ορισμένες μέρες
-          </button>
-        </div>
+      <fieldset className="mt-3 flex flex-col gap-3">
+        <legend className="mb-2.5 text-[17px] font-semibold text-stone-800">Ποιες μέρες;</legend>
+        <SegmentedControl
+          label="Ποιες μέρες"
+          segments={[
+            { value: "every", label: "Κάθε μέρα" },
+            { value: "some", label: "Ορισμένες μέρες" },
+          ]}
+          value={specificDays ? "some" : "every"}
+          onChange={(choice) => {
+            playSound("button");
+            setSpecificDays(choice === "some");
+          }}
+        />
 
         {specificDays && (
-          <div className="grid grid-cols-7 gap-1.5" role="group" aria-label="Ημέρες">
-            {WEEKDAYS.map(({ bit, abbr, full }) => {
-              const checked = (selectedDays & (1 << bit)) !== 0;
-              return (
-                <button
-                  key={bit}
-                  type="button"
-                  onClick={() => toggleDay(bit)}
-                  aria-pressed={checked}
-                  aria-label={full}
-                  className={`flex aspect-square w-full max-w-12 items-center justify-center justify-self-center rounded-full text-[15px] font-semibold transition-colors duration-150 ${
-                    checked ? "bg-accent-700 text-white" : "bg-surface-muted text-stone-700"
-                  }`}
-                >
-                  {abbr}
-                </button>
-              );
-            })}
+          <div className="flex flex-col gap-3 pt-1">
+            <div className="grid grid-cols-7 gap-1.5" role="group" aria-label="Ημέρες" aria-describedby="chosen-days">
+              {WEEKDAYS.map(({ bit, abbr, full }) => {
+                const checked = (selectedDays & (1 << bit)) !== 0;
+                return (
+                  <button
+                    key={bit}
+                    type="button"
+                    onClick={() => toggleDay(bit)}
+                    aria-pressed={checked}
+                    aria-label={full}
+                    className={`flex aspect-square w-full max-w-12 items-center justify-center justify-self-center rounded-full text-[15px] font-semibold transition duration-150 active:scale-90 ${
+                      checked
+                        ? "bg-accent-700 text-white shadow-[0_2px_6px_rgb(4_120_87/0.3)]"
+                        : "bg-white text-stone-700 shadow-[0_1px_2px_rgb(28_25_23/0.05),0_2px_6px_rgb(28_25_23/0.07)]"
+                    }`}
+                  >
+                    {abbr}
+                  </button>
+                );
+              })}
+            </div>
+            <p id="chosen-days" aria-live="polite" className={`text-[15px] leading-snug ${selectedDays ? "font-medium text-stone-700" : "text-stone-500"}`}>
+              {describeDays(selectedDays)}
+            </p>
           </div>
         )}
       </fieldset>

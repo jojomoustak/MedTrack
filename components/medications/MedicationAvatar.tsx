@@ -4,7 +4,7 @@ import { useMedicationPhotoThumbnail } from "@/lib/medications/client/use-medica
 import { medicationColorClasses } from "@/lib/medications/client/medication-color";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
-type Glyph = "tablet" | "capsule" | "drop" | "bottle" | "spray" | "syringe" | "patch" | "sachet";
+type Glyph = "tablet" | "capsule" | "drop" | "bottle" | "spray" | "syringe" | "patch" | "sachet" | "tube";
 
 const GLYPH_FOR_FORM: Record<MedicationForm, Glyph> = {
   tablet: "tablet",
@@ -17,7 +17,8 @@ const GLYPH_FOR_FORM: Record<MedicationForm, Glyph> = {
   sachet: "sachet",
   mg: "tablet",
   mcg: "tablet",
-  g: "tablet",
+  // Creams, gels and ointments are counted in grams.
+  g: "tube",
   dose: "tablet",
   other: "tablet",
 };
@@ -91,6 +92,15 @@ export function MedicationFormGlyph({ form, size = 40 }: { form: MedicationForm 
         <svg {...svg}>
           <path d="M7.5 8.5 9.6 6.4l2.1 2.1 2.1-2.1 2.1 2.1 2.1-2.1 2.1 2.1 2.1-2.1 2.1 2.1V25.5a2.2 2.2 0 0 1-2.2 2.2H9.7a2.2 2.2 0 0 1-2.2-2.2Z" fill="currentColor" />
           <path d="M11 13h10" stroke="white" strokeOpacity="0.55" strokeWidth="1.7" strokeLinecap="round" />
+        </svg>
+      );
+    case "tube":
+      return (
+        <svg {...svg}>
+          <path d="M9.4 4.5h13.2l-1 3.4H10.4Z" fill="currentColor" fillOpacity="0.5" />
+          <path d="M10.4 7.9h11.2l-1.6 15.4h-8Z" fill="currentColor" />
+          <rect x="13" y="23.3" width="6" height="4.6" rx="1.1" fill="currentColor" fillOpacity="0.55" />
+          <path d="M13.4 11.6l.6 7" {...shine} />
         </svg>
       );
     case "tablet":

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { StockUnitField } from "@/components/medications/StockUnitField";
+import { FormPicker } from "@/components/medications/FormPicker";
 import { FORM_LABELS, FORM_OPTIONS } from "@/components/medications/form-options";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import type { CatalogProduct } from "@/lib/domain/catalog";
@@ -13,13 +14,6 @@ import { playSound } from "@/lib/sound/client/play-sound";
 
 // Re-exported: many screens import them from here.
 export { FORM_LABELS, FORM_OPTIONS };
-
-/**
- * The order the forms are offered in here: the usual ones first, measures
- * after, «Άλλο» last across the whole row — an even grid instead of chips
- * of every width wrapping raggedly (owner-reported 2026-10-20).
- */
-const FORM_GRID: MedicationForm[] = ["tablet", "capsule", "drop", "spray", "sachet", "patch", "injection", "dose", "ml", "mg", "mcg", "g"];
 
 export interface DetailsStepValues {
   form: MedicationForm | null;
@@ -67,26 +61,13 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
 
       <fieldset className={FIELD_WRAPPER}>
         <legend className={`${FIELD_LABEL} mb-2`}>Μορφή</legend>
-        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Μορφή φαρμάκου">
-          {[...FORM_GRID, "other" as const].map((option) => (
-            <button
-              key={option}
-              type="button"
-              role="radio"
-              aria-checked={form === option}
-              onClick={() => {
-                playSound("button");
-                setForm(option);
-                if (!unitChosen) setInventoryUnit(option);
-              }}
-              className={`min-h-12 rounded-xl px-2 py-2 text-[15px] font-semibold transition-colors duration-150 active:scale-95 ${option === "other" ? "col-span-3" : ""} ${
-                form === option ? "bg-accent-700 text-white" : "bg-surface-muted text-stone-700"
-              }`}
-            >
-              {FORM_LABELS[option]}
-            </button>
-          ))}
-        </div>
+        <FormPicker
+          value={form}
+          onChange={(option) => {
+            setForm(option);
+            if (!unitChosen) setInventoryUnit(option);
+          }}
+        />
       </fieldset>
 
       <fieldset className={FIELD_WRAPPER}>

@@ -24,7 +24,7 @@ describe("DetailsStep — the stock unit follows the form", () => {
     expect(screen.queryByLabelText("Μονάδα αποθέματος")).toBeNull();
 
     fireEvent.click(screen.getByRole("radio", { name: "Κάψουλα" }));
-    expect(screen.getByText("Κάψουλα", { selector: "span" })).toBeTruthy();
+    expect(screen.getByText(/Μονάδα αποθέματος/).textContent).toContain("Κάψουλα");
     submit();
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ form: "capsule", inventoryUnit: "capsule" }));
@@ -46,7 +46,7 @@ describe("DetailsStep — the stock unit follows the form", () => {
     const syrup = { id: "p-1", name: "ALGOFREN SYR 100MG/5ML FLx150 ML", form: null, strengthValue: null, strengthUnit: null } as unknown as CatalogProduct;
     render(<DetailsStep catalogProduct={syrup} manualName={null} onSubmit={onSubmit} />);
 
-    expect(screen.getByRole("radio", { name: "ml" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("radio", { name: "Σιρόπι (ml)" }).getAttribute("aria-checked")).toBe("true");
     submit();
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ form: "ml", inventoryUnit: "ml" }));
   });
