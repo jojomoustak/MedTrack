@@ -40,6 +40,7 @@ function fakePlatform(recognizePackageText: () => Promise<OcrCaptureResult>): Mo
     upsertReminder: vi.fn(),
     cancelRemindersForDoseEvent: vi.fn(),
     cancelAllReminders: vi.fn(),
+    setAutofill: vi.fn(),
     signInWithGoogle: vi.fn(),
   };
 }

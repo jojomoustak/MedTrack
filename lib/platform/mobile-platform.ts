@@ -229,6 +229,16 @@ export interface MobilePlatform {
   cancelAllReminders(): Promise<NativeReminderCommandResult>;
 
   /**
+   * Switches Android's autofill (Google's password manager) off or back on
+   * for the app's web view. Create account and Reset password turn it off
+   * while they're open: on a new-password field its "strong password"
+   * pop-up kept taking focus and closing the keyboard (owner-reported,
+   * 2026-10-20; `autocomplete="off"` didn't stop it). Same `status`
+   * result shape as the reminder commands.
+   */
+  setAutofill(enabled: boolean): Promise<NativeReminderCommandResult>;
+
+  /**
    * Invokes this app's own native Google Sign-In command (Android
    * Credential Manager / native account picker — never a WebView-hosted
    * Google page, which Google's own policy blocks inside an embedded

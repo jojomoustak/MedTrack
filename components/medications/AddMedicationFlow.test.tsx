@@ -51,6 +51,7 @@ function makeFakePlatform(overrides: Partial<MobilePlatform> = {}): MobilePlatfo
     upsertReminder: vi.fn(),
     cancelRemindersForDoseEvent: vi.fn(),
     cancelAllReminders: vi.fn(),
+    setAutofill: vi.fn(),
     signInWithGoogle: vi.fn(),
     ...overrides,
   };

@@ -21,6 +21,7 @@ function fakePlatform(overrides: Partial<MobilePlatform> = {}): MobilePlatform {
     upsertReminder: vi.fn().mockResolvedValue({ status: "ok" }),
     cancelRemindersForDoseEvent: vi.fn().mockResolvedValue({ status: "ok" }),
     cancelAllReminders: vi.fn().mockResolvedValue({ status: "ok" }),
+    setAutofill: vi.fn().mockResolvedValue({ status: "ok" }),
     signInWithGoogle: vi.fn(),
     ...overrides,
   };

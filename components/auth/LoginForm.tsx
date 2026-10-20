@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
+import { useAppAutofill } from "@/components/auth/use-app-autofill";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
@@ -15,6 +16,8 @@ import { Button } from "@/components/ui/Button";
  * isn't told "wrong password" when the real cause is offline.
  */
 export function LoginForm() {
+  // A saved password still fills here, even if a new-password screen was left without closing (`use-app-autofill.ts`).
+  useAppAutofill(true);
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

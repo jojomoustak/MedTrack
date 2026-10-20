@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
+import { useAppAutofill } from "@/components/auth/use-app-autofill";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PasswordRule } from "@/components/auth/PasswordRule";
@@ -34,6 +35,8 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
   const router = useRouter();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  // Google's strong-password pop-up kept closing the keyboard here (`use-app-autofill.ts`).
+  useAppAutofill(false);
   const [error, setError] = useState<string | null>(null);
   const [linkInvalid, setLinkInvalid] = useState(false);
   const [submitting, setSubmitting] = useState(false);
