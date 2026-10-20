@@ -75,6 +75,12 @@ export default function PrivacyPage() {
               να προσθέσετε φωτογραφία σε ένα φάρμακο.
             </li>
             <li>
+              <strong>Φωτογραφία προφίλ</strong> (προαιρετικό): αν επιλέξετε
+              να προσθέσετε δική σας φωτογραφία στο προφίλ. Αποθηκεύεται ως
+              μικρό τετράγωνο, χωρίς τα στοιχεία της αρχικής φωτογραφίας
+              (όπως η τοποθεσία λήψης), και τη βλέπετε μόνο εσείς.
+            </li>
+            <li>
               <strong>Τεχνικά δεδομένα ασφαλείας:</strong> ένα κρυπτογραφημένο
               (όχι το πραγματικό) αποτύπωμα της διεύθυνσης IP και το είδος
               συσκευής/browser, χρησιμοποιούνται αποκλειστικά για ανίχνευση
@@ -108,7 +114,7 @@ export default function PrivacyPage() {
           <ul className="flex flex-col gap-3 [&>li]:relative [&>li]:pl-5 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[0.62em] [&>li]:before:size-2 [&>li]:before:rounded-full [&>li]:before:bg-accent-600 text-[17px] leading-relaxed text-stone-700">
             <li>
               <strong>Vercel</strong> — φιλοξενία της εφαρμογής και
-              (προαιρετικά) αποθήκευση φωτογραφιών φαρμάκων.
+              (προαιρετικά) αποθήκευση φωτογραφιών φαρμάκων και προφίλ.
             </li>
             <li>
               <strong>Neon</strong> — η βάση δεδομένων όπου αποθηκεύονται τα

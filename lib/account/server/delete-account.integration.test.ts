@@ -47,8 +47,14 @@ import { ConflictError } from "@/lib/errors/app-error";
 // is the only function `deleteAccount`'s photo-cleanup step calls
 // (`lib/medications/server/photo.ts`'s `deleteMedicationPhotoBlobByKey`).
 const blobDel = vi.fn().mockResolvedValue(undefined);
+// A folder listing finds the profile photo (2026-10-20) in its own folder, nothing in the medication-photo one.
+const blobList = vi.fn(async ({ prefix }: { prefix: string }) => ({
+  blobs: prefix.startsWith("profile-photos/") ? [{ pathname: `${prefix}photo.jpg` }] : [],
+  hasMore: false,
+}));
 vi.mock("@vercel/blob", () => ({
   del: (...args: unknown[]) => blobDel(...args),
+  list: (...args: unknown[]) => blobList(...(args as [{ prefix: string }])),
   put: vi.fn(),
   get: vi.fn(),
 }));
@@ -298,7 +304,10 @@ describe.skipIf(!connectionString)("deleteAccount — full hard-delete workflow 
     // --- assert: the medication's photo blob was really deleted -------------
     // (module header item 7 — collected + best-effort-deleted BEFORE the
     // DB batch that removes the `user_medication` row referencing it).
-    expect(blobDel).toHaveBeenCalledWith(`medication-photos/${profileId}/${userMedicationId}-test`);
+    // With its thumbnail (since 2026-10-15, `withThumbnail` in lib/medications/server/photo.ts).
+    expect(blobDel).toHaveBeenCalledWith([`medication-photos/${profileId}/${userMedicationId}-test`, `medication-photos/${profileId}/${userMedicationId}-test.thumb.jpg`]);
+    // The profile photo, swept before and after the erasure.
+    expect(blobDel).toHaveBeenCalledWith([`profile-photos/${profileId}/photo.jpg`]);
 
     // --- assert: every listed table is empty for this profile/account ------
     const emptyChecks: Array<[string, unknown[]]> = [
@@ -387,8 +396,11 @@ describe.skipIf(!connectionString)("deleteAccount — full hard-delete workflow 
     const first = await deleteAccount({ accountId, profileId, method: "user_initiated" }, db);
     expect(first.alreadyDeleted).toBe(false);
 
+    blobDel.mockClear();
     const second = await deleteAccount({ accountId, profileId, method: "user_initiated" }, db);
     expect(second.alreadyDeleted).toBe(true);
+    // A retry still sweeps the profile photo (its place needs only the profile id).
+    expect(blobDel).toHaveBeenCalledWith([`profile-photos/${profileId}/photo.jpg`]);
 
     // Still exactly one deleted_profile_registry row — no duplicate/error.
     const rows = await db.select().from(schema.deletedProfileRegistry).where(eq(schema.deletedProfileRegistry.profileId, profileId));

@@ -266,7 +266,10 @@
  *      progressed, per the idempotency check above (and if it had in fact
  *      already fully succeeded despite the stuck row, this call is a
  *      no-op that also closes out the stale audit row).
- *   6. `medication.photo_blob_cleanup_failed` warning log lines (see
+ *   6. (The profile photo, 2026-10-20: `profile_photo_cleanup_failed`
+ *      names its folder, `profile-photos/<profileId>/`; re-invoking
+ *      `deleteAccount` sweeps it again, even once the account is gone.)
+ *      `medication.photo_blob_cleanup_failed` warning log lines (see
  *      item 7 below) name the specific blob pathname that failed to
  *      delete — cross-reference the timestamp against this same
  *      request/incident and retry `deleteMedicationPhotoBlobByKey()`
@@ -310,6 +313,7 @@ import { withProfileScope } from "@/lib/db/rls";
 import * as schema from "@/lib/db/schema";
 import { hashAccountId } from "@/lib/account/server/account-id-hash";
 import { collectMedicationPhotoBlobKeysForProfile, deleteAllMedicationPhotoBlobsForProfile, deleteMedicationPhotoBlobByKey } from "@/lib/medications/server/photo";
+import { deleteProfilePhoto, profilePhotoFolder } from "@/lib/account/server/profile-photo";
 import { logger } from "@/lib/logging/logger";
 
 export type DeletionMethod = "user_initiated" | "admin" | "legal_request";
@@ -339,6 +343,27 @@ async function isAlreadyDeleted(profileId: string, db: Db | TestableDb): Promise
   return rows[0].length > 0;
 }
 
+/**
+ * The profile photo (2026-10-20), best-effort and logged like the
+ * medication photos. Unlike theirs, its place follows from the profile id
+ * alone, so it can also be swept after the database erasure and on a
+ * repeated deletion: run before the batch, after it (an upload that was
+ * already in flight could land in between; once the batch commits no
+ * session can start another), and again whenever a deletion is retried.
+ * A failure names the folder — UUID-only, like `blobKey` in item 6.
+ */
+async function sweepProfilePhoto(profileId: string, accountIdHash: string): Promise<void> {
+  try {
+    await deleteProfilePhoto(profileId);
+  } catch (err) {
+    logger.warn("account.delete.profile_photo_cleanup_failed", {
+      accountIdHash,
+      blobFolder: profilePhotoFolder(profileId),
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
 export async function deleteAccount(request: DeleteAccountRequest, dbOverride?: Db | TestableDb): Promise<DeleteAccountResult> {
   const { accountId, profileId, method, actor } = request;
   if (!accountId || !profileId) {
@@ -350,6 +375,8 @@ export async function deleteAccount(request: DeleteAccountRequest, dbOverride?: 
 
   if (await isAlreadyDeleted(profileId, db)) {
     logger.info("account.delete.already_deleted", { accountIdHash });
+    // A retry is also how a profile photo a first attempt couldn't remove gets removed.
+    await sweepProfilePhoto(profileId, accountIdHash);
     // Best-effort: if a prior attempt's audit row was left stuck (e.g. the
     // process died between the batch committing and the completion
     // update), close it out now rather than leaving it permanently
@@ -400,6 +427,7 @@ export async function deleteAccount(request: DeleteAccountRequest, dbOverride?: 
     } catch (err) {
       logger.warn("account.delete.photo_folder_sweep_failed", { accountIdHash, error: err instanceof Error ? err.message : String(err) });
     }
+    await sweepProfilePhoto(profileId, accountIdHash);
 
     await withProfileScope(
       profileId,
@@ -483,6 +511,9 @@ export async function deleteAccount(request: DeleteAccountRequest, dbOverride?: 
       .where(eq(schema.accountDeletionAudit.id, auditRow.id));
     throw err;
   }
+
+  // Again now no session is left: catches an upload that was mid-flight during the first sweep.
+  await sweepProfilePhoto(profileId, accountIdHash);
 
   await db
     .update(schema.accountDeletionAudit)

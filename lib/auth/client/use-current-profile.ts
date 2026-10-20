@@ -12,6 +12,8 @@ export type CurrentProfileState =
 const CACHED_PROFILE_KEY = "medtrack:last-known-profile";
 /** Today's greeting name (`use-first-name.ts`) — kept here so signing out clears it with the profile. */
 export const CACHED_FIRST_NAME_KEY = "medtrack:first-name";
+/** The profile photo kept on the phone (`lib/account/client/profile-photo.ts`) — cleared with the profile too. */
+export const CACHED_PROFILE_PHOTO_KEY = "medtrack:profile-photo";
 
 type CachedProfile = { profileId: string; accountId: string; hearts?: boolean };
 
@@ -78,13 +80,14 @@ export function getCachedProfileId(): string | null {
 
 export function clearCachedProfile(): void {
   // Same moment, same reason: the screens' in-memory snapshots, photo
-  // thumbnails and the remembered greeting name belong to the profile being
-  // signed out.
+  // thumbnails, the remembered greeting name and the profile photo belong
+  // to the profile being signed out.
   clearSnapshots();
   notifyProfileCleared();
   try {
     localStorage.removeItem(CACHED_PROFILE_KEY);
     localStorage.removeItem(CACHED_FIRST_NAME_KEY);
+    localStorage.removeItem(CACHED_PROFILE_PHOTO_KEY);
   } catch {
     // Nothing to do if storage is unavailable.
   }

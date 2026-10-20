@@ -29,6 +29,7 @@ import { eq, sql } from "drizzle-orm";
 import { getDb, type Db, type TestableDb } from "@/lib/db/client";
 import { withProfileScope } from "@/lib/db/rls";
 import * as schema from "@/lib/db/schema";
+import { readProfilePhotoForExport } from "@/lib/account/server/profile-photo";
 
 export interface AccountDataExport {
   exportedAt: string;
@@ -48,6 +49,8 @@ export interface AccountDataExport {
   purchaseListItems: unknown[];
   /** Only USER_CONFIRMED/VERIFIED_PHYSICAL_OBSERVATION/COMMUNITY_CONFIRMED rows this profile confirmed — never the shared AUTHORITATIVE catalog mappings. */
   confirmedMedicationIdentifiers: unknown[];
+  /** The profile photo itself (2026-10-20), if one was added: it has no database row to list. */
+  profilePhoto: { contentType: string; base64: string } | null;
 }
 
 export async function exportAccountData(
@@ -130,5 +133,6 @@ export async function exportAccountData(
     purchaseLists: purchaseListRows,
     purchaseListItems: purchaseListItemRows,
     confirmedMedicationIdentifiers: medicationIdentifierRows,
+    profilePhoto: await readProfilePhotoForExport(profileId),
   };
 }

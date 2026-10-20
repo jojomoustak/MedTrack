@@ -37,13 +37,13 @@ function drawToJpeg(bitmap: ImageBitmap, source: { x: number; y: number; width: 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/jpeg", JPEG_QUALITY));
 }
 
-/** A centred square `THUMBNAIL_PX` JPEG of `photo` (avatars crop to a circle anyway), or null where the browser can't decode it. */
-export async function makePhotoThumbnail(photo: Blob): Promise<Blob | null> {
+/** A centred square JPEG of `photo`, `px` on a side (avatars crop to a circle anyway), or null where the browser can't decode it. */
+export async function makePhotoThumbnail(photo: Blob, px = THUMBNAIL_PX): Promise<Blob | null> {
   const bitmap = await decode(photo);
   if (!bitmap) return null;
   try {
     const side = Math.min(bitmap.width, bitmap.height);
-    return await drawToJpeg(bitmap, { x: (bitmap.width - side) / 2, y: (bitmap.height - side) / 2, width: side, height: side }, THUMBNAIL_PX, THUMBNAIL_PX);
+    return await drawToJpeg(bitmap, { x: (bitmap.width - side) / 2, y: (bitmap.height - side) / 2, width: side, height: side }, px, px);
   } catch {
     return null;
   } finally {

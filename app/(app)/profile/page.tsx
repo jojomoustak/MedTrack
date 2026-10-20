@@ -11,6 +11,7 @@ import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Button } from "@/components/ui/Button";
 import { EmailVerificationBanner } from "@/components/profile/EmailVerificationBanner";
+import { ProfilePhoto } from "@/components/profile/ProfilePhoto";
 import { ReminderPermissionToggle } from "@/components/profile/ReminderPermissionToggle";
 import { useProfileId } from "@/components/shell/CurrentProfileContext";
 import { ChevronIcon } from "@/components/ui/ChevronIcon";
@@ -109,14 +110,7 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col gap-5 px-5 pt-1 pb-6">
       <div className="flex flex-col items-center gap-1 pt-2 text-center">
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element -- the account's own Google profile photo URL; not worth routing through image optimization
-          <img src={image} alt="" referrerPolicy="no-referrer" className="mb-2 size-24 rounded-full object-cover shadow-[0_2px_10px_rgba(28,25,23,.12)]" />
-        ) : (
-          <div aria-hidden="true" className="mb-2 flex size-24 items-center justify-center rounded-full bg-accent-100 text-4xl font-bold text-accent-800">
-            {initial}
-          </div>
-        )}
+        <ProfilePhoto profileId={profileId} fallbackImage={image ?? null} initial={initial} />
         <h1 className="text-[24px] font-bold tracking-tight text-stone-900">{name || "Προφίλ"}</h1>
         {email && <p className="text-base text-stone-600">{email}</p>}
       </div>

@@ -12,11 +12,12 @@ const MAX_REQUESTS_PER_WINDOW = 20;
 
 const hits = new Map<string, number[]>();
 
-export function isRateLimited(key: string, now = Date.now()): boolean {
-  const timestamps = (hits.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
+/** `limit`: a route's own window and count, when the search defaults are too loose for it (e.g. image uploads). */
+export function isRateLimited(key: string, now = Date.now(), limit: { windowMs: number; max: number } = { windowMs: WINDOW_MS, max: MAX_REQUESTS_PER_WINDOW }): boolean {
+  const timestamps = (hits.get(key) ?? []).filter((t) => now - t < limit.windowMs);
   timestamps.push(now);
   hits.set(key, timestamps);
-  return timestamps.length > MAX_REQUESTS_PER_WINDOW;
+  return timestamps.length > limit.max;
 }
 
 /** Test-only: clears all tracked rate-limit state. */
