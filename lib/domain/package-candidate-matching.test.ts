@@ -145,3 +145,39 @@ describe("rankPackageCandidates — the brand anywhere on the box", () => {
     expect(rankPackageCandidates(ocr, [flagyl, algofren])).toEqual({ confidence: "OCR_NOT_FOUND", candidates: [] });
   });
 });
+
+// Owner-reported 2026-10-20: an Algofren 600 mg box couldn't be told from the
+// other Algofrens. The catalog imported from EOF has no separate strength,
+// form or box size: only the name says them.
+describe("rankPackageCandidates — strength, form and box size from the catalog name", () => {
+  const bare = { strengthValue: null, strengthUnit: null, form: null, packSizeValue: null, packSizeUnit: null, activeIngredient: "IBUPROFEN" };
+  const names = [
+    "ALGOFREN EFF.GRAN 400MG/SACHET BTX10 SACHETS",
+    "ALGOFREN F.C.TAB 400MG/TAB BTx20 (BLIST 2x10)",
+    "ALGOFREN SYR 100MG/5ML FLx150 ML",
+    "ALGOFREN RAPID SOFT.CAPS 400MG/CAP  BT X 10 CAPS",
+    "ALGOFREN SUPP 500MG/SUP BT X12(STRIP 2X6)",
+    "ALGOFREN F.C.TAB 200MG/TAB BTx20 (BLIST 2x10)",
+    "ALGOFREN F.C.TAB 600MG/TAB BTx20 (BLIST 2x10)",
+  ];
+  const algofrens = names.map((name, i) => makeEntry({ ...bare, id: `algofren-${i}`, eofCode: String(i), name }));
+  const algofren600 = "algofren-6";
+
+  it("a Greek box of Algofren 600 mg tablets finds that one product, clearly", () => {
+    const ocr = extractPackageOcrResult(["Algofren", "600 mg", "Επικαλυμμένα με λεπτό υμένιο δισκία", "Ιβουπροφαίνη", "20 δισκία"].join("\n"));
+    const result = rankPackageCandidates(ocr, algofrens);
+    expect(result.confidence).toBe("OCR_HIGH_CONFIDENCE");
+    expect(result.candidates.map((c) => c.entry.id)).toEqual([algofren600]);
+    expect(result.candidates[0]).toMatchObject({ matchedBrand: true, matchedStrength: true, matchedForm: true, matchedPackageQuantity: true });
+  });
+
+  it("the strength alone is enough to put the right one first", () => {
+    const ocr = extractPackageOcrResult(["ALGOFREN", "600mg"].join("\n"));
+    expect(rankPackageCandidates(ocr, algofrens).candidates[0].entry.id).toBe(algofren600);
+  });
+
+  it("the syrup's box finds the syrup", () => {
+    const ocr = extractPackageOcrResult(["Algofren", "100 mg/5 ml", "πόσιμο εναιώρημα", "σιρόπι"].join("\n"));
+    expect(rankPackageCandidates(ocr, algofrens).candidates[0].entry.id).toBe("algofren-2");
+  });
+});

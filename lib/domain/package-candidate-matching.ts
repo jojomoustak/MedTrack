@@ -25,7 +25,7 @@
  */
 import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
 import type { MedicationPackageOcrResult } from "@/lib/domain/ocr";
-import { normalizeOcrToken } from "@/lib/domain/ocr";
+import { extractPackageOcrResult, normalizeOcrToken } from "@/lib/domain/ocr";
 
 export type OcrConfidenceState = "OCR_HIGH_CONFIDENCE" | "OCR_PARTIAL" | "OCR_AMBIGUOUS" | "OCR_NOT_FOUND";
 
@@ -119,6 +119,25 @@ function brandWord(name: string): string {
   return normalizeOcrToken(name).split(WORD_SEPARATORS).find((word) => word.length > 0) ?? "";
 }
 
+/**
+ * A product's strength, form and box size: its own fields, or, when they
+ * are empty (as for every product imported from EOF's list), read from its
+ * name — "ALGOFREN F.C.TAB 600MG/TAB BTx20" is 600 mg tablets, 20 to a box
+ * — with the same parser that reads the box. Without this, every Algofren
+ * scored the same and a 600 mg box couldn't be told from the others
+ * (owner-reported 2026-10-20).
+ */
+function entryFacts(entry: OfflineIndexEntry): { strengths: { value: string; unit: string | null }[]; form: string | null; packSize: number | null } {
+  const fromName = extractPackageOcrResult(entry.name);
+  return {
+    strengths: entry.strengthValue
+      ? [{ value: entry.strengthValue, unit: entry.strengthUnit }]
+      : (fromName.strengths ?? []).map((s) => ({ value: s.value, unit: s.unit ?? null })),
+    form: entry.form ? entry.form.toLowerCase() : fromName.pharmaceuticalForm ? (OCR_FORM_TO_CATALOG_FORM[fromName.pharmaceuticalForm] ?? null) : null,
+    packSize: entry.packSizeValue ? Number(entry.packSizeValue) : (fromName.packageQuantity ?? null),
+  };
+}
+
 function scoreEntry(ocr: MedicationPackageOcrResult, entry: OfflineIndexEntry, words: ReadonlySet<string>): PackageCandidateScore {
   let score = 0;
   const normalizedName = normalizeOcrToken(entry.name);
@@ -150,20 +169,17 @@ function scoreEntry(ocr: MedicationPackageOcrResult, entry: OfflineIndexEntry, w
     }
   }
 
-  const matchedStrength = Boolean(
-    entry.strengthValue &&
-      ocr.strengths?.some((s) => strengthsMatch(s.value, entry.strengthValue as string) && unitsEquivalent(s.unit, entry.strengthUnit)),
+  const facts = entryFacts(entry);
+
+  const matchedStrength = facts.strengths.some((catalog) =>
+    ocr.strengths?.some((s) => strengthsMatch(s.value, catalog.value) && unitsEquivalent(s.unit, catalog.unit)),
   );
   if (matchedStrength) score += WEIGHT_STRENGTH;
 
-  const matchedForm = Boolean(
-    ocr.pharmaceuticalForm && entry.form && OCR_FORM_TO_CATALOG_FORM[ocr.pharmaceuticalForm] === entry.form.toLowerCase(),
-  );
+  const matchedForm = Boolean(ocr.pharmaceuticalForm && facts.form && OCR_FORM_TO_CATALOG_FORM[ocr.pharmaceuticalForm] === facts.form);
   if (matchedForm) score += WEIGHT_FORM;
 
-  const matchedPackageQuantity = Boolean(
-    ocr.packageQuantity !== undefined && entry.packSizeValue && Number(entry.packSizeValue) === ocr.packageQuantity,
-  );
+  const matchedPackageQuantity = ocr.packageQuantity !== undefined && facts.packSize !== null && facts.packSize === ocr.packageQuantity;
   if (matchedPackageQuantity) score += WEIGHT_PACKAGE_QUANTITY;
 
   return { entry, score, matchedBrand, matchedStrength, matchedForm, matchedPackageQuantity };

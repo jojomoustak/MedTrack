@@ -91,6 +91,30 @@ describe("extractPackageOcrResult — form parsing (spec §5/§31)", () => {
   });
 });
 
+// 2026-10-20: Greek boxes often name the form and count only in Greek.
+describe("extractPackageOcrResult — Greek form and count", () => {
+  it("reads the form from Greek words, with or without accents", () => {
+    expect(extractPackageOcrResult("Επικαλυμμένα με λεπτό υμένιο δισκία").pharmaceuticalForm).toBe("TABLET");
+    expect(extractPackageOcrResult("ΚΑΨΑΚΙΑ ΣΚΛΗΡΑ").pharmaceuticalForm).toBe("CAPSULE");
+    expect(extractPackageOcrResult("σιρόπι").pharmaceuticalForm).toBe("SYRUP");
+    expect(extractPackageOcrResult("πόσιμο εναιώρημα").pharmaceuticalForm).toBe("SUSPENSION");
+    expect(extractPackageOcrResult("κοκκία σε φακελίσκους").pharmaceuticalForm).toBe("SACHET");
+  });
+
+  it("English form words still win when the box has both", () => {
+    expect(extractPackageOcrResult(["film-coated tablets", "καψάκια"].join("\n")).pharmaceuticalForm).toBe("TABLET");
+  });
+
+  it("reads a Greek count as the box size", () => {
+    expect(extractPackageOcrResult("20 δισκία").packageQuantity).toBe(20);
+    expect(extractPackageOcrResult("30 ΚΑΨΑΚΙΑ").packageQuantity).toBe(30);
+  });
+
+  it("reads the catalog's own short forms too", () => {
+    expect(extractPackageOcrResult("ALGOFREN SYR 100MG/5ML FLx150 ML").pharmaceuticalForm).toBe("SYRUP");
+  });
+});
+
 describe("extractPackageOcrResult — package quantity parsing (spec §5/§31)", () => {
   it("parses BTX30", () => {
     const result = extractPackageOcrResult("FLAGYL 500MG CAPS BTX30");

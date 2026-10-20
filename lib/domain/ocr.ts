@@ -90,6 +90,7 @@ const FORM_PATTERNS: readonly [RegExp, string][] = [
   [/\bCAPSULES?\b/i, "CAPSULE"],
   [/\bCAPS?\b/i, "CAPSULE"],
   [/\bSYRUP\b/i, "SYRUP"],
+  [/\bSYR\b/i, "SYRUP"],
   [/\bSUSPENSION\b/i, "SUSPENSION"],
   [/\bCREAM\b/i, "CREAM"],
   [/\bGEL\b/i, "GEL"],
@@ -99,6 +100,32 @@ const FORM_PATTERNS: readonly [RegExp, string][] = [
   [/\bAMPOULES?\b/i, "AMPOULE"],
   [/\bVIALS?\b/i, "VIAL"],
 ];
+
+/**
+ * The same forms in Greek, matched against the normalized text (uppercase,
+ * no tonos, `normalizeOcrToken`): Greek boxes often name the form only in
+ * Greek, e.g. "epikalymmena me lepto ymenio diskia" (owner-reported
+ * 2026-10-20: an Algofren 600 mg box couldn't be told apart from the other
+ * Algofrens). Plain uppercase Greek letters without accents, so no
+ * combining marks enter this file (see `COMBINING_MARKS`); each comment
+ * gives the word in Latin letters.
+ */
+const GREEK_FORM_PATTERNS: readonly [RegExp, string][] = [
+  [/ΔΙΣΚΙ/, "TABLET"], // DISKI(A/O)
+  [/ΚΑΨΑΚΙ|ΚΑΨΟΥΛ/, "CAPSULE"], // KAPSAKI, KAPSOUL
+  [/ΣΙΡΟΠΙ/, "SYRUP"], // SIROPI
+  [/ΕΝΑΙΩΡΗΜΑ/, "SUSPENSION"], // ENAIORIMA
+  [/ΚΡΕΜΑ/, "CREAM"], // KREMA
+  [/ΓΕΛΗ/, "GEL"], // GELI
+  [/ΣΤΑΓΟΝΕΣ/, "DROPS"], // STAGONES
+  [/ΦΑΚΕΛΙΣΚ|ΦΑΚΕΛΑΚΙ/, "SACHET"], // FAKELISK, FAKELAKI
+  [/ΦΥΣΙΓΓ/, "AMPOULE"], // FYSIGG
+  [/ΕΚΝΕΦΩΜΑ/, "SPRAY"], // EKNEFOMA
+];
+
+/** `20 diskia` — a count followed by a Greek unit-of-count word (tablets, capsules, sachets, ampoules), on the normalized text. */
+const GREEK_COUNT_PATTERN =
+  /(\d+)\s*(?:ΔΙΣΚΙΑ|ΚΑΨΑΚΙΑ|ΚΑΨΟΥΛΕΣ|ΦΑΚΕΛΙΣΚΟΙ|ΦΑΚΕΛΑΚΙΑ|ΦΥΣΙΓΓΕΣ)/;
 
 /** `BTX30` / `BT X 30` — the common Greek-pharmacy-label "blister/box × count" shorthand. Checked before the generic `N x M` pattern so it isn't misread as a plain multiplication. */
 const BTX_PATTERN = /\bBT\s*[xX]\s*(\d+)\b/;
@@ -147,6 +174,10 @@ function extractForm(text: string): string | undefined {
   for (const [pattern, normalized] of FORM_PATTERNS) {
     if (pattern.test(text)) return normalized;
   }
+  const plain = normalizeOcrToken(text);
+  for (const [pattern, normalized] of GREEK_FORM_PATTERNS) {
+    if (pattern.test(plain)) return normalized;
+  }
   return undefined;
 }
 
@@ -159,6 +190,9 @@ function extractPackageQuantity(text: string): { quantity: number; matchedText: 
 
   const count = COUNT_PATTERN.exec(text);
   if (count) return { quantity: Number(count[1]), matchedText: count[0] };
+
+  const greekCount = GREEK_COUNT_PATTERN.exec(normalizeOcrToken(text));
+  if (greekCount) return { quantity: Number(greekCount[1]), matchedText: greekCount[0] };
 
   return undefined;
 }
