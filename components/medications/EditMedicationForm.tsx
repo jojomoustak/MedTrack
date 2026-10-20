@@ -6,6 +6,7 @@ import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-s
 import { SelectField } from "@/components/ui/SelectField";
 import { StockUnitField } from "@/components/medications/StockUnitField";
 import { TimeField } from "@/components/ui/TimeField";
+import { DateField } from "@/components/ui/DateField";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { describeSchedule, describeWeekdays } from "@/lib/medications/schedule-summary";
 import { TREATMENT_STATE_LABELS } from "@/lib/medications/labels";
@@ -263,10 +264,10 @@ export function EditMedicationForm({
             )}
           </fieldset>
 
-          <label className={FIELD_WRAPPER}>
+          <div className={FIELD_WRAPPER}>
             <span className={FIELD_LABEL}>Ημερομηνία έναρξης</span>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={`${FIELD_INPUT} pr-4`} />
-          </label>
+            <DateField value={startDate} onChange={setStartDate} label="Ημερομηνία έναρξης" />
+          </div>
         </>
       ) : (
         <div className={FIELD_WRAPPER}>

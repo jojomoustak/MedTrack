@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { FIELD_INPUT } from "@/components/ui/field-styles";
 import { TimeField } from "@/components/ui/TimeField";
+import { DateField } from "@/components/ui/DateField";
+import { dateToParam } from "@/components/calendar/date-param";
 
 export interface ElapsedScheduleValues {
   intervalHours: number;
@@ -18,14 +20,10 @@ export interface ElapsedScheduleBuilderProps {
   initial?: { intervalHours: number; anchorDate: string; anchorTime: string };
 }
 
-function todayDateString(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 /** Phase 3 §2.5's "Elapsed builder" — every_n_hours: interval + first-dose anchor. */
 export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedScheduleBuilderProps) {
   const [intervalHours, setIntervalHours] = useState(initial?.intervalHours ? String(initial.intervalHours) : "8");
-  const [anchorDate, setAnchorDate] = useState(initial?.anchorDate ?? todayDateString());
+  const [anchorDate, setAnchorDate] = useState(initial?.anchorDate ?? dateToParam(new Date())); // the phone's own date, not UTC's
   const [anchorTime, setAnchorTime] = useState(initial?.anchorTime ?? "");
   const [error, setError] = useState<string | null>(null);
 
@@ -67,13 +65,7 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-[17px] font-semibold text-stone-800">Πρώτη δόση</legend>
-        <input
-          type="date"
-          value={anchorDate}
-          onChange={(e) => setAnchorDate(e.target.value)}
-          aria-label="Ημερομηνία πρώτης δόσης"
-          className={`${FIELD_INPUT} pr-4`}
-        />
+        <DateField value={anchorDate} onChange={setAnchorDate} label="Ημερομηνία πρώτης δόσης" />
         <TimeField value={anchorTime} onChange={setAnchorTime} label="Ώρα πρώτης δόσης" />
         <p className="text-[15px] text-stone-600">
           Το διάστημα υπολογίζεται από την πρώτη δόση και δεν αλλάζει με την αλλαγή ώρας (π.χ. καλοκαιρινή/χειμερινή ώρα).
