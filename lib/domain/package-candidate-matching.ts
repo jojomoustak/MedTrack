@@ -83,13 +83,60 @@ function unitsEquivalent(ocrUnit: string | undefined, catalogUnit: string | null
   return normalizeOcrToken(ocrUnit) === normalizeOcrToken(catalogUnit);
 }
 
-function scoreEntry(ocr: MedicationPackageOcrResult, entry: OfflineIndexEntry): PackageCandidateScore {
+/**
+ * Words on a box that never say which medicine it is — its form, its
+ * route, the words around them — in English and Greek, normalized.
+ */
+const NOT_A_BRAND = new Set([
+  "TABLETS", "TABLET", "TABS", "CAPSULES", "CAPSULE", "CAPS", "FILM", "COATED", "ORAL", "SOLUTION", "SUSPENSION",
+  "SYRUP", "CREAM", "DROPS", "SPRAY", "SACHETS", "INJECTION", "EFFERVESCENT", "HARD", "SOFT", "PROLONGED", "RELEASE",
+  "GASTRO", "RESISTANT", "FOR", "AND", "WITH", "THE", "USE",
+  "ΔΙΣΚΙΑ", "ΔΙΣΚΙΟ", "ΚΑΨΑΚΙΑ", "ΚΑΨΑΚΙΟ", "ΚΑΨΟΥΛΕΣ", "ΚΑΨΟΥΛΑ", "ΕΠΙΚΑΛΥΜΜΕΝΑ", "ΛΕΠΤΟ", "ΥΜΕΝΙΟ", "ΣΚΛΗΡΑ",
+  "ΠΟΣΙΜΟ", "ΔΙΑΛΥΜΑ", "ΣΙΡΟΠΙ", "ΑΝΑΒΡΑΖΟΝΤΑ", "ΦΑΡΜΑΚΕΥΤΙΚΟ", "ΠΡΟΙΟΝ", "ΓΙΑ", "ΚΑΙ",
+]);
+
+const WORD_SEPARATORS = /[^\p{L}\p{N}]+/u;
+const HAS_LETTER = /\p{L}/u;
+
+/**
+ * Every word read off the box: letters and digits only, three or more
+ * characters, not one every box has. The text reader's lines come in no
+ * reliable order — its first line, taken as the brand, is often the
+ * maker's name or Greek text about the form — so the brand is looked for
+ * among all of them too (owner-reported 2026-10-20: «read the name» found
+ * nothing, again and again).
+ */
+function boxWords(rawText: string): Set<string> {
+  return new Set(
+    normalizeOcrToken(rawText)
+      .split(WORD_SEPARATORS)
+      .filter((word) => word.length >= 3 && HAS_LETTER.test(word) && !NOT_A_BRAND.has(word)),
+  );
+}
+
+/** A catalog name's brand: its first word ("FLAGYL" in "FLAGYL CAPS 500MG/CAP BTX30"). */
+function brandWord(name: string): string {
+  return normalizeOcrToken(name).split(WORD_SEPARATORS).find((word) => word.length > 0) ?? "";
+}
+
+function scoreEntry(ocr: MedicationPackageOcrResult, entry: OfflineIndexEntry, words: ReadonlySet<string>): PackageCandidateScore {
   let score = 0;
   const normalizedName = normalizeOcrToken(entry.name);
   const normalizedBrand = ocr.brand ? normalizeOcrToken(ocr.brand) : null;
+  const brand = brandWord(entry.name);
+
+  // A generic named after its ingredient ("IBUPROFEN/GENERICS") matches any
+  // box that prints the ingredient: weaker evidence than a brand of its own.
+  const namedAfterIngredient = normalizeOcrToken(entry.activeIngredient ?? "").split(WORD_SEPARATORS).includes(brand);
 
   let matchedBrand = false;
-  if (normalizedBrand) {
+  if (brand.length >= 3 && words.has(brand) && !namedAfterIngredient) {
+    // The product's brand is one of the words on the box, wherever it was read.
+    score += WEIGHT_BRAND_EXACT;
+    matchedBrand = true;
+  } else if (brand.length >= 3 && words.has(brand)) {
+    score += WEIGHT_BRAND_PARTIAL;
+  } else if (normalizedBrand) {
     if (normalizedName.includes(normalizedBrand) || normalizedBrand.includes(normalizedName)) {
       score += WEIGHT_BRAND_EXACT;
       matchedBrand = true;
@@ -136,12 +183,12 @@ const HIGH_CONFIDENCE_SCORE = 85;
  * than a full-catalog score-everything scan, and avoids surfacing
  * completely unrelated products as low-score "candidates."
  */
-function prefilter(ocr: MedicationPackageOcrResult, entries: readonly OfflineIndexEntry[]): OfflineIndexEntry[] {
+function prefilter(ocr: MedicationPackageOcrResult, entries: readonly OfflineIndexEntry[], words: ReadonlySet<string>): OfflineIndexEntry[] {
   const haystack = normalizeOcrToken(ocr.brand ?? ocr.rawText);
-  if (haystack.length === 0) return [];
   const tokens = haystack.split(" ").filter((t) => t.length >= 3);
-  if (tokens.length === 0) return [];
+  if (tokens.length === 0 && words.size === 0) return [];
   return entries.filter((entry) => {
+    if (words.has(brandWord(entry.name))) return true;
     const name = normalizeOcrToken(entry.name);
     return tokens.some((t) => name.includes(t));
   });
@@ -156,8 +203,9 @@ function prefilter(ocr: MedicationPackageOcrResult, entries: readonly OfflineInd
  * confirmation").
  */
 export function rankPackageCandidates(ocr: MedicationPackageOcrResult, entries: readonly OfflineIndexEntry[]): PackageCandidateMatchResult {
-  const scored = prefilter(ocr, entries)
-    .map((entry) => scoreEntry(ocr, entry))
+  const words = boxWords(ocr.rawText);
+  const scored = prefilter(ocr, entries, words)
+    .map((entry) => scoreEntry(ocr, entry, words))
     .filter((s) => s.score >= MIN_MEANINGFUL_SCORE)
     .sort((a, b) => b.score - a.score);
 

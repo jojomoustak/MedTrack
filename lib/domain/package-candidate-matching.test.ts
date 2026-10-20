@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { rankPackageCandidates } from "@/lib/domain/package-candidate-matching";
-import type { MedicationPackageOcrResult } from "@/lib/domain/ocr";
+import { extractPackageOcrResult, type MedicationPackageOcrResult } from "@/lib/domain/ocr";
 import type { OfflineIndexEntry } from "@/lib/domain/offline-index";
 
 function makeEntry(overrides: Partial<OfflineIndexEntry> = {}): OfflineIndexEntry {
@@ -103,5 +103,45 @@ describe("rankPackageCandidates — scoring (OCR-fallback task spec §9/§31)", 
 
   it("an empty entries list never throws and returns OCR_NOT_FOUND", () => {
     expect(rankPackageCandidates(makeOcr(), [])).toEqual({ confidence: "OCR_NOT_FOUND", candidates: [] });
+  });
+});
+
+// Owner-reported 2026-10-20: «read the name» found nothing. The text reader's
+// first line, taken as the brand, is often the maker or Greek form text.
+describe("rankPackageCandidates — the brand anywhere on the box", () => {
+  const flagyl = makeEntry();
+  const algofren = makeEntry({ id: "entry-2", eofCode: "111", name: "ALGOFREN F.C.TAB 400MG/TAB", activeIngredient: "IBUPROFEN", strengthValue: "400", form: "tablet", packSizeValue: "20" });
+  const ibuprofenGeneric = makeEntry({ id: "entry-3", eofCode: "222", name: "IBUPROFEN/GENERICS F.C.TAB 400MG/TAB", activeIngredient: "IBUPROFEN", strengthValue: "400", form: "tablet", packSizeValue: "20" });
+
+  it("finds it when the maker's name is the first line read", () => {
+    const ocr = extractPackageOcrResult(["SANOFI", "Flagyl®", "500 mg", "καψάκια σκληρά", "BTX30"].join("\n"));
+    expect(ocr.brand).toBe("SANOFI");
+    const result = rankPackageCandidates(ocr, [flagyl, algofren]);
+    expect(result.candidates.map((c) => c.entry.id)).toEqual(["entry-1"]);
+    expect(result.candidates[0].matchedBrand).toBe(true);
+  });
+
+  it("finds it when Greek text about the form comes first", () => {
+    const ocr = extractPackageOcrResult(["Επικαλυμμένα με λεπτό υμένιο δισκία", "Algofren", "400 mg", "20 δισκία"].join("\n"));
+    const result = rankPackageCandidates(ocr, [flagyl, algofren]);
+    expect(result.candidates.map((c) => c.entry.id)).toEqual(["entry-2"]);
+  });
+
+  it("the box's own brand outranks a generic named after the ingredient printed on it", () => {
+    const ocr = extractPackageOcrResult(["ALGOFREN", "ibuprofen", "400 mg", "δισκία"].join("\n"));
+    const result = rankPackageCandidates(ocr, [algofren, ibuprofenGeneric]);
+    expect(result.candidates[0].entry.id).toBe("entry-2");
+    expect(result.confidence).not.toBe("OCR_AMBIGUOUS");
+  });
+
+  it("a generic's own box still finds the generic", () => {
+    const ocr = extractPackageOcrResult(["IBUPROFEN/GENERICS", "400 mg", "επικαλυμμένα δισκία"].join("\n"));
+    const result = rankPackageCandidates(ocr, [algofren, ibuprofenGeneric]);
+    expect(result.candidates.map((c) => c.entry.id)).toEqual(["entry-3"]);
+  });
+
+  it("form words and numbers alone point to nothing", () => {
+    const ocr = extractPackageOcrResult(["TABLETS", "500 mg", "ΔΙΣΚΙΑ 30"].join("\n"));
+    expect(rankPackageCandidates(ocr, [flagyl, algofren])).toEqual({ confidence: "OCR_NOT_FOUND", candidates: [] });
   });
 });
