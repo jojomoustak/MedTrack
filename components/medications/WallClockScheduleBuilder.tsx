@@ -5,7 +5,7 @@ import { WEEKDAY_BIT } from "@/lib/domain/medication-schedule";
 import { ALL_WEEKDAYS_MASK } from "@/lib/domain/schedule-draft";
 import { Button } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
-import { FIELD_INPUT } from "@/components/ui/field-styles";
+import { TimeField } from "@/components/ui/TimeField";
 
 export interface WallClockScheduleValues {
   timesOfDay: string[];
@@ -18,14 +18,15 @@ export interface WallClockScheduleBuilderProps {
   initial?: WallClockScheduleValues;
 }
 
+/** Monday first, the way a Greek week reads. */
 const WEEKDAYS: { bit: number; abbr: string; full: string }[] = [
-  { bit: WEEKDAY_BIT.sunday, abbr: "Κυ", full: "Κυριακή" },
   { bit: WEEKDAY_BIT.monday, abbr: "Δε", full: "Δευτέρα" },
   { bit: WEEKDAY_BIT.tuesday, abbr: "Τρ", full: "Τρίτη" },
   { bit: WEEKDAY_BIT.wednesday, abbr: "Τε", full: "Τετάρτη" },
   { bit: WEEKDAY_BIT.thursday, abbr: "Πε", full: "Πέμπτη" },
   { bit: WEEKDAY_BIT.friday, abbr: "Πα", full: "Παρασκευή" },
   { bit: WEEKDAY_BIT.saturday, abbr: "Σα", full: "Σάββατο" },
+  { bit: WEEKDAY_BIT.sunday, abbr: "Κυ", full: "Κυριακή" },
 ];
 
 /** Phase 3 §2.5's "Wall-clock builder" — covers daily/multiple_times_daily/specific_weekdays; `scheduleKind` itself is derived from these values (`deriveWallClockScheduleKind`), never chosen here. */
@@ -79,25 +80,25 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
       <fieldset className="flex flex-col gap-2">
         <legend className="text-[17px] font-semibold text-stone-800">Ώρες δόσης</legend>
         {times.map((time, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <input
-              type="time"
-              value={time}
-              onChange={(e) => updateTime(index, e.target.value)}
-              aria-label={`Ώρα δόσης ${index + 1}`}
-              className={`${FIELD_INPUT} flex-1 pr-4`}
-            />
-            {times.length > 1 && (
-              <button
-                type="button"
-                onClick={() => removeTimeRow(index)}
-                aria-label={`Αφαίρεση ώρας ${index + 1}`}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-muted text-stone-600"
-              >
-                <CloseIcon />
-              </button>
-            )}
-          </div>
+          <TimeField
+            key={index}
+            value={time}
+            onChange={(value) => updateTime(index, value)}
+            label={`Ώρα δόσης ${index + 1}`}
+            suggestion={index === 0 ? "08:00" : "20:00"}
+            trailing={
+              times.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => removeTimeRow(index)}
+                  aria-label={`Αφαίρεση ώρας ${index + 1}`}
+                  className="flex size-12 shrink-0 items-center justify-center rounded-full text-stone-500 active:bg-stone-100"
+                >
+                  <CloseIcon />
+                </button>
+              ) : undefined
+            }
+          />
         ))}
         <button
           type="button"
@@ -132,12 +133,12 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
               specificDays ? "bg-accent-700 text-white" : "bg-surface-muted text-stone-700"
             }`}
           >
-            Συγκεκριμένες ημέρες
+            Ορισμένες μέρες
           </button>
         </div>
 
         {specificDays && (
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Ημέρες">
+          <div className="grid grid-cols-7 gap-1.5" role="group" aria-label="Ημέρες">
             {WEEKDAYS.map(({ bit, abbr, full }) => {
               const checked = (selectedDays & (1 << bit)) !== 0;
               return (
@@ -147,7 +148,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
                   onClick={() => toggleDay(bit)}
                   aria-pressed={checked}
                   aria-label={full}
-                  className={`flex h-12 w-12 items-center justify-center rounded-full text-[15px] font-semibold ${
+                  className={`flex aspect-square w-full max-w-12 items-center justify-center justify-self-center rounded-full text-[15px] font-semibold transition-colors duration-150 ${
                     checked ? "bg-accent-700 text-white" : "bg-surface-muted text-stone-700"
                   }`}
                 >

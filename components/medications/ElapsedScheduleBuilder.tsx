@@ -5,6 +5,7 @@ import { zonedWallClockToUtc } from "@/lib/domain/dose-event-generation";
 import { Button } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { FIELD_INPUT } from "@/components/ui/field-styles";
+import { TimeField } from "@/components/ui/TimeField";
 
 export interface ElapsedScheduleValues {
   intervalHours: number;
@@ -66,22 +67,14 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-[17px] font-semibold text-stone-800">Πρώτη δόση</legend>
-        <div className="flex gap-2">
-          <input
-            type="date"
-            value={anchorDate}
-            onChange={(e) => setAnchorDate(e.target.value)}
-            aria-label="Ημερομηνία πρώτης δόσης"
-            className={`${FIELD_INPUT} flex-1 pr-4`}
-          />
-          <input
-            type="time"
-            value={anchorTime}
-            onChange={(e) => setAnchorTime(e.target.value)}
-            aria-label="Ώρα πρώτης δόσης"
-            className={`${FIELD_INPUT} flex-1 pr-4`}
-          />
-        </div>
+        <input
+          type="date"
+          value={anchorDate}
+          onChange={(e) => setAnchorDate(e.target.value)}
+          aria-label="Ημερομηνία πρώτης δόσης"
+          className={`${FIELD_INPUT} pr-4`}
+        />
+        <TimeField value={anchorTime} onChange={setAnchorTime} label="Ώρα πρώτης δόσης" />
         <p className="text-[15px] text-stone-600">
           Το διάστημα υπολογίζεται από την πρώτη δόση και δεν αλλάζει με την αλλαγή ώρας (π.χ. καλοκαιρινή/χειμερινή ώρα).
         </p>

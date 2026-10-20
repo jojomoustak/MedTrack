@@ -7,11 +7,19 @@ import { FORM_LABELS, FORM_OPTIONS } from "@/components/medications/form-options
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import { shortCatalogName } from "@/lib/domain/catalog-short-name";
+import { catalogMedicationForm } from "@/lib/medications/catalog-form";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 // Re-exported: many screens import them from here.
 export { FORM_LABELS, FORM_OPTIONS };
+
+/**
+ * The order the forms are offered in here: the usual ones first, measures
+ * after, «Άλλο» last across the whole row — an even grid instead of chips
+ * of every width wrapping raggedly (owner-reported 2026-10-20).
+ */
+const FORM_GRID: MedicationForm[] = ["tablet", "capsule", "drop", "spray", "sachet", "patch", "injection", "dose", "ml", "mg", "mcg", "g"];
 
 export interface DetailsStepValues {
   form: MedicationForm | null;
@@ -30,10 +38,12 @@ export interface DetailsStepProps {
 
 /** Phase 3 §2.4 "Add Medication — details step": shared step after any entry path — confirm/adjust name, form, strength, inventory unit. */
 export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsStepProps) {
-  const [form, setForm] = useState<MedicationForm | null>((catalogProduct?.form as MedicationForm | null) ?? null);
+  // A catalog medicine's form and stock unit come from the catalog (its name, for the EOF catalog — `catalogMedicationForm`).
+  const catalogForm = catalogProduct ? catalogMedicationForm(catalogProduct) : null;
+  const [form, setForm] = useState<MedicationForm | null>(catalogForm);
   const [strengthValue, setStrengthValue] = useState(catalogProduct?.strengthValue ?? "");
   const [strengthUnit, setStrengthUnit] = useState(catalogProduct?.strengthUnit ?? "");
-  const [inventoryUnit, setInventoryUnit] = useState<MedicationForm>((catalogProduct?.form as MedicationForm | null) ?? "tablet");
+  const [inventoryUnit, setInventoryUnit] = useState<MedicationForm>(catalogForm ?? "tablet");
   // The stock is counted in the form chosen above (tablets in tablets), so
   // it isn't asked again: it follows the form until the person changes it
   // themselves (`StockUnitField`; owner-reported 2026-10-20).
@@ -57,8 +67,8 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
 
       <fieldset className={FIELD_WRAPPER}>
         <legend className={`${FIELD_LABEL} mb-2`}>Μορφή</legend>
-        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Μορφή φαρμάκου">
-          {FORM_OPTIONS.map((option) => (
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Μορφή φαρμάκου">
+          {[...FORM_GRID, "other" as const].map((option) => (
             <button
               key={option}
               type="button"
@@ -69,7 +79,7 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
                 setForm(option);
                 if (!unitChosen) setInventoryUnit(option);
               }}
-              className={`min-h-12 rounded-xl px-4 py-2 text-[15px] font-semibold transition duration-200 active:scale-95 ${
+              className={`min-h-12 rounded-xl px-2 py-2 text-[15px] font-semibold transition-colors duration-150 active:scale-95 ${option === "other" ? "col-span-3" : ""} ${
                 form === option ? "bg-accent-700 text-white" : "bg-surface-muted text-stone-700"
               }`}
             >

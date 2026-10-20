@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { CatalogProduct } from "@/lib/domain/catalog";
 
 vi.mock("@/lib/sound/client/play-sound", () => ({ playSound: vi.fn() }));
 
@@ -38,6 +39,16 @@ describe("DetailsStep — the stock unit follows the form", () => {
     submit();
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ form: "spray", inventoryUnit: "ml" }));
+  });
+
+  it("a catalog medicine's form and stock unit come from the catalog name", () => {
+    const onSubmit = vi.fn();
+    const syrup = { id: "p-1", name: "ALGOFREN SYR 100MG/5ML FLx150 ML", form: null, strengthValue: null, strengthUnit: null } as unknown as CatalogProduct;
+    render(<DetailsStep catalogProduct={syrup} manualName={null} onSubmit={onSubmit} />);
+
+    expect(screen.getByRole("radio", { name: "ml" }).getAttribute("aria-checked")).toBe("true");
+    submit();
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ form: "ml", inventoryUnit: "ml" }));
   });
 
   it("opening the choice without changing it still follows the form", () => {

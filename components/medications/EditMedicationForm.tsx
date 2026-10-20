@@ -5,6 +5,7 @@ import { FORM_LABELS, FORM_OPTIONS } from "@/components/medications/DetailsStep"
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import { SelectField } from "@/components/ui/SelectField";
 import { StockUnitField } from "@/components/medications/StockUnitField";
+import { TimeField } from "@/components/ui/TimeField";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { describeSchedule, describeWeekdays } from "@/lib/medications/schedule-summary";
 import { TREATMENT_STATE_LABELS } from "@/lib/medications/labels";
@@ -217,31 +218,31 @@ export function EditMedicationForm({
 
           <fieldset className={FIELD_WRAPPER}>
             <legend className={`${FIELD_LABEL} mb-2`}>Ώρες</legend>
-            <ul className="grid grid-cols-2 gap-3">
+            <ul className="flex flex-col gap-3">
               {times.map((time, index) => (
-                <li key={index} className="relative">
-                  <input
-                    type="time"
+                <li key={index}>
+                  <TimeField
                     value={time}
-                    onChange={(e) => setTimes((current) => current.map((t, i) => (i === index ? e.target.value : t)))}
-                    aria-label={`Ώρα δόσης ${index + 1}`}
-                    className={`${FIELD_INPUT} tabular-nums [&::-webkit-calendar-picker-indicator]:hidden ${times.length > 1 ? "pr-11" : "pr-4"}`}
+                    onChange={(value) => setTimes((current) => current.map((t, i) => (i === index ? value : t)))}
+                    label={`Ώρα δόσης ${index + 1}`}
+                    trailing={
+                      times.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playSound("button");
+                            setTimes((current) => current.filter((_, i) => i !== index));
+                          }}
+                          aria-label={`Αφαίρεση ώρας ${time}`}
+                          className="flex size-12 shrink-0 items-center justify-center rounded-full text-stone-500 active:bg-stone-100"
+                        >
+                          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="m5.5 5.5 9 9m0-9-9 9" strokeLinecap="round" />
+                          </svg>
+                        </button>
+                      ) : undefined
+                    }
                   />
-                  {times.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound("button");
-                        setTimes((current) => current.filter((_, i) => i !== index));
-                      }}
-                      aria-label={`Αφαίρεση ώρας ${time}`}
-                      className="absolute top-1/2 right-1 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-stone-500 active:bg-stone-100"
-                    >
-                      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="m5.5 5.5 9 9m0-9-9 9" strokeLinecap="round" />
-                      </svg>
-                    </button>
-                  )}
                 </li>
               ))}
             </ul>

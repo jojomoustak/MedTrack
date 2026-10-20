@@ -175,7 +175,9 @@ describe("AddMedicationFlow — manual entry path end to end", () => {
 
     // Schedule step: pick "Σταθερές ώρες", set one time, keep "Κάθε μέρα".
     fireEvent.click(screen.getByRole("button", { name: /σταθερές ώρες/i }));
-    fireEvent.change(screen.getByLabelText(/ώρα δόσης 1/i), { target: { value: "08:00" } });
+    // The time picker opens on 08:00 for the first dose (`TimeField`).
+    fireEvent.click(screen.getByRole("button", { name: /ώρα δόσης 1/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Έτοιμο" }));
     fireEvent.click(screen.getByRole("button", { name: /συνέχεια/i }));
 
     // Dates review: keep defaults (today, no end date), set quantity.
