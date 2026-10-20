@@ -314,16 +314,15 @@ describe("ScanStep — catalog lookup outcomes", () => {
   });
 });
 
-describe("ScanStep — 'not found' official-source search links", () => {
-  it("online + not-found: offers real EOF/EMA links and a copy-to-clipboard for the parsed GTIN, never a pre-filled/fabricated deep link", async () => {
+describe("ScanStep — 'not found' screen", () => {
+  // The EOF/EMA search links were removed at the owner's request (2026-10-20).
+  it("online + not-found: no links to outside sites, just the ways to go on", async () => {
     __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
     const platform = fakePlatform({
       scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "5201234567890", format: "EAN_13" }),
     });
     const cache = fakeCache();
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ state: "VALID_IDENTIFIER_UNRESOLVED" }) }) as unknown as typeof fetch;
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, { clipboard: { writeText } });
 
     render(
       <ScanStep
@@ -338,22 +337,10 @@ describe("ScanStep — 'not found' official-source search links", () => {
       />,
     );
 
-    const eofLink = await screen.findByRole("link", { name: /ΕΟΦ/i });
-    expect(eofLink.getAttribute("href")).toBe("https://services.eof.gr/human-search/home.xhtml");
-    const emaLink = screen.getByRole("link", { name: /EMA/i });
-    expect(emaLink.getAttribute("href")).toBe("https://www.ema.europa.eu/en/medicines");
-    // Neither link carries the barcode as a query string or fragment — this app doesn't
-    // claim a pre-filled deep link works when neither site documents that contract.
-    expect(eofLink.getAttribute("href")).not.toContain("05201234567890");
-    expect(emaLink.getAttribute("href")).not.toContain("05201234567890");
-
-    // Scoped via the <code> element specifically — the dev-only
-    // diagnostics panel (spec §8) also legitimately displays this same
-    // GTIN as plain text, so a page-wide `getByText` is now ambiguous.
-    const codeElements = document.querySelectorAll("code");
-    expect([...codeElements].some((el) => el.textContent === "05201234567890")).toBe(true);
-    screen.getByRole("button", { name: /Αντιγραφή/i }).click();
-    expect(writeText).toHaveBeenCalledWith("05201234567890");
+    expect(await screen.findByRole("button", { name: "Συνέχεια με χειροκίνητη καταχώριση" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /ΕΟΦ/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /EMA/i })).toBeNull();
+    expect(screen.queryByText(/Αναζήτηση σε επίσημες πηγές/)).toBeNull();
   });
 
   it("online + a well-formed Greek national EAN-13 with no catalog match: shows the 'recognized but not available' message, distinct from the generic one (spec §26)", async () => {
@@ -431,7 +418,7 @@ describe("ScanStep — 'not found' official-source search links", () => {
     expect(screen.queryByRole("link", { name: /ΕΟΦ/i })).toBeNull();
   });
 
-  it("CODE_128 with no GTIN but a real raw value: still offers the links, using the raw scanned string as the search term", async () => {
+  it("CODE_128 with no GTIN: still no outside links, and manual entry is offered", async () => {
     __setNetworkMonitorForTests(fakeNetworkMonitor("online"));
     const platform = fakePlatform({
       scanBarcode: vi.fn().mockResolvedValue({ status: "ok", rawValue: "not-a-gtin", format: "CODE_128" }),
@@ -440,8 +427,8 @@ describe("ScanStep — 'not found' official-source search links", () => {
 
     render(<ScanStep profileId="profile-1" platform={platform} cacheRepository={cache} offlineIndex={fakeOfflineIndex()} onConfirmCandidate={vi.fn()} onFallbackToManual={vi.fn()} onCancel={vi.fn()} />);
 
-    expect(await screen.findByRole("link", { name: /ΕΟΦ/i })).toBeTruthy();
-    expect(screen.getByText("not-a-gtin")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Συνέχεια με χειροκίνητη καταχώριση" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /ΕΟΦ/i })).toBeNull();
   });
 });
 

@@ -18,8 +18,7 @@ import { logger } from "@/lib/logging/logger";
 import { CandidateConfirmation } from "@/components/medications/CandidateConfirmation";
 import { ScanDiagnosticsPanel, type ScanDiagnostics } from "@/components/medications/ScanDiagnosticsPanel";
 import { PackageOcrCandidateFlow } from "@/components/medications/PackageOcrCandidateFlow";
-import { Button, buttonClasses } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 
 export interface ScanStepProps {
@@ -346,7 +345,6 @@ export function ScanStep({
   }
 
   // view.phase === "not-found"
-  const searchTerm = view.parsed?.gtin ?? view.parsed?.raw ?? null;
   // `reason` (see the `ViewState` type comment above): three genuinely
   // different situations, three genuinely different honest messages —
   // never collapsed into one generic "couldn't identify" (GTIN-resolution
@@ -409,7 +407,6 @@ export function ScanStep({
           />
         )
       }
-      {searchTerm && !view.offline && <OfficialSourceSearchLinks searchTerm={searchTerm} />}
       {view.diagnostics && <ScanDiagnosticsPanel diagnostics={view.diagnostics} />}
       <Button variant="secondary" onClick={() => { playSound("button"); onFallbackToManual(view.parsed); }}>
         Συνέχεια με χειροκίνητη καταχώριση
@@ -418,78 +415,5 @@ export function ScanStep({
         ← Πίσω
       </Button>
     </div>
-  );
-}
-
-/**
- * Optional convenience for the "not found" fallback: lets the user check
- * this specific number against real official regulatory sources
- * themselves, rather than MedTracking guessing at or scraping a match.
- *
- * Deliberately NOT a pre-filled deep link: neither EOF's "Αναζήτηση
- * φαρμάκων" tool (`services.eof.gr/human-search/home.xhtml`) nor EMA's
- * medicine finder documents a URL query-parameter contract for
- * pre-filling a search (confirmed by checking both sites directly,
- * 2026-08-23 — not assumed), so promising a pre-filled result would be a
- * claim this code can't actually keep. Instead: copy the number, open the
- * official page, the user pastes it in and reads the result themselves —
- * this only ever opens real official government/EU regulatory sites, and
- * MedTracking never parses or trusts whatever the user finds there; if
- * they want to use it, they still go through "Continue manually" and
- * confirm it themselves (CLAUDE.md: never auto-create from an external
- * lookup, and that discipline applies just as much to a source the user
- * found on their own as to an automated one).
- */
-function OfficialSourceSearchLinks({ searchTerm }: { searchTerm: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    playSound("button");
-    try {
-      await navigator.clipboard.writeText(searchTerm);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard API can be unavailable (permissions, older WebView); the
-      // number is still shown on-screen below for the user to select/type
-      // manually, so this failure mode is a minor inconvenience, not a dead end.
-    }
-  }
-
-  return (
-    <Card>
-      <p className="mb-2 text-sm font-medium text-stone-700">
-        Αναζήτηση σε επίσημες πηγές
-      </p>
-      <p className="mb-3 text-xs text-stone-500">
-        Αντιγράψτε τον κωδικό και αναζητήστε τον στον ιστότοπο του Εθνικού Οργανισμού Φαρμάκων (ΕΟΦ) ή
-        του Ευρωπαϊκού Οργανισμού Φαρμάκων (EMA). Τα αποτελέσματα εμφανίζονται στον ιστότοπό τους — το
-        MedTrack δεν τα διαβάζει ούτε τα συμπληρώνει αυτόματα.
-      </p>
-      <div className="mb-3 flex items-center gap-2 rounded-lg bg-stone-50 px-3 py-2">
-        <code className="flex-1 truncate text-sm">{searchTerm}</code>
-        <Button variant="secondary" size="sm" onClick={handleCopy} className="shrink-0 px-3 text-xs">
-          {copied ? "Αντιγράφηκε ✓" : "Αντιγραφή"}
-        </Button>
-      </div>
-      <div className="flex flex-col gap-2">
-        <a
-          href="https://services.eof.gr/human-search/home.xhtml"
-          target="_blank"
-          rel="noopener noreferrer"
-          className={buttonClasses("secondary", "md", "underline")}
-        >
-          Αναζήτηση στον ΕΟΦ (eof.gr)
-        </a>
-        <a
-          href="https://www.ema.europa.eu/en/medicines"
-          target="_blank"
-          rel="noopener noreferrer"
-          className={buttonClasses("secondary", "md", "underline")}
-        >
-          Αναζήτηση στον EMA (ema.europa.eu)
-        </a>
-      </div>
-    </Card>
   );
 }
