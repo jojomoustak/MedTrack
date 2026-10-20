@@ -85,3 +85,23 @@ describe("useCurrentProfile — start from the saved profile (2026-10-08)", () =
     expect(JSON.parse(localStorage.getItem("medtrack:last-known-profile")!)).toEqual(other);
   });
 });
+
+describe("useCurrentProfile — the gift's hearts flag (2026-10-20)", () => {
+  it("is on only when /api/me says so, and kept for offline launches", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ ...PROFILE, hearts: true }), { status: 200 })));
+    const { result } = renderHook(() => useCurrentProfile());
+    await waitFor(() => expect(result.current).toEqual({ status: "ready", ...PROFILE, hearts: true }));
+    expect(JSON.parse(localStorage.getItem("medtrack:last-known-profile")!)).toEqual({ ...PROFILE, hearts: true });
+    cleanup();
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    const offline = renderHook(() => useCurrentProfile());
+    await waitFor(() => expect(offline.result.current).toEqual({ status: "ready", ...PROFILE, hearts: true }));
+  });
+
+  it("is off for everyone else", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(PROFILE), { status: 200 })));
+    const { result } = renderHook(() => useCurrentProfile());
+    await waitFor(() => expect(result.current).toEqual({ status: "ready", ...PROFILE, hearts: false }));
+  });
+});

@@ -126,6 +126,12 @@ const envSchema = z.object({
   // sends from an unverified domain, which `sendEmail()` surfaces as a
   // thrown error (never silently dropped).
   EMAIL_FROM: z.string().trim().min(1).optional(),
+
+  // Accounts that get hearts when they open the app — a gift
+  // (`lib/account/server/gift.ts`, 2026-10-20). Comma-separated emails,
+  // kept here and not in the code because the repository is public.
+  // Optional: unset, nobody gets them.
+  GIFT_HEARTS_EMAILS: z.string().trim().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

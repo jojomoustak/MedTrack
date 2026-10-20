@@ -10,13 +10,16 @@
 import { NextResponse } from "next/server";
 import { requireSessionFromRequest } from "@/lib/auth/session";
 import { toSafeErrorResponse } from "@/lib/errors/http";
+import { accountGetsHearts } from "@/lib/account/server/gift";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
     const session = await requireSessionFromRequest(request);
-    return NextResponse.json({ profileId: session.profileId, accountId: session.accountId });
+    // A gift for one person (`lib/account/server/gift.ts`): only ever a yes for this account itself.
+    const hearts = await accountGetsHearts(session.accountId);
+    return NextResponse.json({ profileId: session.profileId, accountId: session.accountId, ...(hearts ? { hearts: true } : {}) });
   } catch (err) {
     return toSafeErrorResponse(err, { route: "me" });
   }

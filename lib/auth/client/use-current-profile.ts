@@ -6,14 +6,14 @@ import { notifyProfileCleared } from "@/lib/auth/client/profile-cleared-signal";
 
 export type CurrentProfileState =
   | { status: "loading" }
-  | { status: "ready"; profileId: string; accountId: string }
+  | { status: "ready"; profileId: string; accountId: string; /** A gift: hearts when opening the app (`lib/account/server/gift.ts`). */ hearts: boolean }
   | { status: "signed-out" };
 
 const CACHED_PROFILE_KEY = "medtrack:last-known-profile";
 /** Today's greeting name (`use-first-name.ts`) — kept here so signing out clears it with the profile. */
 export const CACHED_FIRST_NAME_KEY = "medtrack:first-name";
 
-type CachedProfile = { profileId: string; accountId: string };
+type CachedProfile = { profileId: string; accountId: string; hearts?: boolean };
 
 /**
  * NOT a security/authorization boundary -- the server independently
@@ -46,7 +46,8 @@ function parseCachedProfile(raw: string | null): CachedProfile | null {
       typeof (parsed as CachedProfile).profileId === "string" &&
       typeof (parsed as CachedProfile).accountId === "string"
     ) {
-      return parsed as CachedProfile;
+      const profile = parsed as CachedProfile;
+      return { profileId: profile.profileId, accountId: profile.accountId, ...(profile.hearts === true ? { hearts: true } : {}) };
     }
     return null;
   } catch {
@@ -151,11 +152,12 @@ export function useCurrentProfile(): CurrentProfileState {
   const profile = answer.kind === "ready" ? answer.data : answer.kind === "unauthenticated" ? null : cached;
   const profileId = profile?.profileId ?? null;
   const accountId = profile?.accountId ?? null;
+  const hearts = profile?.hearts === true;
   const pending = answer.kind === "pending";
 
   return useMemo<CurrentProfileState>(
-    () => (profileId !== null && accountId !== null ? { status: "ready", profileId, accountId } : { status: pending ? "loading" : "signed-out" }),
-    [profileId, accountId, pending],
+    () => (profileId !== null && accountId !== null ? { status: "ready", profileId, accountId, hearts } : { status: pending ? "loading" : "signed-out" }),
+    [profileId, accountId, hearts, pending],
   );
 }
 

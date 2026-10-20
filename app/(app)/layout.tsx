@@ -12,6 +12,7 @@ import { OfflineBanner } from "@/components/sync/OfflineBanner";
 import { RouteSkeleton } from "@/components/shell/ScreenSkeletons";
 import { preloadPhotoThumbnails } from "@/lib/medications/client/use-medication-photo-thumbnail";
 import { catchUpWithServer } from "@/lib/sync/client/catch-up";
+import { GiftHearts } from "@/components/gift/GiftHearts";
 
 /**
  * The authenticated app shell (Phase 3 §1): app bar + tab content +
@@ -95,6 +96,7 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
       <div className="fixed inset-x-0 bottom-0">
         <BottomNav />
       </div>
+      {session.status === "ready" && <GiftHearts accountId={session.accountId} enabled={session.hearts} />}
     </div>
   );
 }

@@ -83,3 +83,48 @@ body {
     0 1px 2px rgb(28 25 23 / 0.04),
     0 2px 8px rgb(28 25 23 / 0.06);
 }
+
+/*
+ * Hearts floating up, like Facebook's when the heart is held: a gift for
+ * one person when they open the app (`components/gift/GiftHearts.tsx`).
+ * Each heart rises and fades (outer element) while swaying side to side
+ * (inner element); the component sets each one's own drift, size, speed.
+ */
+@keyframes gift-heart-rise {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.3);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translate3d(calc(var(--drift) * 0.15), -8vh, 0) scale(var(--scale));
+  }
+  75% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate3d(var(--drift), -78vh, 0) scale(calc(var(--scale) * 1.15)) rotate(var(--turn));
+    opacity: 0;
+  }
+}
+
+@keyframes gift-heart-sway {
+  from {
+    transform: translateX(calc(var(--sway) * -1));
+  }
+  to {
+    transform: translateX(var(--sway));
+  }
+}
+
+/* Reduced motion: one heart that fades in and out where it is. */
+@keyframes gift-heart-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  30%,
+  70% {
+    opacity: 1;
+  }
+}
