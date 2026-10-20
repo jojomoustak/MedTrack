@@ -2,44 +2,16 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { SelectField } from "@/components/ui/SelectField";
+import { StockUnitField } from "@/components/medications/StockUnitField";
+import { FORM_LABELS, FORM_OPTIONS } from "@/components/medications/form-options";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import type { CatalogProduct } from "@/lib/domain/catalog";
 import { shortCatalogName } from "@/lib/domain/catalog-short-name";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 import { playSound } from "@/lib/sound/client/play-sound";
 
-export const FORM_OPTIONS: MedicationForm[] = [
-  "tablet",
-  "capsule",
-  "ml",
-  "mg",
-  "mcg",
-  "g",
-  "dose",
-  "spray",
-  "drop",
-  "sachet",
-  "patch",
-  "injection",
-  "other",
-];
-
-export const FORM_LABELS: Record<MedicationForm, string> = {
-  tablet: "Δισκίο",
-  capsule: "Κάψουλα",
-  ml: "ml",
-  mg: "mg",
-  mcg: "mcg",
-  g: "g",
-  dose: "Δόση",
-  spray: "Σπρέι",
-  drop: "Σταγόνες",
-  sachet: "Φακελάκι",
-  patch: "Επίθεμα",
-  injection: "Ένεση",
-  other: "Άλλο",
-};
+// Re-exported: many screens import them from here.
+export { FORM_LABELS, FORM_OPTIONS };
 
 export interface DetailsStepValues {
   form: MedicationForm | null;
@@ -64,8 +36,7 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
   const [inventoryUnit, setInventoryUnit] = useState<MedicationForm>((catalogProduct?.form as MedicationForm | null) ?? "tablet");
   // The stock is counted in the form chosen above (tablets in tablets), so
   // it isn't asked again: it follows the form until the person changes it
-  // themselves (owner-reported 2026-10-20: «Δισκίο» was asked twice).
-  const [changingUnit, setChangingUnit] = useState(false);
+  // themselves (`StockUnitField`; owner-reported 2026-10-20).
   const [unitChosen, setUnitChosen] = useState(false);
 
   // The product is chosen by its full description (search, confirmation); from here on it goes by its everyday name.
@@ -131,38 +102,13 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
         </div>
       </fieldset>
 
-      {changingUnit ? (
-        <SelectField
-          label="Μονάδα αποθέματος"
-          value={inventoryUnit}
-          onChange={(e) => {
-            setInventoryUnit(e.target.value as MedicationForm);
-            setUnitChosen(true);
-          }}
-        >
-          {FORM_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {FORM_LABELS[option]}
-            </option>
-          ))}
-        </SelectField>
-      ) : (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[15px] text-stone-700">
-            Μονάδα αποθέματος: <span className="font-semibold text-stone-900">{FORM_LABELS[inventoryUnit]}</span>
-          </p>
-          <Button
-            variant="tertiary"
-            onClick={() => {
-              playSound("button");
-              setChangingUnit(true);
-            }}
-            className="min-h-11 px-0 underline"
-          >
-            Αλλαγή
-          </Button>
-        </div>
-      )}
+      <StockUnitField
+        value={inventoryUnit}
+        onChoose={(unit) => {
+          setInventoryUnit(unit);
+          setUnitChosen(true);
+        }}
+      />
 
       <Button type="submit" size="lg" fullWidth>
         Συνέχεια

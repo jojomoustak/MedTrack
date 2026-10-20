@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FORM_LABELS, FORM_OPTIONS } from "@/components/medications/DetailsStep";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import { SelectField } from "@/components/ui/SelectField";
+import { StockUnitField } from "@/components/medications/StockUnitField";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { describeSchedule, describeWeekdays } from "@/lib/medications/schedule-summary";
 import { TREATMENT_STATE_LABELS } from "@/lib/medications/labels";
@@ -84,6 +85,9 @@ export function EditMedicationForm({
   const [startDate, setStartDate] = useState(schedule?.startDate ?? "");
   const [treatmentState, setTreatmentState] = useState<TreatmentState>(medication.treatmentState);
   const [inventoryUnit, setInventoryUnit] = useState<MedicationForm>(medication.inventoryUnit);
+  // The stock unit follows the form (`StockUnitField`, 2026-10-20) — unless it was already set to
+  // something else, a choice made on purpose that a change of form mustn't overwrite.
+  const [unitChosen, setUnitChosen] = useState(medication.customForm !== null && medication.inventoryUnit !== medication.customForm);
   const [lowStockThresholdValue, setLowStockThresholdValue] = useState(medication.lowStockThresholdValue ? formatQuantity(medication.lowStockThresholdValue) : "");
   const [expiryWarningDays, setExpiryWarningDays] = useState(String(medication.expiryWarningDays));
   const [notes, setNotes] = useState(medication.notes ?? "");
@@ -178,7 +182,15 @@ export function EditMedicationForm({
             </div>
           </fieldset>
 
-          <SelectField label="Μορφή" value={customForm ?? ""} onChange={(e) => setCustomForm(e.target.value ? (e.target.value as MedicationForm) : null)}>
+          <SelectField
+            label="Μορφή"
+            value={customForm ?? ""}
+            onChange={(e) => {
+              const next = e.target.value ? (e.target.value as MedicationForm) : null;
+              setCustomForm(next);
+              if (next && !unitChosen) setInventoryUnit(next);
+            }}
+          >
             <option value="">Επιλέξτε…</option>
             {FORM_OPTIONS.map((option) => (
               <option key={option} value={option}>
@@ -286,13 +298,13 @@ export function EditMedicationForm({
         <p className="-mt-2 text-[15px] text-stone-600">Οι επόμενες δόσεις και οι υπενθυμίσεις του θα ακυρωθούν.</p>
       )}
 
-      <SelectField label="Μονάδα αποθέματος" value={inventoryUnit} onChange={(e) => setInventoryUnit(e.target.value as MedicationForm)}>
-        {FORM_OPTIONS.map((option) => (
-          <option key={option} value={option}>
-            {FORM_LABELS[option]}
-          </option>
-        ))}
-      </SelectField>
+      <StockUnitField
+        value={inventoryUnit}
+        onChoose={(unit) => {
+          setInventoryUnit(unit);
+          setUnitChosen(true);
+        }}
+      />
 
       <label className={FIELD_WRAPPER}>
         <span className={FIELD_LABEL}>Όριο χαμηλού αποθέματος</span>
