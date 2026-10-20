@@ -7,13 +7,16 @@ import { authClient } from "@/lib/auth/client/auth-client";
 import { useAppAutofill } from "@/components/auth/use-app-autofill";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { ResendVerificationButton } from "@/components/auth/ResendVerificationButton";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import { Button } from "@/components/ui/Button";
 
 /**
  * Phase 3 §2.1 "Login" / §8: wrong-credentials and no-connection are two
  * genuinely distinct messages, never the same generic one, so a user
- * isn't told "wrong password" when the real cause is offline.
+ * isn't told "wrong password" when the real cause is offline. A third:
+ * the right password for an account whose email isn't confirmed yet
+ * (2026-10-20, `lib/auth/config.ts`), with a way to get the link again.
  */
 export function LoginForm() {
   // A saved password still fills here, even if a new-password screen was left without closing (`use-app-autofill.ts`).
@@ -22,14 +25,22 @@ export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // The address a sign-in was refused for because it isn't confirmed yet (only said once the password was right).
+  const [unconfirmed, setUnconfirmed] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    setUnconfirmed(null);
     setSubmitting(true);
+    const address = email.trim();
     try {
-      const { error: signInError } = await authClient.signIn.email({ email, password });
+      const { error: signInError } = await authClient.signIn.email({ email: address, password });
+      if (signInError?.code === "EMAIL_NOT_VERIFIED") {
+        setUnconfirmed(address);
+        return;
+      }
       if (signInError) {
         setError("Λανθασμένο email ή κωδικός πρόσβασης.");
         return;
@@ -82,6 +93,16 @@ export function LoginForm() {
         <p role="alert" className="text-sm text-red-700">
           {error}
         </p>
+      )}
+
+      {unconfirmed && (
+        <div className="surface-card flex flex-col gap-3 p-4">
+          <p role="alert" className="text-[15px] leading-snug text-stone-700">
+            Το email σας δεν έχει επιβεβαιωθεί ακόμα. Πατήστε τον σύνδεσμο που σας στείλαμε στο{" "}
+            <span className="font-semibold text-stone-900 wrap-anywhere">{unconfirmed}</span> και δοκιμάστε ξανά.
+          </p>
+          <ResendVerificationButton email={unconfirmed} />
+        </div>
       )}
 
       <Button type="submit" size="lg" fullWidth disabled={submitting} aria-busy={submitting} className="mt-2">

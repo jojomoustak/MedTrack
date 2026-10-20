@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
+import { EMAIL_VERIFIED_PATH } from "@/lib/auth/client/email-verification";
 import { useAppAutofill } from "@/components/auth/use-app-autofill";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PasswordRule } from "@/components/auth/PasswordRule";
@@ -11,17 +11,23 @@ import { Button } from "@/components/ui/Button";
 
 const MIN_PASSWORD_LENGTH = 8;
 
+export interface RegisterValues {
+  name: string;
+  email: string;
+  password: string;
+}
+
 /**
- * Phase 3 §2.1 "Register". Calls Better Auth's client SDK (ADR-003) —
- * `autoSignIn: true` (Phase 4 config) means a successful sign-up already
- * has a session, so this redirects straight to Today rather than to a
- * separate login step.
+ * Phase 3 §2.1 "Register". Calls Better Auth's client SDK (ADR-003). A
+ * sign-up starts no session: the account waits for its email to be
+ * confirmed (2026-10-20, `lib/auth/config.ts`), so success hands the
+ * values to `onRegistered` (`RegisterScreen` shows "check your email").
+ * `initial` refills the form when the person goes back to fix the email.
  */
-export function RegisterForm() {
-  const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export function RegisterForm({ initial, onRegistered }: { initial?: RegisterValues; onRegistered: (values: RegisterValues) => void }) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [email, setEmail] = useState(initial?.email ?? "");
+  const [password, setPassword] = useState(initial?.password ?? "");
   // Google's strong-password pop-up kept closing the keyboard here (`use-app-autofill.ts`).
   useAppAutofill(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,13 +37,20 @@ export function RegisterForm() {
     event.preventDefault();
     setError(null);
     setSubmitting(true);
-    const { error: signUpError } = await authClient.signUp.email({ name, email, password });
-    setSubmitting(false);
-    if (signUpError) {
-      setError(translateAuthError(signUpError.message ?? ""));
-      return;
+    // A phone keyboard's suggestion often leaves a trailing space.
+    const address = email.trim();
+    try {
+      const { error: signUpError } = await authClient.signUp.email({ name, email: address, password, callbackURL: EMAIL_VERIFIED_PATH });
+      if (signUpError) {
+        setError(translateAuthError(signUpError.message ?? ""));
+        return;
+      }
+      onRegistered({ name, email: address, password });
+    } catch {
+      setError("Δεν ήταν δυνατή η σύνδεση με το διαδίκτυο. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.");
+    } finally {
+      setSubmitting(false);
     }
-    router.push("/today");
   }
 
   return (
@@ -100,21 +113,11 @@ export function RegisterForm() {
  * Never shows a raw Better Auth/server error string (CLAUDE.md rule 8) — a
  * small, honest translation layer.
  *
- * Account-enumeration partial mitigation (security audit follow-up,
- * 2026-09-15): the previous version of this function had an explicit
- * "already exists" branch that told an unauthenticated visitor, in plain
- * UI text, whether a given email is already registered — a textbook
- * enumeration oracle. Removed; an existing-email sign-up now falls into
- * the same generic branch as every other failure, so the rendered UI text
- * no longer confirms existence either way. This does NOT close the
- * underlying HTTP-level distinguishability (different status code / no
- * session cookie for the existing-email case) — closing that would require
- * Better Auth's own generic-duplicate-response mechanism, which is
- * structurally incompatible with ADR-003 §5's grace-period policy
- * (`autoSignIn: true`/`requireEmailVerification: false`) at this app's
- * current config; see `lib/auth/config.ts`'s doc comment for the full
- * reachability finding. That remaining gap is tracked, not silently
- * accepted as fixed.
+ * No "already exists" branch (security audit follow-up, 2026-09-15: that
+ * told a visitor whether an email is registered). Since 2026-10-20 the
+ * server doesn't fail that case at all: with email verification required,
+ * Better Auth answers an existing email exactly like a new one and emails
+ * the owner instead (`lib/auth/config.ts`'s `onExistingUserSignUp`).
  */
 function translateAuthError(message: string): string {
   const lower = message.toLowerCase();

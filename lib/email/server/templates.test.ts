@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   existingAccountSignUpNoticeEmail,
-  passwordResetBlockedPendingVerificationEmail,
   passwordResetEmail,
   verificationEmail,
 } from "@/lib/email/server/templates";
@@ -55,18 +54,11 @@ describe("passwordResetEmail", () => {
   });
 });
 
-describe("passwordResetBlockedPendingVerificationEmail", () => {
-  it("is well-formed and does not include any token/reset URL (no second token is minted)", () => {
-    const content = passwordResetBlockedPendingVerificationEmail();
+describe("existingAccountSignUpNoticeEmail", () => {
+  it("is well-formed and carries no link (it's unasked-for mail: nothing to click)", () => {
+    const content = existingAccountSignUpNoticeEmail();
     assertWellFormed(content);
     expect(content.html).not.toMatch(/https?:\/\//);
     expect(content.text).not.toMatch(/https?:\/\//);
-  });
-});
-
-describe("existingAccountSignUpNoticeEmail", () => {
-  it("is well-formed", () => {
-    const content = existingAccountSignUpNoticeEmail();
-    assertWellFormed(content);
   });
 });

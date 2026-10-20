@@ -21,10 +21,9 @@ const MIN_PASSWORD_LENGTH = 8;
  * call in the pinned version's own source
  * (`node_modules/better-auth/.../api/routes/password.mjs`).
  *
- * `authClient.resetPassword({newPassword, token})` — existing sessions
- * elsewhere are NOT revoked by this (Better Auth's `revokeSessionsOnPassword
- * Reset` default is `false`, left at its default per this task's own
- * scope — no specific reason to override it here).
+ * `authClient.resetPassword({newPassword, token})` — signs out every
+ * session of the account, and confirms its email (`lib/auth/config.ts`'s
+ * `revokeSessionsOnPasswordReset` and `onPasswordReset`, 2026-10-20).
  *
  * The live checks show only the two rules this form actually enforces —
  * the server's minimum length and the confirm field matching — not the

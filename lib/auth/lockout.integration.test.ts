@@ -187,5 +187,5 @@ describe.skipIf(!connectionString)("password-credential lockout is scoped to cre
     // The escape hatch actually un-blocks sign-in, not just the counter.
     const ok = await verifyPasswordWithLockout(db, { hash: passwordHash, password: "correct-horse-battery-staple" });
     expect(ok).toBe(true);
-  });
+  }, 30_000); // the same ten real Argon2id verifies and delays as the first test
 });

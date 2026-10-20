@@ -40,44 +40,44 @@
  * Password reset / email verification / rate limiting (security audit
  * follow-up, 2026-09-15 — Resend email integration), all via Resend
  * (`lib/email/server/resend-client.ts` + `lib/email/server/templates.ts`):
- *   - `emailVerification.sendVerificationEmail` + `sendOnSignUp: true`
- *     sends a verification email on every sign-up. This does NOT reopen
- *     ADR-003 §5's grace-period decision — `autoSignIn: true` and
- *     `requireEmailVerification: false` below are UNCHANGED; the grace
- *     period is account creation logging the user in immediately
- *     regardless of verification state, which this doesn't touch.
- *   - `emailAndPassword.sendResetPassword` sends the real reset link only
- *     for an already-verified account (`data.user.emailVerified`); for an
- *     unverified account it sends
- *     `passwordResetBlockedPendingVerificationEmail` instead (ADR-003 §5
- *     bullet 4: "unverified email means password-reset won't work yet"),
- *     pointing at the in-app "resend verification" action rather than
- *     minting a second token here.
- *   - `emailAndPassword.onPasswordReset` clears the password credential's
- *     lockout state (`lib/auth/lockout.ts`'s `clearLockout`) — ADR-003
- *     §"Security review resolution" item 1's escape hatch, finally wired
- *     up now that a reset flow exists.
+ *   - Email verification before first sign-in (owner's call, 2026-10-20,
+ *     replacing ADR-003 §5's grace period — see that section's amendment):
+ *     `requireEmailVerification: true` + `autoSignIn: false`. Sign-up
+ *     sends the link and starts no session; an email/password sign-in
+ *     answers 403 `EMAIL_NOT_VERIFIED` until the link is opened. Google
+ *     accounts arrive verified (Google attests the address). Sessions that
+ *     already existed are untouched — only a new sign-in is gated.
+ *   - `autoSignInAfterVerification: false`: the link opens in the phone's
+ *     browser, not the app (no Android App Links), so a session started
+ *     there would only be a stray one in Chrome. The app signs in itself
+ *     once the person comes back (`components/auth/CheckEmailPanel.tsx`).
+ *   - `emailAndPassword.sendResetPassword` sends the real reset link to any
+ *     account, verified or not, and `onPasswordReset` then marks the email
+ *     verified: the link reached that inbox and was used, the same proof
+ *     the verification link gives (before 2026-10-20 an unverified account
+ *     got a "verify first" notice, a dead end once unverified accounts
+ *     can't sign in to resend).
+ *   - `emailAndPassword.onPasswordReset` also clears the password
+ *     credential's lockout state (`lib/auth/lockout.ts`'s `clearLockout`)
+ *     — ADR-003 §"Security review resolution" item 1's escape hatch.
  *   - `rateLimit` (`storage: "database"`, `lib/db/schema.ts`'s
  *     `authRateLimit` table) adds `customRules` for `/sign-in/email`
  *     (ADR-003 §1's literal "≤20 login POSTs/IP/5 min" requirement),
- *     `/sign-up/email`, and `/request-password-reset` — path strings
+ *     `/sign-up/email`, `/request-password-reset` and
+ *     `/send-verification-email` — path strings
  *     confirmed against `createAuthEndpoint(...)` calls in
  *     `node_modules/better-auth/.../api/routes/*.mjs` for this pinned
  *     version, not assumed (the endpoint is `/request-password-reset`,
  *     NOT `/forget-password` — Better Auth 1.7.1 has no `/forget-password`
  *     route in core; that name only exists in the separate `email-otp`
  *     plugin, not used here).
- *   - **`onExistingUserSignUp` is deliberately NOT wired below.** Reading
- *     `sign-up.mjs`'s actual source confirms this callback only fires
- *     inside the `shouldReturnGenericDuplicateResponse` branch, which is
- *     `requireEmailVerification || autoSignIn === false` — both false
- *     here, so it is structurally unreachable under this app's config.
- *     Configuring it anyway would be dead code with a misleading doc
- *     comment; `RegisterForm.tsx`'s error-message change is the actual
- *     (partial) enumeration mitigation for the sign-up path instead. See
- *     `docs/adr/ADR-003-authentication.md`'s addendum-1 item 4 for the
- *     accepted reasoning on why the remaining HTTP-level distinguishability
- *     is a known, non-blocking gap.
+ *   - `onExistingUserSignUp` sends `existingAccountSignUpNoticeEmail`.
+ *     With verification required, Better Auth answers a sign-up for an
+ *     email that already has an account exactly like a new one (same
+ *     status, same body, no session — `sign-up.mjs`'s
+ *     `shouldReturnGenericDuplicateResponse`), which closes the sign-up
+ *     enumeration gap ADR-003's addendum-1 item 4 had accepted; the
+ *     notice is how the real owner learns why no verification link came.
  */
 import { eq, sql } from "drizzle-orm";
 import { betterAuth } from "better-auth";
@@ -87,13 +87,15 @@ import { withProfileScope } from "@/lib/db/rls";
 import * as schema from "@/lib/db/schema";
 import { getEnv } from "@/lib/config/env";
 import { hashPassword } from "@/lib/auth/argon2";
-import { clearLockout, verifyPasswordWithLockout } from "@/lib/auth/lockout";
+import { verifyPasswordWithLockout } from "@/lib/auth/lockout";
+import { completePasswordReset } from "@/lib/auth/password-reset";
 import { stripOAuthTokens } from "@/lib/auth/oauth-token-strip";
+import { betterAuthLogger } from "@/lib/auth/better-auth-logger";
 import { withHashedSessionTokenAdapter } from "@/lib/auth/adr003-adapter";
 import { DISABLED_SESSION_PATHS, stripSessionTokensAfterHook } from "@/lib/auth/session-hardening";
 import { sendEmail } from "@/lib/email/server/resend-client";
 import {
-  passwordResetBlockedPendingVerificationEmail,
+  existingAccountSignUpNoticeEmail,
   passwordResetEmail,
   verificationEmail,
 } from "@/lib/email/server/templates";
@@ -193,6 +195,9 @@ function buildAuth() {
 
     database: adapter,
 
+    // Never Better Auth's console default: it prints extra arguments such as a database error with the inserted email in it.
+    logger: betterAuthLogger,
+
     // Security review (2026-10-08) — see lib/auth/session-hardening.ts.
     disabledPaths: DISABLED_SESSION_PATHS,
     hooks: { after: stripSessionTokensAfterHook },
@@ -225,6 +230,10 @@ function buildAuth() {
     //     Elena persona) while still bounding scripted
     //     enumeration/email-bombing abuse; tune later if a more precise
     //     spec appears.
+    //   - "/send-verification-email": answers without a session since
+    //     2026-10-20 (the "send the link again" button before first
+    //     sign-in), so it can mail any unverified address — bounded like
+    //     the reset request (ADR-003 §5: "resend available, rate-limited").
     rateLimit: {
       enabled: true,
       storage: "database",
@@ -238,6 +247,7 @@ function buildAuth() {
         "/sign-in/email": { window: 300, max: 20 },
         "/sign-up/email": { window: 3600, max: 10 },
         "/request-password-reset": { window: 300, max: 5 },
+        "/send-verification-email": { window: 300, max: 3 },
       },
     },
 
@@ -374,28 +384,33 @@ function buildAuth() {
         // a password attempt or vice versa.
         verify: async ({ hash, password }: { hash: string; password: string }) => verifyPasswordWithLockout(db, { hash, password }),
       },
-      // ADR-003 §5 "Email-verification-before-login policy": grace period,
-      // not a login gate — account creation logs the user in immediately.
-      autoSignIn: true,
-      requireEmailVerification: false,
-      // Security audit follow-up (2026-09-15): `data.user` here is Better
-      // Auth's core `User` shape, which includes a real `emailVerified`
-      // boolean (confirmed against `@better-auth/core`'s
-      // `sendResetPassword` type). This callback fetches the user fresh
-      // via `findUserByEmail`, a different internal path than the one
-      // `getSessionFromCtx()` used — the latter is what produced the real,
-      // confirmed `EMAIL_ALREADY_VERIFIED` bug fixed 2026-09-17 (see
-      // `lib/db/schema.ts`'s `account.emailVerified` doc comment); a live
-      // test confirmed this specific path was never affected (an
-      // unverified account correctly received a real reset link, not the
-      // "verify first" notice) — moot now regardless, since `emailVerified`
-      // is a plain native boolean everywhere as of that fix.
-      sendResetPassword: async (data: { user: { email: string; emailVerified: boolean }; url: string }) => {
-        const content = data.user.emailVerified
-          ? passwordResetEmail({ url: data.url })
-          : passwordResetBlockedPendingVerificationEmail();
-        await sendEmail({ to: data.user.email, ...content });
+      // ADR-003 §5 "Email-verification-before-login policy", amended
+      // 2026-10-20 (owner's call): an account can't be used until its
+      // email is confirmed. Sign-up starts no session; sign-in answers 403
+      // `EMAIL_NOT_VERIFIED` until then.
+      autoSignIn: false,
+      requireEmailVerification: true,
+      // Reachable now that sign-up answers an existing email like a new one
+      // (see the module doc): tells the real owner, who otherwise waits
+      // for a verification link that never comes.
+      onExistingUserSignUp: async ({ user }: { user: { email: string } }) => {
+        await sendEmail({ to: user.email, ...existingAccountSignUpNoticeEmail() });
       },
+      // The real reset link for every account: using it proves the inbox
+      // as well as the verification link does, so `onPasswordReset` below
+      // also marks the email verified (see the module doc). That holds only
+      // while an account's email can't change — the reset token names the
+      // account, not the address it was mailed to — so `user.changeEmail`
+      // must stay off (`config.test.ts` checks), or this must change with it.
+      sendResetPassword: async (data: { user: { email: string }; url: string }) => {
+        await sendEmail({ to: data.user.email, ...passwordResetEmail({ url: data.url }) });
+      },
+      // A reset signs out every session (security review 2026-10-20). It's
+      // how someone takes back an address another person registered first;
+      // if they'd been tricked into opening that person's verification link,
+      // the squatter could already be signed in. Other devices just sign in
+      // again; changes they hadn't sent wait on the phone and go after that.
+      revokeSessionsOnPasswordReset: true,
       // ADR-003 §"Security review resolution" item 1's escape hatch:
       // "password-reset... immediately clears both failed_login_count and
       // locked_until on successful reset." `user.id` here is
@@ -403,26 +418,32 @@ function buildAuth() {
       // `loginAccount`/`account` above) — `clearLockout` itself scopes the
       // write to `credential_type = 'password'` (addendum A.6), so a
       // linked Google credential row is never touched by this.
+      // Also confirms the email (`lib/auth/password-reset.ts`).
       onPasswordReset: async (data: { user: { id: string } }) => {
-        await clearLockout(db, data.user.id);
+        await completePasswordReset(db, data.user.id);
       },
     },
 
-    // Security audit follow-up (2026-09-15): sends a real verification
-    // email on every sign-up. Independent of, and does not reopen, ADR-003
-    // §5's grace period — `autoSignIn`/`requireEmailVerification` above are
-    // unchanged; this only adds the email send itself.
-    // `autoSignInAfterVerification: true` is a no-op refresh for someone
-    // already logged in via the grace period (the common case here) —
-    // harmless, matches Better Auth's own documented behavior for that
-    // option.
+    // The link is sent on sign-up and again on request (the "send it
+    // again" buttons, `/send-verification-email`, which works without a
+    // session and answers the same whether or not the address has an
+    // account). Not on a refused sign-in (`sendOnSignIn` unset): the app
+    // retries sign-in by itself while waiting, and each try would mail a
+    // new link. No session from opening the link — see the module doc.
     emailVerification: {
+      // A failed send is logged and swallowed: the no-session resend would
+      // otherwise fail only for an address with an unverified account,
+      // saying it has one (security review 2026-10-20). Sign-up already
+      // swallows it the same way.
       sendVerificationEmail: async ({ user, url }: { user: { email: string }; url: string }) => {
-        const content = verificationEmail({ url });
-        await sendEmail({ to: user.email, ...content });
+        try {
+          await sendEmail({ to: user.email, ...verificationEmail({ url }) });
+        } catch (err) {
+          logger.error("auth.email.verification.send_failed", { errorName: err instanceof Error ? err.name : "unknown" });
+        }
       },
       sendOnSignUp: true,
-      autoSignInAfterVerification: true,
+      autoSignInAfterVerification: false,
     },
 
     databaseHooks: {

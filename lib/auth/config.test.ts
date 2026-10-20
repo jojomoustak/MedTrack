@@ -41,6 +41,8 @@ describe("lib/auth/config — rate limiting / password-reset / email-verificatio
       expect(auth.options.rateLimit?.customRules?.["/sign-in/email"]).toEqual({ window: 300, max: 20 });
       expect(auth.options.rateLimit?.customRules?.["/sign-up/email"]).toEqual({ window: 3600, max: 10 });
       expect(auth.options.rateLimit?.customRules?.["/request-password-reset"]).toEqual({ window: 300, max: 5 });
+      // Works without a session since 2026-10-20, so it can mail any unverified address.
+      expect(auth.options.rateLimit?.customRules?.["/send-verification-email"]).toEqual({ window: 300, max: 3 });
     },
     // Builds the real, full Better Auth instance (first call in this file
     // pays that one-time cost; every other `it` here reuses the cached
@@ -51,25 +53,20 @@ describe("lib/auth/config — rate limiting / password-reset / email-verificatio
     45_000,
   );
 
-  it("leaves autoSignIn/requireEmailVerification exactly as ADR-003 §5's grace period requires — never reopened by this task", async () => {
+  // Owner's call, 2026-10-20 (ADR-003 §5 amended): no account is used before its email is confirmed.
+  it("requires a confirmed email before the first sign-in, and starts no session at sign-up", async () => {
     const { getAuth } = await import("@/lib/auth/config");
     const auth = getAuth();
 
-    expect(auth.options.emailAndPassword?.autoSignIn).toBe(true);
-    expect(auth.options.emailAndPassword?.requireEmailVerification).toBe(false);
+    expect(auth.options.emailAndPassword?.requireEmailVerification).toBe(true);
+    expect(auth.options.emailAndPassword?.autoSignIn).toBe(false);
   });
 
-  it("does NOT configure onExistingUserSignUp — confirmed unreachable under this app's grace-period config (requireEmailVerification=false, autoSignIn=true), so it is deliberately left unset rather than wired as dead code", async () => {
+  it("tells the owner of an existing email about a sign-up with it (the sign-up itself is answered like a new one)", async () => {
     const { getAuth } = await import("@/lib/auth/config");
     const auth = getAuth();
 
-    // `auth.options` is typed as the exact literal this module passed to
-    // `betterAuth(...)`, which (by design, per this test) never sets this
-    // key — cast to a loose record to assert its absence at runtime rather
-    // than fighting the narrowed literal type for a property that, by
-    // construction, isn't part of it.
-    const emailAndPassword = auth.options.emailAndPassword as Record<string, unknown> | undefined;
-    expect(emailAndPassword?.onExistingUserSignUp).toBeUndefined();
+    expect(typeof auth.options.emailAndPassword?.onExistingUserSignUp).toBe("function");
   });
 
   it("wires sendResetPassword and onPasswordReset (the lockout escape hatch) as functions", async () => {
@@ -80,12 +77,32 @@ describe("lib/auth/config — rate limiting / password-reset / email-verificatio
     expect(typeof auth.options.emailAndPassword?.onPasswordReset).toBe("function");
   });
 
-  it("sends a verification email on every sign-up without gating login (sendOnSignUp, not requireEmailVerification)", async () => {
+  // Security review 2026-10-20: a reset is how an address registered by someone else is taken back.
+  it("a password reset signs out every session, and an account's email can't be changed (a reset also confirms the email)", async () => {
+    const { getAuth } = await import("@/lib/auth/config");
+    const auth = getAuth();
+
+    expect(auth.options.emailAndPassword?.revokeSessionsOnPasswordReset).toBe(true);
+    // The reset token names the account, not the address it was mailed to: confirming on reset is only sound while the address is fixed.
+    expect((auth.options.user as { changeEmail?: { enabled?: boolean } } | undefined)?.changeEmail?.enabled).not.toBe(true);
+  });
+
+  it("routes Better Auth's own logging through the app's logger at warn, never its console default", async () => {
+    const { getAuth } = await import("@/lib/auth/config");
+    const { betterAuthLogger } = await import("@/lib/auth/better-auth-logger");
+    const auth = getAuth();
+
+    expect(auth.options.logger).toBe(betterAuthLogger);
+    expect(auth.options.logger?.level).toBe("warn");
+  });
+
+  it("sends the link on sign-up, not on each refused sign-in, and starts no session from the link (it opens in the browser, not the app)", async () => {
     const { getAuth } = await import("@/lib/auth/config");
     const auth = getAuth();
 
     expect(auth.options.emailVerification?.sendOnSignUp).toBe(true);
-    expect(auth.options.emailVerification?.autoSignInAfterVerification).toBe(true);
+    expect((auth.options.emailVerification as Record<string, unknown> | undefined)?.sendOnSignIn).toBeUndefined();
+    expect(auth.options.emailVerification?.autoSignInAfterVerification).toBe(false);
     expect(typeof auth.options.emailVerification?.sendVerificationEmail).toBe("function");
   });
 });

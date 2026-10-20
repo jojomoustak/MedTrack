@@ -7,9 +7,11 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace: vi.fn() }),
 }));
 
+vi.mock("@/lib/sound/client/play-sound", () => ({ playSound: vi.fn() }));
+
 const signInEmail = vi.fn();
 vi.mock("@/lib/auth/client/auth-client", () => ({
-  authClient: { signIn: { email: (...args: unknown[]) => signInEmail(...args) } },
+  authClient: { signIn: { email: (...args: unknown[]) => signInEmail(...args) }, sendVerificationEmail: vi.fn() },
 }));
 
 afterEach(() => {
@@ -41,6 +43,21 @@ describe("LoginForm — wrong credentials vs. no connection are distinct message
     fireEvent.click(screen.getByRole("button", { name: /σύνδεση/i }));
 
     await vi.waitFor(() => expect(screen.getByRole("alert").textContent).toMatch(/λανθασμένο/i));
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("an account whose email isn't confirmed yet is told so, with a way to get the link again — not 'wrong password'", async () => {
+    signInEmail.mockResolvedValue({ data: null, error: { code: "EMAIL_NOT_VERIFIED", status: 403, message: "Email not verified" } });
+    const { LoginForm } = await import("@/components/auth/LoginForm");
+    render(<LoginForm />);
+
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@example.com" } });
+    fireEvent.change(screen.getByLabelText("Κωδικός πρόσβασης"), { target: { value: "correct" } });
+    fireEvent.click(screen.getByRole("button", { name: /σύνδεση/i }));
+
+    await vi.waitFor(() => expect(screen.getByRole("alert").textContent).toMatch(/δεν έχει επιβεβαιωθεί/i));
+    expect(screen.getByRole("alert").textContent).not.toMatch(/λανθασμένο/i);
+    expect(screen.getByRole("button", { name: "Στείλτε νέο σύνδεσμο" })).toBeTruthy();
     expect(push).not.toHaveBeenCalled();
   });
 

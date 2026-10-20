@@ -2,19 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { authClient } from "@/lib/auth/client/auth-client";
+import { EMAIL_VERIFIED_PATH, RESEND_COOLDOWN_MS } from "@/lib/auth/client/email-verification";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { Button } from "@/components/ui/Button";
-
-/** ADR-003 §5 bullet 2: "resend available, rate-limited, e.g. 1 per 2 minutes per account". */
-const RESEND_COOLDOWN_MS = 2 * 60 * 1000;
 
 type VerificationState = "checking" | "verified" | "unverified" | "unknown";
 type ResendState = "idle" | "sending" | "sent" | "error";
 
 /**
- * ADR-003 §5's "non-blocking, dismissible-but-recurring" in-app banner: an
- * unverified email means password-reset won't work yet (see
- * `lib/auth/config.ts`'s `sendResetPassword`) — surfaced, not punitive.
+ * ADR-003 §5's "non-blocking, dismissible-but-recurring" in-app banner,
+ * now only for accounts made before 2026-10-20, when signing in started to
+ * need a confirmed email: their sessions still work, but the next sign-in
+ * won't until it's confirmed — surfaced, not punitive.
  * "Dismissible-but-recurring" is kept deliberately simple: dismissal is
  * component-local state, not persisted, so it reappears the next time this
  * mounts (e.g. next visit to Profile) rather than needing its own
@@ -63,7 +62,7 @@ export function EmailVerificationBanner({ email }: { email: string | null }) {
     playSound("button");
     setResend("sending");
     try {
-      const { error } = await authClient.sendVerificationEmail({ email, callbackURL: "/profile" });
+      const { error } = await authClient.sendVerificationEmail({ email, callbackURL: EMAIL_VERIFIED_PATH });
       if (error) {
         setResend("error");
         return;
@@ -84,7 +83,7 @@ export function EmailVerificationBanner({ email }: { email: string | null }) {
       role="status"
       className="flex flex-col gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
     >
-      <p>Το email σας δεν έχει επιβεβαιωθεί ακόμα. Η επαναφορά κωδικού πρόσβασης δεν θα λειτουργήσει μέχρι να το επιβεβαιώσετε.</p>
+      <p>Το email σας δεν έχει επιβεβαιωθεί ακόμα. Επιβεβαιώστε το για να μπορείτε να συνδεθείτε ξανά, αν αποσυνδεθείτε.</p>
       <div className="flex flex-wrap items-center gap-3">
         <Button
           variant="secondary"

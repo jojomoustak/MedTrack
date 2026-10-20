@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { AuthBackLink } from "@/components/auth/AuthBackLink";
-import { RegisterForm } from "@/components/auth/RegisterForm";
-import { BrandLockup } from "@/components/shell/BrandMark";
+import { RegisterScreen } from "@/components/auth/RegisterScreen";
 
 /**
  * Layout matched to the reference mockup's Register, compared bezel-free
@@ -14,37 +12,15 @@ import { BrandLockup } from "@/components/shell/BrandMark";
  * Two deliberate departures: the reference's consent line also links a
  * "Terms of Service" page this app doesn't have (so only Privacy is
  * linked), and its three live password rules become the one this app
- * actually enforces (see `RegisterForm`).
+ * actually enforces (see `RegisterForm`). After sign-up the content gives
+ * way to "check your email" (`RegisterScreen`).
  */
 export default function RegisterPage() {
   return (
     <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-6 pt-4">
       <div className="mx-auto flex w-full max-w-sm flex-col">
         <AuthBackLink href="/welcome" />
-
-        <BrandLockup iconSize={72} textClassName="text-[30px] leading-none" className="self-center" />
-
-        <h1 className="mt-7 text-[27px] font-bold leading-tight tracking-tight text-stone-900">Δημιουργία λογαριασμού</h1>
-        <p className="mt-2 text-lg leading-snug text-stone-600">Λίγα στοιχεία μόνο, και θα σας βοηθάμε να θυμάστε τα φάρμακά σας.</p>
-
-        <div className="mt-6">
-          <RegisterForm />
-        </div>
-
-        <p className="mt-5 text-center text-sm leading-relaxed text-stone-500">
-          Δημιουργώντας λογαριασμό, συμφωνείτε με την{" "}
-          <Link href="/privacy" className="font-semibold text-accent-700">
-            Πολιτική Απορρήτου
-          </Link>
-          .
-        </p>
-
-        <p className="mt-6 text-center text-[15px] text-stone-600">
-          Έχετε ήδη λογαριασμό;{" "}
-          <Link href="/login" className="font-semibold text-accent-700">
-            Σύνδεση
-          </Link>
-        </p>
+        <RegisterScreen />
       </div>
     </main>
   );

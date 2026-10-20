@@ -131,23 +131,25 @@ function layout({ preheader, heading, body, action }: Layout): string {
 
 const TEXT_FOOTER = `—\nΑυτό είναι ένα αυτόματο μήνυμα για τον λογαριασμό σας στο ${BRAND}. Αν δεν το ζητήσατε εσείς, μπορείτε απλώς να το αγνοήσετε.`;
 
-/** (a) Email verification link — sent on every sign-up (ADR-003 §5), and on demand via the in-app "resend" action. */
+/** (a) Email verification link — sent on every sign-up and on request (ADR-003 §5); the account can't be signed in to until it's opened. */
 export function verificationEmail(params: { url: string }): EmailContent {
   const subject = `Επιβεβαιώστε το email σας στο ${BRAND}`;
   const html = layout({
-    preheader: `Ένα πάτημα για να επιβεβαιώσετε το email σας. Ο σύνδεσμος ισχύει για ${LINK_VALID_FOR}.`,
+    preheader: `Ένα πάτημα και ο λογαριασμός σας είναι έτοιμος. Ο σύνδεσμος ισχύει για ${LINK_VALID_FOR}.`,
     heading: "Επιβεβαιώστε το email σας",
     body: [
-      "Πατήστε το παρακάτω κουμπί για να επιβεβαιώσετε ότι αυτό το email σας ανήκει.",
-      "Έτσι θα μπορείτε να ορίσετε νέο κωδικό πρόσβασης, αν ποτέ ξεχάσετε τον τωρινό.",
+      "Πατήστε το παρακάτω κουμπί για να επιβεβαιώσετε ότι αυτό το email σας ανήκει. Ο λογαριασμός σας ενεργοποιείται αμέσως.",
+      `Μετά γυρίστε στην εφαρμογή ${BRAND} για να συνεχίσετε.`,
+      // Security review 2026-10-20: someone who registered this address first could get its owner to confirm it for them.
+      `Αν δεν δημιουργήσατε εσείς τώρα λογαριασμό στο ${BRAND}, μην πατήσετε το κουμπί.`,
     ],
     action: { label: "Επιβεβαίωση email", url: params.url, note: `Ο σύνδεσμος ισχύει για ${LINK_VALID_FOR}.` },
   });
-  const text = `Επιβεβαιώστε το email σας\n\nΑνοίξτε τον παρακάτω σύνδεσμο για να επιβεβαιώσετε ότι αυτό το email σας ανήκει. Έτσι θα μπορείτε να ορίσετε νέο κωδικό πρόσβασης, αν ποτέ ξεχάσετε τον τωρινό.\n\n${params.url}\n\nΟ σύνδεσμος ισχύει για ${LINK_VALID_FOR}.\n\n${TEXT_FOOTER}`;
+  const text = `Επιβεβαιώστε το email σας\n\nΑνοίξτε τον παρακάτω σύνδεσμο για να επιβεβαιώσετε ότι αυτό το email σας ανήκει. Ο λογαριασμός σας ενεργοποιείται αμέσως.\n\n${params.url}\n\nΟ σύνδεσμος ισχύει για ${LINK_VALID_FOR}. Μετά γυρίστε στην εφαρμογή ${BRAND} για να συνεχίσετε.\n\nΑν δεν δημιουργήσατε εσείς τώρα λογαριασμό στο ${BRAND}, μην ανοίξετε τον σύνδεσμο.\n\n${TEXT_FOOTER}`;
   return { subject, html, text, attachments: [LOGO_ATTACHMENT] };
 }
 
-/** (b) Password-reset link — only sent for an already-verified account (see `lib/auth/config.ts`'s `sendResetPassword`, ADR-003 §5 bullet 4). */
+/** (b) Password-reset link — for any account; using it also confirms the email (`lib/auth/config.ts`'s `onPasswordReset`). */
 export function passwordResetEmail(params: { url: string }): EmailContent {
   const subject = `Επαναφορά κωδικού πρόσβασης — ${BRAND}`;
   const html = layout({
@@ -164,15 +166,11 @@ export function passwordResetEmail(params: { url: string }): EmailContent {
 }
 
 /**
- * (c) "Someone tried to create an account with your email" notice — for
- * the existing-email sign-up case. Built for completeness per this task's
- * spec, but NOT currently wired into `lib/auth/config.ts`: Better Auth's
- * `onExistingUserSignUp` callback only fires when
- * `requireEmailVerification: true` or `autoSignIn: false`
- * (`node_modules/better-auth/.../api/routes/sign-up.mjs`), and ADR-003 §5
- * requires neither be set — see `lib/auth/config.ts`'s doc comment for the
- * full reachability finding. Kept here, unused, so wiring it up is a
- * one-line change if that ADR constraint is ever revisited.
+ * (c) "Someone tried to create an account with your email" notice — sent
+ * instead of a verification link when a sign-up uses an email that already
+ * has an account (`lib/auth/config.ts`'s `onExistingUserSignUp`). The app
+ * shows that sign-up the same "check your email" screen as a new one, so
+ * this is how the real owner finds out why.
  */
 export function existingAccountSignUpNoticeEmail(): EmailContent {
   const subject = `Κάποιος προσπάθησε να δημιουργήσει λογαριασμό με το email σας — ${BRAND}`;
@@ -181,30 +179,12 @@ export function existingAccountSignUpNoticeEmail(): EmailContent {
     heading: "Έχετε ήδη λογαριασμό",
     body: [
       `Κάποιος προσπάθησε να δημιουργήσει νέο λογαριασμό ${BRAND} με αυτή τη διεύθυνση email, αλλά υπάρχει ήδη λογαριασμός με αυτό το email.`,
-      "Αν ήσασταν εσείς, απλώς συνδεθείτε κανονικά. Αν όχι, δεν χρειάζεται να κάνετε τίποτα: ο λογαριασμός σας παραμένει ασφαλής.",
+      "Αν ήσασταν εσείς, απλώς συνδεθείτε με τον κωδικό που έχετε. Αν δεν τον θυμάστε, πατήστε «Ξεχάσατε τον κωδικό;» στην οθόνη σύνδεσης.",
+      `Αν δεν δημιουργήσατε ποτέ εσείς λογαριασμό στο ${BRAND}, κάποιος άλλος μπορεί να χρησιμοποίησε τη διεύθυνσή σας. Πατήστε κι εσείς «Ξεχάσατε τον κωδικό;» και ορίστε δικό σας κωδικό: ο λογαριασμός περνά σε εσάς και όποιος ήταν συνδεδεμένος αποσυνδέεται.`,
+      "Αν έχετε ήδη λογαριασμό και δεν ήσασταν εσείς, δεν χρειάζεται να κάνετε τίποτα: ο λογαριασμός σας παραμένει ασφαλής.",
     ],
   });
-  const text = `Έχετε ήδη λογαριασμό\n\nΚάποιος προσπάθησε να δημιουργήσει νέο λογαριασμό ${BRAND} με αυτή τη διεύθυνση email, αλλά υπάρχει ήδη λογαριασμός με αυτό το email.\n\nΑν ήσασταν εσείς, απλώς συνδεθείτε κανονικά. Αν όχι, δεν χρειάζεται να κάνετε τίποτα: ο λογαριασμός σας παραμένει ασφαλής.\n\n${TEXT_FOOTER}`;
+  const text = `Έχετε ήδη λογαριασμό\n\nΚάποιος προσπάθησε να δημιουργήσει νέο λογαριασμό ${BRAND} με αυτή τη διεύθυνση email, αλλά υπάρχει ήδη λογαριασμός με αυτό το email.\n\nΑν ήσασταν εσείς, απλώς συνδεθείτε με τον κωδικό που έχετε. Αν δεν τον θυμάστε, πατήστε «Ξεχάσατε τον κωδικό;» στην οθόνη σύνδεσης.\n\nΑν δεν δημιουργήσατε ποτέ εσείς λογαριασμό στο ${BRAND}, κάποιος άλλος μπορεί να χρησιμοποίησε τη διεύθυνσή σας. Πατήστε κι εσείς «Ξεχάσατε τον κωδικό;» και ορίστε δικό σας κωδικό: ο λογαριασμός περνά σε εσάς και όποιος ήταν συνδεδεμένος αποσυνδέεται.\n\nΑν έχετε ήδη λογαριασμό και δεν ήσασταν εσείς, δεν χρειάζεται να κάνετε τίποτα: ο λογαριασμός σας παραμένει ασφαλής.\n\n${TEXT_FOOTER}`;
   return { subject, html, text, attachments: [LOGO_ATTACHMENT] };
 }
 
-/**
- * (d) Sent instead of a real reset link when `sendResetPassword` is
- * invoked for an account whose email isn't verified yet (ADR-003 §5 bullet
- * 4: "unverified email means password-reset won't work yet"). Points the
- * user at the in-app "resend verification email" action rather than
- * minting a second token here.
- */
-export function passwordResetBlockedPendingVerificationEmail(): EmailContent {
-  const subject = `Δεν είναι δυνατή η επαναφορά κωδικού ακόμα — ${BRAND}`;
-  const html = layout({
-    preheader: "Επιβεβαιώστε πρώτα το email σας από την εφαρμογή.",
-    heading: "Επιβεβαιώστε πρώτα το email σας",
-    body: [
-      "Λάβαμε αίτημα επαναφοράς του κωδικού πρόσβασης για τον λογαριασμό σας, αλλά το email σας δεν έχει επιβεβαιωθεί ακόμα. Για λόγους ασφαλείας, η επαναφορά κωδικού λειτουργεί μόνο για επιβεβαιωμένα email.",
-      "Συνδεθείτε στην εφαρμογή και πατήστε «Επαναποστολή email επιβεβαίωσης» στο προφίλ σας. Μόλις επιβεβαιώσετε το email σας, θα μπορείτε να ζητήσετε ξανά επαναφορά κωδικού.",
-    ],
-  });
-  const text = `Επιβεβαιώστε πρώτα το email σας\n\nΛάβαμε αίτημα επαναφοράς του κωδικού πρόσβασης για τον λογαριασμό σας, αλλά το email σας δεν έχει επιβεβαιωθεί ακόμα. Για λόγους ασφαλείας, η επαναφορά κωδικού λειτουργεί μόνο για επιβεβαιωμένα email.\n\nΣυνδεθείτε στην εφαρμογή και πατήστε «Επαναποστολή email επιβεβαίωσης» στο προφίλ σας. Μόλις επιβεβαιώσετε το email σας, θα μπορείτε να ζητήσετε ξανά επαναφορά κωδικού.\n\n${TEXT_FOOTER}`;
-  return { subject, html, text, attachments: [LOGO_ATTACHMENT] };
-}

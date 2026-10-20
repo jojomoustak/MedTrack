@@ -36,6 +36,29 @@ export function ForgotPasswordIllustration({ className = "" }: { className?: str
   );
 }
 
+/** The envelope again, opened, with a check badge: the email is confirmed. */
+export function EmailConfirmedIllustration({ className = "" }: { className?: string }) {
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true" className={className}>
+      <defs>
+        <linearGradient id={`${id}f`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#3AA87B" />
+          <stop offset="1" stopColor="#0F6E4C" />
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="50" className={DISC} />
+      <rect x="24" y="44" width="52" height="34" rx="4" fill="#165F45" />
+      <rect x="31" y="31" width="34" height="32" rx="3" fill="#EEF5EF" />
+      <path d="M24 50 L50 66 L76 50 V74 A4 4 0 0 1 72 78 H28 A4 4 0 0 1 24 74 Z" fill={`url(#${id}f)`} />
+      <path d="M24 76 L45 62 M76 76 L55 62" stroke="#FFFFFF" strokeOpacity="0.22" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+      <circle cx="70" cy="32" r="14" fill="#FFFFFF" />
+      <circle cx="70" cy="32" r="11.5" fill="#0F6E4C" />
+      <path d="M64.5 32.3 L68.4 36 L75.6 28.6" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+
 export function ResetPasswordIllustration({ className = "" }: { className?: string }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   return (
