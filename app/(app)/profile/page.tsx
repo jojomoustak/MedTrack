@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client/auth-client";
+import { useAccountIdentity } from "@/lib/auth/client/use-account-identity";
 import { clearCachedProfile } from "@/lib/auth/client/use-current-profile";
 import { clearAllLocalProfileData, hasPendingLocalWork } from "@/lib/db-client/clear-local-profile-data";
 import { cancelAllNativeReminders } from "@/lib/reminders/client/native-reminder-sync";
@@ -49,7 +50,8 @@ const ROW = "flex min-h-16 w-full items-center gap-4 px-4 text-left text-[17px] 
  *   `/profile/delete`.
  */
 export default function ProfilePage() {
-  const { data } = authClient.useSession();
+  // Kept on the phone too, so they still show offline (owner-reported 2026-10-21).
+  const identity = useAccountIdentity();
   const router = useRouter();
   const profileId = useProfileId();
   /** Changes not sent yet: signing out asks first (2026-10-16). */
@@ -102,9 +104,9 @@ export default function ProfilePage() {
     router.replace("/welcome");
   }
 
-  const name = data?.user?.name?.trim();
-  const email = data?.user?.email;
-  const image = data?.user?.image;
+  const name = identity.name ?? undefined;
+  const email = identity.email ?? undefined;
+  const image = identity.image;
   const initial = (name?.charAt(0) || email?.charAt(0) || "?").toUpperCase();
 
   return (

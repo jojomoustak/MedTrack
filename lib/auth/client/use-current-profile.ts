@@ -14,6 +14,8 @@ const CACHED_PROFILE_KEY = "medtrack:last-known-profile";
 export const CACHED_FIRST_NAME_KEY = "medtrack:first-name";
 /** The profile photo kept on the phone (`lib/account/client/profile-photo.ts`) — cleared with the profile too. */
 export const CACHED_PROFILE_PHOTO_KEY = "medtrack:profile-photo";
+/** Profile's name and email, for when there's no connection (`use-account-identity.ts`) — cleared with the profile too. */
+export const CACHED_ACCOUNT_IDENTITY_KEY = "medtrack:account-identity";
 
 type CachedProfile = { profileId: string; accountId: string; hearts?: boolean };
 
@@ -88,6 +90,7 @@ export function clearCachedProfile(): void {
     localStorage.removeItem(CACHED_PROFILE_KEY);
     localStorage.removeItem(CACHED_FIRST_NAME_KEY);
     localStorage.removeItem(CACHED_PROFILE_PHOTO_KEY);
+    localStorage.removeItem(CACHED_ACCOUNT_IDENTITY_KEY);
   } catch {
     // Nothing to do if storage is unavailable.
   }

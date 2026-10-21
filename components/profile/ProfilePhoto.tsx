@@ -24,7 +24,9 @@ export function ProfilePhoto({ profileId, fallbackImage, initial }: { profileId:
   const { src, busy, error, upload, remove } = useProfilePhoto(profileId);
   const input = useRef<HTMLInputElement>(null);
   const [choosing, setChoosing] = useState(false);
-  const shown = src ?? fallbackImage;
+  // The Google picture comes from Google: offline it can't load, and the initial stands in instead of an empty circle.
+  const [failedImage, setFailedImage] = useState<string | null>(null);
+  const shown = src ?? (fallbackImage && fallbackImage !== failedImage ? fallbackImage : null);
 
   function pick() {
     setChoosing(false);
@@ -48,7 +50,14 @@ export function ProfilePhoto({ profileId, fallbackImage, initial }: { profileId:
       >
         {shown ? (
           // eslint-disable-next-line @next/next/no-img-element -- a data URL kept on the phone, or the account's Google photo; nothing to optimize
-          <img src={shown} alt="" referrerPolicy="no-referrer" className="size-24 rounded-full object-cover shadow-[0_2px_10px_rgba(28,25,23,.12)]" />
+          <img
+            src={shown}
+            alt=""
+            referrerPolicy="no-referrer"
+            onError={() => {
+              if (shown === fallbackImage) setFailedImage(fallbackImage);
+            }}
+            className="size-24 rounded-full object-cover shadow-[0_2px_10px_rgba(28,25,23,.12)]" />
         ) : (
           <span aria-hidden="true" className="flex size-24 items-center justify-center rounded-full bg-accent-100 text-4xl font-bold text-accent-800">
             {initial}
