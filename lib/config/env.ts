@@ -127,6 +127,14 @@ const envSchema = z.object({
   // thrown error (never silently dropped).
   EMAIL_FROM: z.string().trim().min(1).optional(),
 
+  // Gmail instead of Resend (2026-10-21, `lib/email/server/gmail-transport.ts`):
+  // Resend without a bought domain only delivers to its own account
+  // holder. Both set → every email goes through this Gmail account, from
+  // «MedTrack <GMAIL_USER>». The app password is Google's 16-letter one
+  // (spaces allowed), never the account's real password.
+  GMAIL_USER: z.string().trim().email().optional(),
+  GMAIL_APP_PASSWORD: z.string().trim().min(16).optional(),
+
   // Accounts that get hearts when they open the app — a gift
   // (`lib/account/server/gift.ts`, 2026-10-20). Comma-separated emails,
   // kept here and not in the code because the repository is public.

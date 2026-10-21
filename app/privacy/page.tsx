@@ -125,8 +125,8 @@ export default function PrivacyPage() {
               λογαριασμού Google.
             </li>
             <li>
-              <strong>Resend</strong> — αποστολή email επιβεβαίωσης λογαριασμού
-              και επαναφοράς κωδικού πρόσβασης.
+              <strong>Google (Gmail)</strong> — αποστολή των email της εφαρμογής
+              (επιβεβαίωση λογαριασμού, επαναφορά κωδικού πρόσβασης).
             </li>
           </ul>
           <p className="text-[17px] leading-relaxed text-stone-700">

@@ -26,6 +26,7 @@ import { getEnv } from "@/lib/config/env";
 import { ConfigError } from "@/lib/errors/app-error";
 import { logger } from "@/lib/logging/logger";
 import { BRAND, type EmailAttachment } from "@/lib/email/server/templates";
+import { sendWithGmail } from "@/lib/email/server/gmail-transport";
 
 export interface SendEmailInput {
   to: string;
@@ -72,7 +73,18 @@ export function __resetResendClientForTests(): void {
   resendSingletonKey = undefined;
 }
 
+/**
+ * Through Gmail when it's configured (`gmail-transport.ts`, 2026-10-21:
+ * Resend without a bought domain only reaches its own account holder),
+ * otherwise Resend.
+ */
 export async function sendEmail(input: SendEmailInput): Promise<void> {
+  const env = getEnv();
+  if (env.GMAIL_USER && env.GMAIL_APP_PASSWORD) {
+    await sendWithGmail(input, { user: env.GMAIL_USER, appPassword: env.GMAIL_APP_PASSWORD });
+    return;
+  }
+
   const { apiKey, from } = assertResendConfigured();
   const client = getResendClient(apiKey);
 
