@@ -4,10 +4,14 @@ import { useId } from "react";
 import { setLanguage, useLanguage } from "@/lib/i18n/client";
 import { playSound } from "@/lib/sound/client/play-sound";
 
-/** Greece's flag: nine blue and white stripes, the white cross on blue in the corner. */
+/**
+ * Greece's flag: nine blue and white stripes, the white cross on blue in
+ * the corner. Cropped from the left, as round Greek flags are, so the whole
+ * cross shows (centred, the crop cut it in half — owner-reported 2026-10-21).
+ */
 function GreekFlag() {
   return (
-    <svg viewBox="0 0 27 18" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false" className="size-full">
+    <svg viewBox="0 0 27 18" preserveAspectRatio="xMinYMid slice" aria-hidden="true" focusable="false" className="size-full">
       <rect width="27" height="18" fill="#0D5EAF" />
       {[2, 6, 10, 14].map((y) => (
         <rect key={y} y={y} width="27" height="2" fill="#FFFFFF" />
