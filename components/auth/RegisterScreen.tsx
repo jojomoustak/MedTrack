@@ -64,9 +64,10 @@ export function RegisterScreen() {
         />
       </div>
 
-      <p className="mt-5 text-center text-sm leading-relaxed text-stone-500">
+      {/* Balanced, with the link kept whole: it used to hang alone on a second line, or break in two (owner-reported 2026-10-21). */}
+      <p className="mt-5 text-center text-sm leading-relaxed text-balance text-stone-500">
         <T>Δημιουργώντας λογαριασμό, συμφωνείτε με την</T>{" "}
-        <Link href="/privacy" className="font-semibold text-accent-700">
+        <Link href="/privacy" className="font-semibold whitespace-nowrap text-accent-700">
           <T>Πολιτική Απορρήτου</T>
         </Link>
         .
