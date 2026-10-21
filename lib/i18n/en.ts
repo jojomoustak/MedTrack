@@ -81,7 +81,7 @@ export const EN: Record<string, string> = {
   "Δίπλα σας,": "By your side,",
   "κάθε μέρα": "every day",
   "Σας θυμίζουμε πότε είναι η ώρα για κάθε φάρμακο και κρατάμε το πρόγραμμά σας τακτοποιημένο, ώστε να έχετε ένα πράγμα λιγότερο να σκέφτεστε.":
-    "We remind you when it's time for each medicine and keep your schedule in order, so you have one less thing to think about.",
+    "We remind you when it's time for each medicine and keep your schedule in order, so you have one less thing to worry about.",
   "Ας ξεκινήσουμε": "Let's get started",
 
   // --- Sign in / create account -------------------------------------------------
