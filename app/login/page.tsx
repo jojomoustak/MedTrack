@@ -20,7 +20,7 @@ interface LoginPageProps {
  * Layout matched to the reference mockup's Login, compared bezel-free at
  * the same width (2026-10-04): centered logo lockup, then a LEFT-aligned
  * large heading and subcopy, tall white fields, a large primary button,
- * plain "or continue with" text (no rules), a white card button for
+ * a plain «ή» (no rules; «ή συνεχίστε με» until 2026-10-21, owner's call), a white card button for
  * Google, and a single-line sign-up prompt. One deliberate departure: the
  * reference shows Google *and* Apple side by side — Apple Sign-In isn't a
  * provider this app supports (CLAUDE.md rule 4), so only Google renders,
@@ -50,7 +50,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <LoginForm />
         </div>
 
-        <p className="mt-6 text-center text-base text-stone-500">ή συνεχίστε με</p>
+        <p className="mt-6 text-center text-base text-stone-500">ή</p>
 
         <div className="mt-4">
           <GoogleAuthButton
