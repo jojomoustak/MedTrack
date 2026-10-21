@@ -60,7 +60,7 @@ export function RegisterForm({ initial, onRegistered }: { initial?: RegisterValu
         <input
           type="text"
           autoComplete="name"
-          placeholder="Όνομα χρήστη"
+          placeholder=""
           value={name}
           onChange={(e) => setName(e.target.value)}
           aria-label="Ονοματεπώνυμο"
