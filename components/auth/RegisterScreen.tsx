@@ -64,8 +64,8 @@ export function RegisterScreen() {
         />
       </div>
 
-      {/* Balanced, with the link kept whole: it used to hang alone on a second line, or break in two (owner-reported 2026-10-21). */}
-      <p className="mt-5 text-center text-sm leading-relaxed text-balance text-stone-500">
+      {/* Balanced, with the link kept whole, and room around it (owner-reported 2026-10-21: it hung alone on a second line, broke in two, and felt crammed). */}
+      <p className="mt-9 text-center text-[15px] leading-relaxed text-balance text-stone-500">
         <T>Δημιουργώντας λογαριασμό, συμφωνείτε με την</T>{" "}
         <Link href="/privacy" className="font-semibold whitespace-nowrap text-accent-700">
           <T>Πολιτική Απορρήτου</T>
@@ -73,7 +73,7 @@ export function RegisterScreen() {
         .
       </p>
 
-      <p className="mt-6 text-center text-[15px] text-stone-600">
+      <p className="mt-9 text-center text-[15px] text-stone-600">
         <T>Έχετε ήδη λογαριασμό;</T>{" "}
         <Link href="/login" className="font-semibold text-accent-700">
           <T>Σύνδεση</T>

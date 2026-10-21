@@ -26,7 +26,8 @@ import { BrandWordmark } from "@/components/shell/BrandMark";
 export default function PrivacyPage() {
   return (
     <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-12 pt-4">
-      <div className="mx-auto flex max-w-2xl flex-col gap-8">
+      {/* Room between sections, under headings and between points (owner-reported 2026-10-21: it felt crammed). */}
+      <div className="mx-auto flex max-w-2xl flex-col gap-12">
         <div className="flex flex-col">
           <div className="relative flex items-center justify-center">
             <BackButton fallback="/welcome" className="absolute -left-3" />
@@ -40,7 +41,7 @@ export default function PrivacyPage() {
           </p>
         </div>
 
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-4">
           <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900">
             Τι είναι το MedTrack
           </h2>
@@ -55,11 +56,11 @@ export default function PrivacyPage() {
           </p>
         </section>
 
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-4">
           <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900">
             1. Ποια δεδομένα συλλέγουμε
           </h2>
-          <ul className="flex flex-col gap-3 [&>li]:relative [&>li]:pl-5 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[0.62em] [&>li]:before:size-2 [&>li]:before:rounded-full [&>li]:before:bg-accent-600 text-[17px] leading-relaxed text-stone-700">
+          <ul className="flex flex-col gap-5 [&>li]:relative [&>li]:pl-5 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[0.62em] [&>li]:before:size-2 [&>li]:before:rounded-full [&>li]:before:bg-accent-600 text-[17px] leading-relaxed text-stone-700">
             <li>
               <strong>Στοιχεία λογαριασμού:</strong> email, όνομα (προαιρετικό),
               κρυπτογραφημένος κωδικός πρόσβασης (ποτέ ο ίδιος ο κωδικός σε απλό
@@ -90,7 +91,7 @@ export default function PrivacyPage() {
           </ul>
         </section>
 
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-4">
           <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900">
             2. Γιατί τα χρησιμοποιούμε
           </h2>
@@ -103,7 +104,7 @@ export default function PrivacyPage() {
           </p>
         </section>
 
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-4">
           <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900">
             3. Με ποιους μοιραζόμαστε δεδομένα
           </h2>
@@ -111,7 +112,7 @@ export default function PrivacyPage() {
             Χρησιμοποιούμε τους παρακάτω τρίτους αποκλειστικά ως πάροχοι
             υποδομής (όχι ως αποδέκτες για δικούς τους σκοπούς):
           </p>
-          <ul className="flex flex-col gap-3 [&>li]:relative [&>li]:pl-5 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[0.62em] [&>li]:before:size-2 [&>li]:before:rounded-full [&>li]:before:bg-accent-600 text-[17px] leading-relaxed text-stone-700">
+          <ul className="flex flex-col gap-5 [&>li]:relative [&>li]:pl-5 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[0.62em] [&>li]:before:size-2 [&>li]:before:rounded-full [&>li]:before:bg-accent-600 text-[17px] leading-relaxed text-stone-700">
             <li>
               <strong>Vercel</strong> — φιλοξενία της εφαρμογής και
               (προαιρετικά) αποθήκευση φωτογραφιών φαρμάκων και προφίλ.
@@ -140,7 +141,7 @@ export default function PrivacyPage() {
           </p>
         </section>
 
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-4">
           <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900">
             4. Πόσο καιρό κρατάμε τα δεδομένα σας
           </h2>
@@ -154,11 +155,11 @@ export default function PrivacyPage() {
           </p>
         </section>
 
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-4">
           <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900">
             5. Τα δικαιώματά σας
           </h2>
-          <ul className="flex flex-col gap-3 [&>li]:relative [&>li]:pl-5 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[0.62em] [&>li]:before:size-2 [&>li]:before:rounded-full [&>li]:before:bg-accent-600 text-[17px] leading-relaxed text-stone-700">
+          <ul className="flex flex-col gap-5 [&>li]:relative [&>li]:pl-5 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[0.62em] [&>li]:before:size-2 [&>li]:before:rounded-full [&>li]:before:bg-accent-600 text-[17px] leading-relaxed text-stone-700">
             <li>
               <strong>Πρόσβαση/Φορητότητα:</strong> μπορείτε να ζητήσετε
               αντίγραφο όλων των δεδομένων σας στο email της ενότητας 7. Από
@@ -190,7 +191,7 @@ export default function PrivacyPage() {
           </ul>
         </section>
 
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-4">
           <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900">
             6. Πώς προστατεύουμε τα δεδομένα σας
           </h2>
@@ -204,7 +205,7 @@ export default function PrivacyPage() {
           </p>
         </section>
 
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-4">
           <h2 className="text-[21px] font-bold leading-snug tracking-tight text-stone-900">
             7. Επικοινωνία
           </h2>
