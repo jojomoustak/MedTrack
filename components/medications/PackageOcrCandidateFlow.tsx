@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/Card";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { logger } from "@/lib/logging/logger";
 import { formatQuantity } from "@/lib/domain/quantity";
+import { T, useT } from "@/lib/i18n/client";
 
 export interface PackageOcrCandidateFlowProps {
   /** The GTIN that came back `VALID_IDENTIFIER_UNRESOLVED` — what a confirmed candidate gets mapped to (spec §12). */
@@ -76,12 +77,13 @@ export function PackageOcrCandidateFlow({
   cacheRepository,
   fetchImpl,
 }: PackageOcrCandidateFlowProps) {
+  const t = useT();
   const [state, setState] = useState<FlowState>({ phase: "idle" });
 
   async function startOcr() {
     const activePlatform = platform ?? getDefaultMobilePlatform();
     if (!activePlatform.isAvailable()) {
-      setState({ phase: "error", message: "Η αναγνώριση από ετικέτα διατίθεται μόνο μέσα από την εφαρμογή MedTrack για κινητά." });
+      setState({ phase: "error", message: t("Η αναγνώριση από ετικέτα διατίθεται μόνο μέσα από την εφαρμογή MedTrack για κινητά.") });
       return;
     }
 
@@ -94,7 +96,7 @@ export function PackageOcrCandidateFlow({
         setState({ phase: "error", message: err.message });
       } else {
         logger.warn("package_ocr_flow.platform_error", { message: (err as Error).message });
-        setState({ phase: "error", message: "Κάτι πήγε στραβά με τη λήψη φωτογραφίας. Δοκιμάστε ξανά." });
+        setState({ phase: "error", message: t("Κάτι πήγε στραβά με τη λήψη φωτογραφίας. Δοκιμάστε ξανά.") });
       }
       return;
     }
@@ -105,7 +107,7 @@ export function PackageOcrCandidateFlow({
     }
     if (result.status === "error") {
       logger.warn("package_ocr_flow.native_error", { errorCode: result.errorCode });
-      setState({ phase: "error", message: "Δεν ήταν δυνατή η ανάγνωση της ετικέτας. Δοκιμάστε ξανά ή αναζητήστε χειροκίνητα." });
+      setState({ phase: "error", message: t("Δεν ήταν δυνατή η ανάγνωση της ετικέτας. Δοκιμάστε ξανά ή αναζητήστε χειροκίνητα.") });
       return;
     }
 
@@ -144,7 +146,7 @@ export function PackageOcrCandidateFlow({
           void startOcr();
         }}
       >
-        Δοκιμή αναγνώρισης από την ετικέτα του πακέτου
+        <T>Δοκιμή αναγνώρισης από την ετικέτα του πακέτου</T>
       </Button>
     );
   }
@@ -152,7 +154,7 @@ export function PackageOcrCandidateFlow({
   if (state.phase === "capturing" || state.phase === "processing") {
     return (
       <p role="status" aria-live="polite" className="text-sm text-stone-600">
-        {state.phase === "capturing" ? "Άνοιγμα κάμερας…" : "Ανάλυση ετικέτας…"}
+        {state.phase === "capturing" ? t("Άνοιγμα κάμερας…") : t("Ανάλυση ετικέτας…")}
       </p>
     );
   }
@@ -164,7 +166,7 @@ export function PackageOcrCandidateFlow({
           {state.message}
         </p>
         <Button variant="tertiary" size="sm" onClick={() => { playSound("button"); setState({ phase: "idle" }); }} className="self-start px-0 underline">
-          Δοκιμάστε ξανά
+          <T>Δοκιμάστε ξανά</T>
         </Button>
       </div>
     );
@@ -174,14 +176,14 @@ export function PackageOcrCandidateFlow({
     return (
       <div className="rounded-xl border border-dashed border-stone-300 p-4">
         <p className="mb-3 text-sm text-stone-700">
-          Δεν βρέθηκε αντιστοιχία από την ετικέτα. Δοκιμάστε ξανά με καλύτερο φωτισμό ή αναζητήστε χειροκίνητα.
+          <T>Δεν βρέθηκε αντιστοιχία από την ετικέτα. Δοκιμάστε ξανά με καλύτερο φωτισμό ή αναζητήστε χειροκίνητα.</T>
         </p>
         <div className="flex gap-3">
           <Button variant="tertiary" size="sm" onClick={() => { playSound("button"); setState({ phase: "idle" }); }} className="px-0 underline">
-            Δοκιμάστε ξανά
+            <T>Δοκιμάστε ξανά</T>
           </Button>
           <Button variant="tertiary" size="sm" onClick={() => { playSound("button"); onFallbackToManual(); }} className="px-0 underline">
-            Χειροκίνητη αναζήτηση
+            <T>Χειροκίνητη αναζήτηση</T>
           </Button>
         </div>
       </div>
@@ -191,7 +193,7 @@ export function PackageOcrCandidateFlow({
   if (state.phase === "picking") {
     return (
       <div className="flex flex-col gap-3 rounded-xl border border-stone-300 p-4">
-        <p className="text-sm font-medium">Βρήκαμε πολλές πιθανές συσκευασίες. Επιλέξτε αυτή που αναγράφεται στο κουτί σας:</p>
+        <p className="text-sm font-medium"><T>Βρήκαμε πολλές πιθανές συσκευασίες. Επιλέξτε αυτή που αναγράφεται στο κουτί σας:</T></p>
         <ul className="flex flex-col gap-2">
           {state.scores.map((score) => (
             <li key={score.entry.id}>
@@ -207,7 +209,7 @@ export function PackageOcrCandidateFlow({
           ))}
         </ul>
         <Button variant="tertiary" size="sm" onClick={() => { playSound("button"); onFallbackToManual(); }} className="self-start px-0 underline">
-          Καμία δεν ταιριάζει — χειροκίνητη αναζήτηση
+          <T>Καμία δεν ταιριάζει — χειροκίνητη αναζήτηση</T>
         </Button>
       </div>
     );
@@ -217,7 +219,7 @@ export function PackageOcrCandidateFlow({
   const product = offlineIndexEntryToCatalogProduct(state.entry);
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-stone-600">Βρέθηκε από την ετικέτα του πακέτου — επιβεβαιώστε ότι είναι σωστό:</p>
+      <p className="text-sm text-stone-600"><T>Βρέθηκε από την ετικέτα του πακέτου — επιβεβαιώστε ότι είναι σωστό:</T></p>
       <CandidateConfirmation
         product={product}
         parsedExpiry={parsed.expiry}

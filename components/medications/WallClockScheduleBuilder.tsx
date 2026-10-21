@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { TimeField } from "@/components/ui/TimeField";
+import { T, useT, useLanguage } from "@/lib/i18n/client";
+import type { Language } from "@/lib/i18n/language";
+import { translatorFor } from "@/lib/i18n/translate";
 
 export interface WallClockScheduleValues {
   timesOfDay: string[];
@@ -34,24 +37,28 @@ const WEEKDAYS_ONLY = WEEKDAYS.slice(0, 5).reduce((mask, { bit }) => mask | (1 <
 const WEEKEND_ONLY = WEEKDAYS.slice(5).reduce((mask, { bit }) => mask | (1 << bit), 0);
 
 /** The chosen days read back in words under the circles, so a two-letter «Τε» or «Πε» slip shows. */
-export function describeDays(mask: number): string {
-  if (mask === 0) return "Πατήστε τις μέρες που χρειάζεστε.";
-  if (mask === ALL_WEEKDAYS_MASK) return "Κάθε μέρα";
-  if (mask === WEEKDAYS_ONLY) return "Δευτέρα έως Παρασκευή";
-  if (mask === WEEKEND_ONLY) return "Κάθε Σάββατο και Κυριακή";
-  const names = WEEKDAYS.filter(({ bit }) => mask & (1 << bit)).map(({ full }) => full);
-  return `Κάθε ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} και ${names[names.length - 1]}`}`;
+export function describeDays(mask: number, language: Language = "el"): string {
+  const t = translatorFor(language);
+  if (mask === 0) return t("Πατήστε τις μέρες που χρειάζεστε.");
+  if (mask === ALL_WEEKDAYS_MASK) return t("Κάθε μέρα");
+  if (mask === WEEKDAYS_ONLY) return t("Δευτέρα έως Παρασκευή");
+  if (mask === WEEKEND_ONLY) return t("Κάθε Σάββατο και Κυριακή");
+  const names = WEEKDAYS.filter(({ bit }) => mask & (1 << bit)).map(({ full }) => t(full));
+  if (names.length === 1) return t("Κάθε {day}", { day: names[0] });
+  return t("Κάθε {days} και {last}", { days: names.slice(0, -1).join(", "), last: names[names.length - 1] });
 }
 
 /** Phase 3 §2.5's "Wall-clock builder" — covers daily/multiple_times_daily/specific_weekdays; `scheduleKind` itself is derived from these values (`deriveWallClockScheduleKind`), never chosen here. */
 export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallClockScheduleBuilderProps) {
+  const t = useT();
+  const language = useLanguage();
   const [times, setTimes] = useState<string[]>(initial?.timesOfDay && initial.timesOfDay.length > 0 ? initial.timesOfDay : [""]);
   const [specificDays, setSpecificDays] = useState(initial?.weekdaysMask !== null && initial?.weekdaysMask !== undefined);
   const [selectedDays, setSelectedDays] = useState<number>(initial?.weekdaysMask ?? 0);
   const [error, setError] = useState<string | null>(null);
 
   function updateTime(index: number, value: string) {
-    setTimes((prev) => prev.map((t, i) => (i === index ? value : t)));
+    setTimes((prev) => prev.map((time, i) => (i === index ? value : time)));
   }
 
   function addTimeRow() {
@@ -71,13 +78,13 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const filledTimes = times.map((t) => t.trim()).filter(Boolean);
+    const filledTimes = times.map((time) => time.trim()).filter(Boolean);
     if (filledTimes.length === 0) {
-      setError("Προσθέστε τουλάχιστον μία ώρα.");
+      setError(t("Προσθέστε τουλάχιστον μία ώρα."));
       return;
     }
     if (specificDays && selectedDays === 0) {
-      setError("Επιλέξτε τουλάχιστον μία ημέρα.");
+      setError(t("Επιλέξτε τουλάχιστον μία ημέρα."));
       return;
     }
     // Selecting every day normalizes to "no specific days" (weekdaysMask: null).
@@ -89,23 +96,23 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="text-[22px] font-bold tracking-tight text-stone-900">Σταθερές ώρες</h2>
+      <h2 className="text-[22px] font-bold tracking-tight text-stone-900"><T>Σταθερές ώρες</T></h2>
 
       <fieldset className="flex flex-col gap-2.5">
-        <legend className="mb-2.5 text-[17px] font-semibold text-stone-800">Ποιες ώρες;</legend>
+        <legend className="mb-2.5 text-[17px] font-semibold text-stone-800"><T>Ποιες ώρες;</T></legend>
         {times.map((time, index) => (
           <TimeField
             key={index}
             value={time}
             onChange={(value) => updateTime(index, value)}
-            label={`Ώρα δόσης ${index + 1}`}
+            label={t("Ώρα δόσης {n}", { n: index + 1 })}
             suggestion={index === 0 ? "08:00" : "20:00"}
             trailing={
               times.length > 1 ? (
                 <button
                   type="button"
                   onClick={() => removeTimeRow(index)}
-                  aria-label={`Αφαίρεση ώρας ${index + 1}`}
+                  aria-label={t("Αφαίρεση ώρας {n}", { n: index + 1 })}
                   className="flex size-12 shrink-0 items-center justify-center rounded-full text-stone-500 active:bg-stone-100"
                 >
                   <CloseIcon />
@@ -122,17 +129,17 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2">
             <path d="M10 4v12M4 10h12" strokeLinecap="round" />
           </svg>
-          Προσθήκη ώρας
+          <T>Προσθήκη ώρας</T>
         </button>
       </fieldset>
 
       <fieldset className="mt-3 flex flex-col gap-3">
-        <legend className="mb-2.5 text-[17px] font-semibold text-stone-800">Ποιες μέρες;</legend>
+        <legend className="mb-2.5 text-[17px] font-semibold text-stone-800"><T>Ποιες μέρες;</T></legend>
         <SegmentedControl
-          label="Ποιες μέρες"
+          label={t("Ποιες μέρες")}
           segments={[
-            { value: "every", label: "Κάθε μέρα" },
-            { value: "some", label: "Ορισμένες μέρες" },
+            { value: "every", label: t("Κάθε μέρα") },
+            { value: "some", label: t("Ορισμένες μέρες") },
           ]}
           value={specificDays ? "some" : "every"}
           onChange={(choice) => {
@@ -143,7 +150,7 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
 
         {specificDays && (
           <div className="flex flex-col gap-3 pt-1">
-            <div className="grid grid-cols-7 gap-1.5" role="group" aria-label="Ημέρες" aria-describedby="chosen-days">
+            <div className="grid grid-cols-7 gap-1.5" role="group" aria-label={t("Ημέρες")} aria-describedby="chosen-days">
               {WEEKDAYS.map(({ bit, abbr, full }) => {
                 const checked = (selectedDays & (1 << bit)) !== 0;
                 return (
@@ -152,20 +159,20 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
                     type="button"
                     onClick={() => toggleDay(bit)}
                     aria-pressed={checked}
-                    aria-label={full}
+                    aria-label={t(full)}
                     className={`flex aspect-square w-full max-w-12 items-center justify-center justify-self-center rounded-full text-[15px] font-semibold transition duration-150 active:scale-90 ${
                       checked
                         ? "bg-accent-700 text-white shadow-[0_2px_6px_rgb(4_120_87/0.3)]"
                         : "bg-white text-stone-700 shadow-[0_1px_2px_rgb(28_25_23/0.05),0_2px_6px_rgb(28_25_23/0.07)]"
                     }`}
                   >
-                    {abbr}
+                    {t(abbr)}
                   </button>
                 );
               })}
             </div>
             <p id="chosen-days" aria-live="polite" className={`text-[15px] leading-snug ${selectedDays ? "font-medium text-stone-700" : "text-stone-500"}`}>
-              {describeDays(selectedDays)}
+              {describeDays(selectedDays, language)}
             </p>
           </div>
         )}
@@ -179,10 +186,10 @@ export function WallClockScheduleBuilder({ onSubmit, onBack, initial }: WallCloc
 
       <div className="flex gap-2">
         <Button variant="secondary" onClick={() => { playSound("button"); onBack(); }} size="lg" className="flex-1">
-          Πίσω
+          <T>Πίσω</T>
         </Button>
         <Button type="submit" size="lg" className="flex-1">
-          Συνέχεια
+          <T>Συνέχεια</T>
         </Button>
       </div>
     </form>

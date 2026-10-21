@@ -1,3 +1,7 @@
+"use client";
+
+import { useT } from "@/lib/i18n/client";
+
 /**
  * A single-row segmented control where every option keeps a visible
  * background — unlike an independent action-button row (where only the
@@ -34,10 +38,12 @@ export function SegmentedControl<T extends string>({
   /** Force a fixed grid (e.g. 2 columns) instead of one flexible row — for label sets that would wrap awkwardly in a single row on narrow phones. */
   columns?: number;
 }) {
+  // Labels arrive in Greek (or already translated) and are shown in the chosen language.
+  const t = useT();
   return (
     <div
       role="tablist"
-      aria-label={label}
+      aria-label={t(label)}
       className={columns ? `grid gap-2` : "flex gap-2"}
       style={columns ? { gridTemplateColumns: `repeat(${columns}, 1fr)` } : undefined}
     >
@@ -52,7 +58,7 @@ export function SegmentedControl<T extends string>({
             onClick={() => onChange(s.value)}
             className={segmentClasses(active)}
           >
-            {s.label}
+            {t(s.label)}
           </button>
         );
       })}

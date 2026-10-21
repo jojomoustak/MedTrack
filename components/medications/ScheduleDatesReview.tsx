@@ -10,6 +10,9 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { dateToParam } from "@/components/calendar/date-param";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { FIELD_INPUT } from "@/components/ui/field-styles";
+import { T, useLanguage, useT } from "@/lib/i18n/client";
+import { LOCALE_OF, type Language } from "@/lib/i18n/language";
+import { translatorFor } from "@/lib/i18n/translate";
 
 export interface ScheduleDatesReviewProps {
   /** Everything the schedule-kind-specific builder already collected — dose quantity included only when that builder (PRN) already asked for it. */
@@ -25,18 +28,22 @@ export interface ScheduleDatesReviewProps {
  * The end date read back in words, like the chosen weekdays a step before:
  * «Για 10 μέρες, ως και την Πέμπτη 29 Οκτωβρίου». Both days count.
  */
-export function describeSpan(start: string, end: string, today = new Date()): string | null {
+export function describeSpan(start: string, end: string, today = new Date(), language: Language = "el"): string | null {
   const first = parseLocalDate(start);
   const last = parseLocalDate(end);
   if (!first || !last || daysBetween(first, last) < 0) return null;
   const days = daysBetween(first, last) + 1;
+  const t = translatorFor(language);
+  const date = longDate(last, today, LOCALE_OF[language]);
   // Σάββατο is the one weekday that isn't feminine.
-  const article = last.getDay() === 6 ? "το" : "την";
-  return `Για ${days} ${days === 1 ? "μέρα" : "μέρες"}, ως και ${article} ${longDate(last, today)}.`;
+  if (last.getDay() === 6) return days === 1 ? t("Για 1 μέρα, ως και το {date}.", { date }) : t("Για {days} μέρες, ως και το {date}.", { days, date });
+  return days === 1 ? t("Για 1 μέρα, ως και την {date}.", { date }) : t("Για {days} μέρες, ως και την {date}.", { days, date });
 }
 
 /** Phase 3 §2.5's shared final step — start/end date, dose quantity (skipped if the PRN builder already collected it). */
 export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesReviewProps) {
+  const t = useT();
+  const language = useLanguage();
   const needsQuantity = base.doseQuantityValue === undefined;
   // The phone's own date: `toISOString()` gave yesterday between midnight and 03:00 in Greece.
   const [startDate, setStartDate] = useState(() => dateToParam(new Date()));
@@ -49,15 +56,15 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!noEndDate && !endDate) {
-      setError("Επιλέξτε την τελευταία μέρα.");
+      setError(t("Επιλέξτε την τελευταία μέρα."));
       return;
     }
     if (!noEndDate && endDate < startDate) {
-      setError("Η τελευταία μέρα δεν μπορεί να είναι πριν από την πρώτη.");
+      setError(t("Η τελευταία μέρα δεν μπορεί να είναι πριν από την πρώτη."));
       return;
     }
     if (needsQuantity && !quantityValue.trim()) {
-      setError("Συμπληρώστε την ποσότητα δόσης.");
+      setError(t("Συμπληρώστε την ποσότητα δόσης."));
       return;
     }
     setError(null);
@@ -72,25 +79,25 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
     });
   }
 
-  const span = noEndDate ? null : describeSpan(startDate, endDate);
+  const span = noEndDate ? null : describeSpan(startDate, endDate, undefined, language);
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="text-[22px] font-bold tracking-tight text-stone-900">Ημερομηνίες</h2>
+      <h2 className="text-[22px] font-bold tracking-tight text-stone-900"><T>Ημερομηνίες</T></h2>
 
       <fieldset className="flex flex-col">
-        <legend className="mb-2.5 text-[17px] font-semibold text-stone-800">Από πότε;</legend>
-        <DateField value={startDate} onChange={setStartDate} label="Πρώτη μέρα" />
+        <legend className="mb-2.5 text-[17px] font-semibold text-stone-800"><T>Από πότε;</T></legend>
+        <DateField value={startDate} onChange={setStartDate} label={t("Πρώτη μέρα")} />
       </fieldset>
 
       {/* «Ημερομηνία λήξης» until 2026-10-20 — on a medicine that reads as its expiry date. */}
       <fieldset className="mt-3 flex flex-col gap-3">
-        <legend className="mb-2.5 text-[17px] font-semibold text-stone-800">Μέχρι πότε;</legend>
+        <legend className="mb-2.5 text-[17px] font-semibold text-stone-800"><T>Μέχρι πότε;</T></legend>
         <SegmentedControl
-          label="Μέχρι πότε"
+          label={t("Μέχρι πότε")}
           segments={[
-            { value: "open", label: "Μέχρι νεωτέρας" },
-            { value: "until", label: "Μέχρι μια μέρα" },
+            { value: "open", label: t("Μέχρι νεωτέρας") },
+            { value: "until", label: t("Μέχρι μια μέρα") },
           ]}
           value={noEndDate ? "open" : "until"}
           onChange={(choice) => {
@@ -100,7 +107,7 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
         />
         {!noEndDate && (
           <>
-            <DateField value={endDate} onChange={setEndDate} label="Τελευταία μέρα" min={startDate} rangeStart={startDate} initiallyOpen={!endDate} />
+            <DateField value={endDate} onChange={setEndDate} label={t("Τελευταία μέρα")} min={startDate} rangeStart={startDate} initiallyOpen={!endDate} />
             {span && (
               <p aria-live="polite" className="text-[15px] font-medium leading-snug text-stone-700">
                 {span}
@@ -113,27 +120,27 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
       {needsQuantity && (
         <div className="flex gap-3">
           <label className="flex flex-1 flex-col gap-2">
-            <span className="text-[17px] font-semibold text-stone-800">Ποσότητα δόσης</span>
+            <span className="text-[17px] font-semibold text-stone-800"><T>Ποσότητα δόσης</T></span>
             <input
               type="text"
               inputMode="decimal"
               value={quantityValue}
               onChange={(e) => setQuantityValue(e.target.value)}
-              aria-label="Ποσότητα δόσης"
+              aria-label={t("Ποσότητα δόσης")}
               className={`${FIELD_INPUT} pr-4`}
             />
           </label>
           <label className="flex flex-1 flex-col gap-2">
-            <span className="text-[17px] font-semibold text-stone-800">Μονάδα</span>
+            <span className="text-[17px] font-semibold text-stone-800"><T>Μονάδα</T></span>
             <select
               value={quantityUnit}
               onChange={(e) => setQuantityUnit(e.target.value as MedicationForm)}
-              aria-label="Μονάδα δόσης"
+              aria-label={t("Μονάδα δόσης")}
               className={`${FIELD_INPUT} pr-4`}
             >
               {FORM_OPTIONS.map((option) => (
                 <option key={option} value={option}>
-                  {FORM_LABELS[option]}
+                  {t(FORM_LABELS[option])}
                 </option>
               ))}
             </select>
@@ -157,10 +164,10 @@ export function ScheduleDatesReview({ base, onSubmit, onBack }: ScheduleDatesRev
           size="lg"
           className="flex-1"
         >
-          Πίσω
+          <T>Πίσω</T>
         </Button>
         <Button type="submit" size="lg" className="flex-1">
-          Συνέχεια
+          <T>Συνέχεια</T>
         </Button>
       </div>
     </form>

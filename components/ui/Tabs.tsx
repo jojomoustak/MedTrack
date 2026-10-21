@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n/client";
+
 /**
  * Content-switching tabs (Medication Detail's Overview/Schedule/History) —
  * a plain underlined style, deliberately distinct from `SegmentedControl`'s
@@ -24,8 +26,9 @@ export function Tabs<T extends string>({
   onChange: (value: T) => void;
   label: string;
 }) {
+  const t = useT();
   return (
-    <div role="tablist" aria-label={label} className="flex gap-5 border-b border-stone-200">
+    <div role="tablist" aria-label={t(label)} className="flex gap-5 border-b border-stone-200">
       {tabs.map((tab) => {
         const active = tab.value === value;
         return (
@@ -39,7 +42,7 @@ export function Tabs<T extends string>({
               active ? "border-accent-700 text-accent-800" : "border-transparent text-stone-500"
             }`}
           >
-            {tab.label}
+            {t(tab.label)}
           </button>
         );
       })}

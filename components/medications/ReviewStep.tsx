@@ -8,6 +8,8 @@ import { formatQuantity } from "@/lib/domain/quantity";
 import type { ScheduleDraft } from "@/lib/domain/schedule-draft";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 import { FIELD_INPUT } from "@/components/ui/field-styles";
+import { useT, T } from "@/lib/i18n/client";
+import type { Translator } from "@/lib/i18n/translate";
 
 export interface ReviewStepProps {
   name: string;
@@ -27,16 +29,18 @@ export interface ReviewStepProps {
   onInitialQuantityValueChange: (value: string) => void;
 }
 
-function describeSchedule(schedule: ScheduleDraft): string {
-  const quantity = `${formatQuantity(schedule.doseQuantityValue)} ${FORM_LABELS[schedule.doseQuantityUnit as MedicationForm] ?? schedule.doseQuantityUnit}`;
+/** The review's one line for a schedule, in the screen's language (`t`). */
+function describeSchedule(schedule: ScheduleDraft, t: Translator): string {
+  const unit = FORM_LABELS[schedule.doseQuantityUnit as MedicationForm];
+  const quantity = `${formatQuantity(schedule.doseQuantityValue)} ${unit ? t(unit) : schedule.doseQuantityUnit}`;
   if (schedule.scheduleKind === "prn") {
-    return `Όποτε χρειάζεται — ${quantity}`;
+    return t("Όποτε χρειάζεται — {quantity}", { quantity });
   }
   if (schedule.scheduleKind === "every_n_hours") {
-    return `Κάθε ${schedule.intervalHours} ώρες — ${quantity}`;
+    return t("Κάθε {hours} ώρες — {quantity}", { hours: schedule.intervalHours ?? "?", quantity });
   }
   const times = (schedule.timesOfDay ?? []).join(", ");
-  const days = schedule.scheduleKind === "specific_weekdays" ? "συγκεκριμένες ημέρες" : "κάθε μέρα";
+  const days = schedule.scheduleKind === "specific_weekdays" ? t("συγκεκριμένες ημέρες") : t("κάθε μέρα");
   return `${times} (${days}) — ${quantity}`;
 }
 
@@ -57,6 +61,7 @@ export function ReviewStep({
   initialQuantityValue,
   onInitialQuantityValueChange,
 }: ReviewStepProps) {
+  const t = useT();
   const hasPackageData = Boolean(packageBatch || packageExpiry);
 
   return (
@@ -66,66 +71,66 @@ export function ReviewStep({
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-base">
           {form && (
             <>
-              <dt className="text-stone-500">Μορφή</dt>
-              <dd>{FORM_LABELS[form as MedicationForm] ?? form}</dd>
+              <dt className="text-stone-500"><T>Μορφή</T></dt>
+              <dd>{FORM_LABELS[form as MedicationForm] ? t(FORM_LABELS[form as MedicationForm]) : form}</dd>
             </>
           )}
           {strengthValue && (
             <>
-              <dt className="text-stone-500">Περιεκτικότητα</dt>
+              <dt className="text-stone-500"><T>Περιεκτικότητα</T></dt>
               <dd>
                 {formatQuantity(strengthValue)} {strengthUnit}
               </dd>
             </>
           )}
-          <dt className="text-stone-500">Μονάδα αποθέματος</dt>
-          <dd>{FORM_LABELS[inventoryUnit as MedicationForm] ?? inventoryUnit}</dd>
+          <dt className="text-stone-500"><T>Μονάδα αποθέματος</T></dt>
+          <dd>{FORM_LABELS[inventoryUnit as MedicationForm] ? t(FORM_LABELS[inventoryUnit as MedicationForm]) : inventoryUnit}</dd>
         </dl>
       </Card>
 
       <Card>
         <div className="flex items-center justify-between">
-          <h3 className="text-[17px] font-semibold text-stone-800">Πρόγραμμα δόσεων</h3>
+          <h3 className="text-[17px] font-semibold text-stone-800"><T>Πρόγραμμα δόσεων</T></h3>
           <Button variant="tertiary" onClick={onEditSchedule} className="px-0 underline">
-            {schedule ? "Επεξεργασία" : "Προσθήκη"}
+            {schedule ? t("Επεξεργασία") : t("Προσθήκη")}
           </Button>
         </div>
         <p className="mt-1 text-base text-stone-600">
-          {schedule ? describeSchedule(schedule) : "Χωρίς πρόγραμμα ακόμα — μπορείτε να προσθέσετε αργότερα."}
+          {schedule ? describeSchedule(schedule, t) : t("Χωρίς πρόγραμμα ακόμα — μπορείτε να προσθέσετε αργότερα.")}
         </p>
       </Card>
 
       {hasPackageData && (
         <Card>
-          <h3 className="text-[17px] font-semibold text-stone-800">Αρχικό απόθεμα</h3>
+          <h3 className="text-[17px] font-semibold text-stone-800"><T>Αρχικό απόθεμα</T></h3>
           <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-base">
             {packageBatch && (
               <>
-                <dt className="text-stone-500">Παρτίδα</dt>
+                <dt className="text-stone-500"><T>Παρτίδα</T></dt>
                 <dd>{packageBatch}</dd>
               </>
             )}
             {packageExpiry && (
               <>
-                <dt className="text-stone-500">Λήξη</dt>
+                <dt className="text-stone-500"><T>Ημερομηνία λήξης</T></dt>
                 <dd>{packageExpiry}</dd>
               </>
             )}
           </dl>
           <label className="mt-3 flex flex-col gap-1">
-            <span className="text-[17px] font-semibold text-stone-800">Πόσα έχετε; (προαιρετικό)</span>
+            <span className="text-[17px] font-semibold text-stone-800"><T>Πόσα έχετε; (προαιρετικό)</T></span>
             <input
               type="text"
               inputMode="decimal"
               value={initialQuantityValue}
               onChange={(e) => onInitialQuantityValueChange(e.target.value)}
-              placeholder={`π.χ. 30 ${inventoryUnit}`}
-              aria-label="Αρχική ποσότητα"
+              placeholder={t("π.χ. 30 {unit}", { unit: inventoryUnit })}
+              aria-label={t("Αρχική ποσότητα")}
               className={`${FIELD_INPUT} pr-4`}
             />
           </label>
           <p className="mt-1 text-sm text-stone-500">
-            Αν το συμπληρώσετε, θα δημιουργηθεί μια πραγματική συσκευασία στο απόθεμά σας.
+            <T>Αν το συμπληρώσετε, θα δημιουργηθεί μια πραγματική συσκευασία στο απόθεμά σας.</T>
           </p>
         </Card>
       )}
@@ -146,7 +151,7 @@ export function ReviewStep({
         size="lg"
         fullWidth
       >
-        {submitting ? "Αποθήκευση…" : "Ολοκλήρωση"}
+        {submitting ? t("Αποθήκευση…") : t("Ολοκλήρωση")}
       </Button>
     </div>
   );

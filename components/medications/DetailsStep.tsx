@@ -11,6 +11,7 @@ import { shortCatalogName } from "@/lib/domain/catalog-short-name";
 import { catalogMedicationForm } from "@/lib/medications/catalog-form";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { useT, T } from "@/lib/i18n/client";
 
 // Re-exported: many screens import them from here.
 export { FORM_LABELS, FORM_OPTIONS };
@@ -33,6 +34,7 @@ export interface DetailsStepProps {
 /** Phase 3 §2.4 "Add Medication — details step": shared step after any entry path — confirm/adjust name, form, strength, inventory unit. */
 export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsStepProps) {
   // A catalog medicine's form and stock unit come from the catalog (its name, for the EOF catalog — `catalogMedicationForm`).
+  const t = useT();
   const catalogForm = catalogProduct ? catalogMedicationForm(catalogProduct) : null;
   const [form, setForm] = useState<MedicationForm | null>(catalogForm);
   const [strengthValue, setStrengthValue] = useState(catalogProduct?.strengthValue ?? "");
@@ -55,12 +57,12 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="surface-card flex flex-col gap-0.5 p-4">
-        <span className="text-sm font-medium text-stone-500">Φάρμακο</span>
+        <span className="text-sm font-medium text-stone-500"><T>Φάρμακο</T></span>
         <p className="text-[19px] font-bold text-stone-900">{displayName}</p>
       </div>
 
       <fieldset className={FIELD_WRAPPER}>
-        <legend className={`${FIELD_LABEL} mb-2`}>Μορφή</legend>
+        <legend className={`${FIELD_LABEL} mb-2`}><T>Μορφή</T></legend>
         <FormPicker
           value={form}
           onChange={(option) => {
@@ -71,22 +73,22 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
       </fieldset>
 
       <fieldset className={FIELD_WRAPPER}>
-        <legend className={`${FIELD_LABEL} mb-2`}>Περιεκτικότητα</legend>
+        <legend className={`${FIELD_LABEL} mb-2`}><T>Περιεκτικότητα</T></legend>
         <div className="flex gap-3">
           <input
             type="text"
             inputMode="decimal"
             value={strengthValue}
             onChange={(e) => setStrengthValue(e.target.value)}
-            aria-label="Τιμή περιεκτικότητας"
-            placeholder="π.χ. 500"
+            aria-label={t("Τιμή περιεκτικότητας")}
+            placeholder={t("π.χ. 500")}
             className={`${FIELD_INPUT} pr-4`}
           />
           <input
             type="text"
             value={strengthUnit}
             onChange={(e) => setStrengthUnit(e.target.value)}
-            aria-label="Μονάδα περιεκτικότητας"
+            aria-label={t("Μονάδα περιεκτικότητας")}
             placeholder="mg"
             className={`${FIELD_INPUT} max-w-28 pr-4`}
           />
@@ -102,7 +104,7 @@ export function DetailsStep({ catalogProduct, manualName, onSubmit }: DetailsSte
       />
 
       <Button type="submit" size="lg" fullWidth>
-        Συνέχεια
+        <T>Συνέχεια</T>
       </Button>
     </form>
   );

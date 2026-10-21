@@ -22,6 +22,7 @@ import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
 import { MedicationFormSkeleton } from "@/components/shell/ScreenSkeletons";
+import { T, useT } from "@/lib/i18n/client";
 
 function localToday(): string {
   const now = new Date();
@@ -30,6 +31,7 @@ function localToday(): string {
 
 /** `/medications/[id]/edit` (Phase 3), laid out after the reference mockup's screen 11 — Save in the header. */
 export default function EditMedicationPage() {
+  const t = useT();
   const profileId = useProfileId();
   const params = { id: usePathId(2) };
   const router = useRouter();
@@ -87,7 +89,7 @@ export default function EditMedicationPage() {
       returnToDetail();
     } catch (err) {
       logger.warn("medications.edit_save_failed", { message: err instanceof Error ? err.message : String(err) });
-      setError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+      setError(t("Κάτι πήγε στραβά. Δοκιμάστε ξανά."));
       setSubmitting(false);
     }
   }
@@ -100,21 +102,21 @@ export default function EditMedicationPage() {
       await deleteMedicationWithCascade(profileId, params.id);
       router.replace("/medications");
     } catch {
-      setDeleteError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+      setDeleteError(t("Κάτι πήγε στραβά. Δοκιμάστε ξανά."));
       setDeleting(false);
     }
   }
 
   if (medication === undefined) {
-    return <MedicationFormSkeleton title="Επεξεργασία" fields={4} />;
+    return <MedicationFormSkeleton title={t("Επεξεργασία")} fields={4} />;
   }
 
   if (medication === null) {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <p className="text-stone-600">Το φάρμακο δεν βρέθηκε.</p>
+        <p className="text-stone-600"><T>Το φάρμακο δεν βρέθηκε.</T></p>
         <ButtonLink href="/medications" onClick={() => playSound("button")} variant="tertiary" className="px-0 underline">
-          Πίσω στα φάρμακα
+          <T>Πίσω στα φάρμακα</T>
         </ButtonLink>
       </div>
     );
@@ -123,10 +125,10 @@ export default function EditMedicationPage() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 px-5 pt-1 pb-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Επεξεργασία</h1>
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900"><T>Επεξεργασία</T></h1>
         {/* A real HTML `form` attribute submits EditMedicationForm from the header, as in the reference. */}
         <Button form={EDIT_MEDICATION_FORM_ID} type="submit" disabled={submitting} aria-busy={submitting}>
-          {submitting ? "Αποθήκευση…" : "Αποθήκευση"}
+          {submitting ? t("Αποθήκευση…") : t("Αποθήκευση")}
         </Button>
       </div>
 

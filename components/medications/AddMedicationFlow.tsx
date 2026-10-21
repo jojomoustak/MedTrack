@@ -35,6 +35,8 @@ import { getDefaultMobilePlatform } from "@/lib/platform/get-mobile-platform";
 import type { MobilePlatform } from "@/lib/platform/mobile-platform";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { learnScannedBarcode } from "@/lib/catalog/client/learn-scanned-barcode";
+import { T, useT } from "@/lib/i18n/client";
+import type { Translator } from "@/lib/i18n/translate";
 
 type FlowStep = "entry" | "scan" | "search" | "manual" | "details" | "schedule" | "review";
 
@@ -67,10 +69,10 @@ export interface AddMedicationFlowProps {
  * package step," `AddPackageForm`'s doc — this flow never had a quantity
  * to work with before now) and this fallback doesn't run.
  */
-function buildScanNotes(expiry: string | null, batch: string | null): string | null {
+function buildScanNotes(expiry: string | null, batch: string | null, t: Translator): string | null {
   const parts: string[] = [];
-  if (batch) parts.push(`Παρτίδα: ${batch}`);
-  if (expiry) parts.push(`Λήξη: ${expiry}`);
+  if (batch) parts.push(t("Παρτίδα: {batch}", { batch }));
+  if (expiry) parts.push(t("Λήξη: {date}", { date: expiry }));
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
@@ -99,6 +101,7 @@ export function AddMedicationFlow({
   packageRepository,
   inventoryTransactionRepository,
 }: AddMedicationFlowProps) {
+  const t = useT();
   const [step, setStep] = useState<FlowStep>("entry");
   const [catalogProduct, setCatalogProduct] = useState<CatalogProduct | null>(null);
   const [manualName, setManualName] = useState<string | null>(null);
@@ -258,7 +261,7 @@ export function AddMedicationFlow({
         inventoryUnit: details.inventoryUnit,
         lowStockThresholdValue: null,
         expiryWarningDays: 30,
-        notes: shouldCreatePackage ? null : buildScanNotes(packageExpiry, packageBatch),
+        notes: shouldCreatePackage ? null : buildScanNotes(packageExpiry, packageBatch, t),
       });
 
       if (shouldCreatePackage) {
@@ -324,7 +327,7 @@ export function AddMedicationFlow({
       // Saved: the button stays disabled ("Αποθήκευση…") until the next screen takes over.
       onCreated?.(record);
     } catch {
-      setError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+      setError(t("Κάτι πήγε στραβά. Δοκιμάστε ξανά."));
       finishingRef.current = false;
       setSubmitting(false);
     }
@@ -339,16 +342,16 @@ export function AddMedicationFlow({
       {/* Switch method without going back (reference mockup, screen 15). */}
       {(step === "manual" || step === "search") && (
         <SegmentedControl
-          label="Τρόπος προσθήκης"
+          label={t("Τρόπος προσθήκης")}
           value={step}
           onChange={(next) => {
             playSound("button");
             handleEntryChoice(next);
           }}
           segments={[
-            { value: "manual", label: "Χειροκίνητα" },
-            { value: "search", label: "Αναζήτηση" },
-            ...(scanAvailable ? [{ value: "scan" as const, label: "Σάρωση" }] : []),
+            { value: "manual", label: t("Χειροκίνητα") },
+            { value: "search", label: t("Αναζήτηση") },
+            ...(scanAvailable ? [{ value: "scan" as const, label: t("Σάρωση") }] : []),
           ]}
         />
       )}
@@ -366,7 +369,7 @@ export function AddMedicationFlow({
         />
       )}
       {step === "search" && learnForScan && (
-        <p className="rounded-xl bg-accent-50 px-4 py-3 text-[15px] text-accent-900">Βρείτε το φάρμακο της συσκευασίας που σαρώσατε. Την επόμενη φορά θα το αναγνωρίζουμε αυτόματα.</p>
+        <p className="rounded-xl bg-accent-50 px-4 py-3 text-[15px] text-accent-900"><T>Βρείτε το φάρμακο της συσκευασίας που σαρώσατε. Την επόμενη φορά θα το αναγνωρίζουμε αυτόματα.</T></p>
       )}
       {step === "search" && <SearchStep onConfirmCandidate={handleSearchPicked} onFallbackToManual={handleManualEntryDirect} />}
       {step === "manual" && (

@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { formatQuantity } from "@/lib/domain/quantity";
 import type { MedicationForm } from "@/lib/domain/user-medication";
+import { T, useT } from "@/lib/i18n/client";
 
 export interface CandidateConfirmationProps {
   product: CatalogProduct;
@@ -28,6 +29,7 @@ export interface CandidateConfirmationProps {
  * (`SearchStep`, `ScanStep`) rather than a second confirmation screen.
  */
 export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry, parsedBatch, parsedSerial, note }: CandidateConfirmationProps) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-4">
       <Button
@@ -38,7 +40,7 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
         }}
         className="self-start px-0 underline"
       >
-        ← Πίσω στα αποτελέσματα
+        <T>← Πίσω στα αποτελέσματα</T>
       </Button>
 
       {note && <p className="rounded-xl bg-accent-50 px-4 py-3 text-[15px] text-accent-900">{note}</p>}
@@ -49,13 +51,13 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           {product.activeIngredient && (
             <>
-              <dt className="text-stone-500">Δραστική ουσία</dt>
+              <dt className="text-stone-500"><T>Δραστική ουσία</T></dt>
               <dd>{product.activeIngredient}</dd>
             </>
           )}
           {product.strengthValue && (
             <>
-              <dt className="text-stone-500">Περιεκτικότητα</dt>
+              <dt className="text-stone-500"><T>Περιεκτικότητα</T></dt>
               <dd>
                 {formatQuantity(product.strengthValue)} {product.strengthUnit}
               </dd>
@@ -63,37 +65,37 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
           )}
           {product.form && (
             <>
-              <dt className="text-stone-500">Μορφή</dt>
-              <dd>{FORM_LABELS[product.form as MedicationForm] ?? product.form}</dd>
+              <dt className="text-stone-500"><T>Μορφή</T></dt>
+              <dd>{FORM_LABELS[product.form as MedicationForm] ? t(FORM_LABELS[product.form as MedicationForm]) : product.form}</dd>
             </>
           )}
         </dl>
         {product.regulatorySource === SEED_PLACEHOLDER_SOURCE && (
           <p className="mt-3 text-xs text-stone-500">
-            Δοκιμαστικά δεδομένα καταλόγου — όχι επίσημη πηγή.
+            <T>Δοκιμαστικά δεδομένα καταλόγου — όχι επίσημη πηγή.</T>
           </p>
         )}
       </Card>
 
       {(parsedExpiry || parsedBatch || parsedSerial) && (
         <div className="rounded-xl border border-dashed border-stone-300 p-4">
-          <p className="mb-2 text-sm font-medium">Από τη σάρωση</p>
+          <p className="mb-2 text-sm font-medium"><T>Από τη σάρωση</T></p>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
             {parsedExpiry && (
               <>
-                <dt className="text-stone-500">Ημερομηνία λήξης</dt>
+                <dt className="text-stone-500"><T>Ημερομηνία λήξης</T></dt>
                 <dd>{parsedExpiry}</dd>
               </>
             )}
             {parsedBatch && (
               <>
-                <dt className="text-stone-500">Παρτίδα</dt>
+                <dt className="text-stone-500"><T>Παρτίδα</T></dt>
                 <dd>{parsedBatch}</dd>
               </>
             )}
             {parsedSerial && (
               <>
-                <dt className="text-stone-500">Σειριακός αριθμός</dt>
+                <dt className="text-stone-500"><T>Σειριακός αριθμός</T></dt>
                 <dd>{parsedSerial}</dd>
               </>
             )}
@@ -107,7 +109,7 @@ export function CandidateConfirmation({ product, onConfirm, onBack, parsedExpiry
           onConfirm();
         }}
       >
-        Επιβεβαίωση — είναι αυτό το φάρμακο
+        <T>Επιβεβαίωση — είναι αυτό το φάρμακο</T>
       </Button>
     </div>
   );

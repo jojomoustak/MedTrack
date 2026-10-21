@@ -18,6 +18,7 @@ import { browserLiveCamera, stopStream, type LiveCamera } from "@/lib/camera/cli
 import { makePhotoThumbnail, shrinkPhotoForUpload } from "@/lib/medications/client/photo-thumbnail";
 import { removeLocalPhotoThumbnail, setLocalPhotoThumbnail, syncPhotoThumbnails } from "@/lib/medications/client/use-medication-photo-thumbnail";
 import { CameraViewfinder } from "@/components/medications/CameraViewfinder";
+import { T, useT } from "@/lib/i18n/client";
 
 const POLL_INTERVAL_MS = 1500;
 /** ~60s of polling before giving up and asking the user to retry manually — a freshly-created medication is expected to sync within a few seconds when online; this is a generous ceiling, not a tight timeout. */
@@ -95,6 +96,7 @@ function isOfflineError(err: unknown): boolean {
  * from the UI, or claim success, silently).
  */
 export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl, photoCache, photoOutbox, camera, top, intro }: MedicationPhotoAttachProps) {
+  const t = useT();
   const repo = repository ?? new DexieUserMedicationRepository();
   const fetcher = fetchImpl ?? fetch;
   const cache = photoCache ?? new DexiePhotoCacheRepository();
@@ -294,7 +296,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
         if (isOfflineError(err)) {
           setOfflineNote(true);
         } else {
-          setError("Δεν ήταν δυνατή η φόρτωση της φωτογραφίας.");
+          setError(t("Δεν ήταν δυνατή η φόρτωση της φωτογραφίας."));
         }
       }
     }
@@ -331,7 +333,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
       const file = await shrinkPhotoForUpload(picked);
       const clientError = isAllowedClientSide(file);
       if (clientError) {
-        setError(clientError);
+        setError(t(clientError));
         return;
       }
       const thumbnail = await makePhotoThumbnail(file);
@@ -353,7 +355,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
           setPendingOp("upload");
           setRefreshNonce((n) => n + 1);
         } else {
-          setError(err instanceof MedicationPhotoApiError ? err.message : "Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+          setError(err instanceof MedicationPhotoApiError ? t(err.message) : t("Κάτι πήγε στραβά. Δοκιμάστε ξανά."));
         }
       }
     } finally {
@@ -372,7 +374,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     try {
       blob = await cam.capture(video, { x: frameBox.left - videoBox.left, y: frameBox.top - videoBox.top, width: frameBox.width, height: frameBox.height });
     } catch {
-      setError("Η λήψη δεν ήταν δυνατή. Δοκιμάστε ξανά.");
+      setError(t("Η λήψη δεν ήταν δυνατή. Δοκιμάστε ξανά."));
       return;
     }
     stopCamera();
@@ -409,7 +411,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
         setPendingOp("delete");
         setRefreshNonce((n) => n + 1);
       } else {
-        setError(err instanceof MedicationPhotoApiError ? err.message : "Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+        setError(err instanceof MedicationPhotoApiError ? t(err.message) : t("Κάτι πήγε στραβά. Δοκιμάστε ξανά."));
       }
     } finally {
       setBusy(false);
@@ -430,7 +432,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
         below={
           pollExhausted ? (
             <>
-              <p>Το φάρμακο δεν έχει συγχρονιστεί ακόμα, οπότε δεν μπορείτε να προσθέσετε φωτογραφία αυτή τη στιγμή.</p>
+              <p><T>Το φάρμακο δεν έχει συγχρονιστεί ακόμα, οπότε δεν μπορείτε να προσθέσετε φωτογραφία αυτή τη στιγμή.</T></p>
               <button
                 type="button"
                 onClick={() => {
@@ -440,11 +442,11 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
                 }}
                 className="mt-2 min-h-12 rounded-xl border border-white/40 px-5 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
-                Δοκιμή ξανά
+                <T>Δοκιμή ξανά</T>
               </button>
             </>
           ) : (
-            <p role="status">Αναμονή συγχρονισμού πριν την προσθήκη φωτογραφίας…</p>
+            <p role="status"><T>Αναμονή συγχρονισμού πριν την προσθήκη φωτογραφίας…</T></p>
           )
         }
       >
@@ -475,7 +477,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
   const torchAvailable = live && stream !== null && cam.hasTorch?.(stream) === true;
   const showingPhoto = !live && photoStatus === "present" && photoUrl !== null;
 
-  const shutterLabel = busy ? "Μεταφόρτωση…" : live ? "Λήψη φωτογραφίας" : photoStatus === "present" ? "Νέα φωτογραφία" : "Προσθήκη φωτογραφίας";
+  const shutterLabel = busy ? t("Μεταφόρτωση…") : live ? t("Λήψη φωτογραφίας") : photoStatus === "present" ? t("Νέα φωτογραφία") : t("Προσθήκη φωτογραφίας");
   const shutterFace = (
     <>
       <span aria-hidden="true" className="flex size-19 items-center justify-center rounded-full border-4 border-white/90 motion-safe:transition-transform motion-safe:duration-150 active:scale-95">
@@ -495,22 +497,22 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
   const notes = [
     pendingOp === "upload" && (
       <p key="upload" role="status" className="text-amber-300">
-        Θα μεταφορτωθεί μόλις επανασυνδεθείτε στο διαδίκτυο.
+        <T>Θα μεταφορτωθεί μόλις επανασυνδεθείτε στο διαδίκτυο.</T>
       </p>
     ),
     pendingOp === "delete" && (
       <p key="delete" role="status" className="text-amber-300">
-        Θα αφαιρεθεί μόλις επανασυνδεθείτε στο διαδίκτυο.
+        <T>Θα αφαιρεθεί μόλις επανασυνδεθείτε στο διαδίκτυο.</T>
       </p>
     ),
     offlineNote && !pendingOp && (
       <p key="offline" role="status">
-        Δεν ήταν δυνατή η σύνδεση για έλεγχο φωτογραφίας.
+        <T>Δεν ήταν δυνατή η σύνδεση για έλεγχο φωτογραφίας.</T>
       </p>
     ),
     cameraState === "blocked" && (
       <p key="blocked" role="status">
-        Δεν δόθηκε πρόσβαση στην κάμερα — το κουμπί λήψης ανοίγει την κάμερα του κινητού.
+        <T>Δεν δόθηκε πρόσβαση στην κάμερα — το κουμπί λήψης ανοίγει την κάμερα του κινητού.</T>
       </p>
     ),
     error && (
@@ -519,14 +521,14 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
       </p>
     ),
   ].filter(Boolean);
-  const instruction = !showingPhoto && photoStatus !== "checking" ? <p>{photoStatus === "absent" && intro ? intro : INSTRUCTION}</p> : null;
+  const instruction = !showingPhoto && photoStatus !== "checking" ? <p>{photoStatus === "absent" && intro ? t(intro) : t(INSTRUCTION)}</p> : null;
 
   return (
     <CameraViewfinder
       top={top}
       dimmed={live}
       frameRef={frameRef}
-      background={live ? <video ref={attachVideo} autoPlay muted playsInline aria-label="Κάμερα" className="h-full w-full object-cover" /> : undefined}
+      background={live ? <video ref={attachVideo} autoPlay muted playsInline aria-label={t("Κάμερα")} className="h-full w-full object-cover" /> : undefined}
       below={
         <>
           {notes.length > 0 ? notes : instruction}
@@ -539,7 +541,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
               }}
               className="min-h-11 px-3 font-semibold text-white focus-visible:outline-2 focus-visible:outline-white"
             >
-              Ακύρωση
+              <T>Ακύρωση</T>
             </button>
           )}
           {showingPhoto && (
@@ -553,7 +555,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
               aria-busy={busy}
               className="min-h-11 px-3 font-semibold text-red-300 focus-visible:outline-2 focus-visible:outline-white disabled:opacity-50"
             >
-              Αφαίρεση φωτογραφίας
+              <T>Αφαίρεση φωτογραφίας</T>
             </button>
           )}
         </>
@@ -576,9 +578,9 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
               </svg>
             </span>
             <span aria-hidden="true" className={sideLabel}>
-              Συλλογή
+              <T>Συλλογή</T>
             </span>
-            {picker(false, "Επιλογή από τη συλλογή")}
+            {picker(false, t("Επιλογή από τη συλλογή"))}
           </label>
 
           {live || cameraState === "off" ? (
@@ -615,7 +617,7 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
                   <path d="M13 2.5 4.5 13.5H11L10 21.5 19.5 10H13Z" />
                 </svg>
               </span>
-              <span className={sideLabel}>Φακός</span>
+              <span className={sideLabel}><T>Φακός</T></span>
             </button>
           ) : (
             <span aria-hidden="true" />
@@ -625,14 +627,14 @@ export function MedicationPhotoAttach({ userMedicationId, repository, fetchImpl,
     >
       {showingPhoto ? (
         // eslint-disable-next-line @next/next/no-img-element -- `photoUrl` is a local `blob:` object URL from an authenticated fetch (or a locally-cached/queued copy), never a remote asset `next/image` can optimize.
-        <img src={photoUrl ?? undefined} alt="Φωτογραφία φαρμάκου" className="h-full w-full object-contain" />
+        <img src={photoUrl ?? undefined} alt={t("Φωτογραφία φαρμάκου")} className="h-full w-full object-contain" />
       ) : live ? null : (
         // While the saved photo is looked up, the frame's icon pulses instead of a "Φόρτωση…" line.
         <span className={`text-white/35 ${photoStatus === "checking" ? "motion-safe:animate-pulse" : ""}`}>
           {packageIcon}
           {photoStatus === "checking" && (
             <span role="status" className="sr-only">
-              Φόρτωση…
+              <T>Φόρτωση…</T>
             </span>
           )}
         </span>

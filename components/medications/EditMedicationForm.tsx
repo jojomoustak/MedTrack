@@ -14,6 +14,8 @@ import { formatQuantity } from "@/lib/domain/quantity";
 import type { MedicationForm, TreatmentState, UserMedicationRecord } from "@/lib/domain/user-medication";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { ScheduleEdit } from "@/lib/medications/client/save-medication-edits";
+import { T, useLanguage, useT } from "@/lib/i18n/client";
+import type { Translator } from "@/lib/i18n/translate";
 
 export interface EditMedicationValues {
   customName: string | null;
@@ -35,12 +37,12 @@ const FREQUENCY_OPTIONS = [1, 2, 3, 4, 5, 6];
 /** Times offered when a slot is added, in order — the first not already used wins. */
 const SUGGESTED_TIMES = ["08:00", "20:00", "14:00", "22:00", "11:00", "17:00"];
 
-function timesPerDayLabel(n: number): string {
-  return n === 1 ? "1 φορά την ημέρα" : `${n} φορές την ημέρα`;
+function timesPerDayLabel(n: number, t: Translator): string {
+  return n === 1 ? t("1 φορά την ημέρα") : t("{n} φορές την ημέρα", { n });
 }
 
 function nextSuggestedTime(existing: string[]): string {
-  const free = SUGGESTED_TIMES.find((t) => !existing.includes(t));
+  const free = SUGGESTED_TIMES.find((time) => !existing.includes(time));
   if (free) return free;
   const last = existing[existing.length - 1] ?? "08:00";
   const hour = (Number(last.slice(0, 2)) + 1) % 24;
@@ -76,6 +78,8 @@ export function EditMedicationForm({
   onSubmit: (values: EditMedicationValues, scheduleEdit: ScheduleEdit | null) => void;
   error: string | null;
 }) {
+  const t = useT();
+  const language = useLanguage();
   const isCatalogLinked = medication.catalogProductId !== null;
   const editableSchedule = schedule?.timeAnchor === "wall_clock" ? schedule : null;
   const [customName, setCustomName] = useState(medication.customName ?? "");
@@ -83,7 +87,7 @@ export function EditMedicationForm({
   // The database returns numerics at full scale ("500.000") — show what the user typed ("500").
   const [customStrengthValue, setCustomStrengthValue] = useState(medication.customStrengthValue ? formatQuantity(medication.customStrengthValue) : "");
   const [customStrengthUnit, setCustomStrengthUnit] = useState(medication.customStrengthUnit ?? "");
-  const [times, setTimes] = useState<string[]>(() => (editableSchedule?.timesOfDay ?? []).map((t) => t.slice(0, 5)));
+  const [times, setTimes] = useState<string[]>(() => (editableSchedule?.timesOfDay ?? []).map((time) => time.slice(0, 5)));
   const [startDate, setStartDate] = useState(schedule?.startDate ?? "");
   const [treatmentState, setTreatmentState] = useState<TreatmentState>(medication.treatmentState);
   const [inventoryUnit, setInventoryUnit] = useState<MedicationForm>(medication.inventoryUnit);
@@ -106,25 +110,25 @@ export function EditMedicationForm({
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!isCatalogLinked && customName.trim().length === 0) {
-      setValidationError("Το όνομα του φαρμάκου είναι απαραίτητο.");
+      setValidationError(t("Το όνομα του φαρμάκου είναι απαραίτητο."));
       return;
     }
     const parsedExpiryWarningDays = Number(expiryWarningDays);
     if (!Number.isFinite(parsedExpiryWarningDays) || parsedExpiryWarningDays < 0) {
-      setValidationError("Οι μέρες προειδοποίησης λήξης πρέπει να είναι μη αρνητικός αριθμός.");
+      setValidationError(t("Οι μέρες προειδοποίησης λήξης πρέπει να είναι μη αρνητικός αριθμός."));
       return;
     }
     if (editableSchedule) {
-      if (times.length === 0 || times.some((t) => !TIME_PATTERN.test(t))) {
-        setValidationError("Συμπληρώστε κάθε ώρα δόσης.");
+      if (times.length === 0 || times.some((time) => !TIME_PATTERN.test(time))) {
+        setValidationError(t("Συμπληρώστε κάθε ώρα δόσης."));
         return;
       }
       if (!startDate) {
-        setValidationError("Συμπληρώστε την ημερομηνία έναρξης.");
+        setValidationError(t("Συμπληρώστε την ημερομηνία έναρξης."));
         return;
       }
       if (editableSchedule.endDate && startDate > editableSchedule.endDate) {
-        setValidationError("Η έναρξη δεν μπορεί να είναι μετά τη λήξη του προγράμματος.");
+        setValidationError(t("Η έναρξη δεν μπορεί να είναι μετά τη λήξη του προγράμματος."));
         return;
       }
     }
@@ -142,7 +146,7 @@ export function EditMedicationForm({
         expiryWarningDays: parsedExpiryWarningDays,
         notes: notes.trim() || null,
       },
-      editableSchedule ? { scheduleId: editableSchedule.id, timesOfDay: times.map((t) => `${t}:00`), startDate } : null,
+      editableSchedule ? { scheduleId: editableSchedule.id, timesOfDay: times.map((time) => `${time}:00`), startDate } : null,
     );
   }
 
@@ -150,34 +154,34 @@ export function EditMedicationForm({
     <form id={EDIT_MEDICATION_FORM_ID} onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
       {isCatalogLinked ? (
         <div className="surface-card flex flex-col gap-1 p-4">
-          <span className="text-sm font-medium text-stone-500">Φάρμακο από τον κατάλογο</span>
+          <span className="text-sm font-medium text-stone-500"><T>Φάρμακο από τον κατάλογο</T></span>
           <p className="text-[19px] font-bold">{displayName}</p>
-          <p className="text-[15px] text-stone-600">Το όνομα, η μορφή και η περιεκτικότητα έρχονται από τον κατάλογο και δεν αλλάζουν εδώ.</p>
+          <p className="text-[15px] text-stone-600"><T>Το όνομα, η μορφή και η περιεκτικότητα έρχονται από τον κατάλογο και δεν αλλάζουν εδώ.</T></p>
         </div>
       ) : (
         <>
           <label className={FIELD_WRAPPER}>
-            <span className={FIELD_LABEL}>Όνομα</span>
+            <span className={FIELD_LABEL}><T>Όνομα</T></span>
             <input type="text" value={customName} onChange={(e) => setCustomName(e.target.value)} className={`${FIELD_INPUT} pr-4`} />
           </label>
 
           <fieldset className={FIELD_WRAPPER}>
-            <legend className={`${FIELD_LABEL} mb-2`}>Περιεκτικότητα</legend>
+            <legend className={`${FIELD_LABEL} mb-2`}><T>Περιεκτικότητα</T></legend>
             <div className="flex gap-3">
               <input
                 type="text"
                 inputMode="decimal"
                 value={customStrengthValue}
                 onChange={(e) => setCustomStrengthValue(e.target.value)}
-                aria-label="Τιμή περιεκτικότητας"
-                placeholder="π.χ. 500"
+                aria-label={t("Τιμή περιεκτικότητας")}
+                placeholder={t("π.χ. 500")}
                 className={`${FIELD_INPUT} pr-4`}
               />
               <input
                 type="text"
                 value={customStrengthUnit}
                 onChange={(e) => setCustomStrengthUnit(e.target.value)}
-                aria-label="Μονάδα περιεκτικότητας"
+                aria-label={t("Μονάδα περιεκτικότητας")}
                 placeholder="mg"
                 className={`${FIELD_INPUT} max-w-28 pr-4`}
               />
@@ -185,7 +189,7 @@ export function EditMedicationForm({
           </fieldset>
 
           <SelectField
-            label="Μορφή"
+            label={t("Μορφή")}
             value={customForm ?? ""}
             onChange={(e) => {
               const next = e.target.value ? (e.target.value as MedicationForm) : null;
@@ -193,10 +197,10 @@ export function EditMedicationForm({
               if (next && !unitChosen) setInventoryUnit(next);
             }}
           >
-            <option value="">Επιλέξτε…</option>
+            <option value=""><T>Επιλέξτε…</T></option>
             {FORM_OPTIONS.map((option) => (
               <option key={option} value={option}>
-                {FORM_LABELS[option]}
+                {t(FORM_LABELS[option])}
               </option>
             ))}
           </SelectField>
@@ -205,27 +209,27 @@ export function EditMedicationForm({
 
       {editableSchedule ? (
         <>
-          <SelectField label="Συχνότητα" value={String(Math.min(times.length, FREQUENCY_OPTIONS.length))} onChange={(e) => setTimeCount(Number(e.target.value))}>
+          <SelectField label={t("Συχνότητα")} value={String(Math.min(times.length, FREQUENCY_OPTIONS.length))} onChange={(e) => setTimeCount(Number(e.target.value))}>
             {FREQUENCY_OPTIONS.map((n) => (
               <option key={n} value={n}>
-                {timesPerDayLabel(n)}
+                {timesPerDayLabel(n, t)}
               </option>
             ))}
-            {times.length > FREQUENCY_OPTIONS.length && <option value={times.length}>{timesPerDayLabel(times.length)}</option>}
+            {times.length > FREQUENCY_OPTIONS.length && <option value={times.length}>{timesPerDayLabel(times.length, t)}</option>}
           </SelectField>
           {editableSchedule.scheduleKind === "specific_weekdays" && (
-            <p className="-mt-2 text-[15px] text-stone-600">Ημέρες: {describeWeekdays(editableSchedule.weekdaysMask ?? 0)}</p>
+            <p className="-mt-2 text-[15px] text-stone-600"><T>Ημέρες:</T> {describeWeekdays(editableSchedule.weekdaysMask ?? 0, language)}</p>
           )}
 
           <fieldset className={FIELD_WRAPPER}>
-            <legend className={`${FIELD_LABEL} mb-2`}>Ώρες</legend>
+            <legend className={`${FIELD_LABEL} mb-2`}><T>Ώρες</T></legend>
             <ul className="flex flex-col gap-3">
               {times.map((time, index) => (
                 <li key={index}>
                   <TimeField
                     value={time}
-                    onChange={(value) => setTimes((current) => current.map((t, i) => (i === index ? value : t)))}
-                    label={`Ώρα δόσης ${index + 1}`}
+                    onChange={(value) => setTimes((current) => current.map((time, i) => (i === index ? value : time)))}
+                    label={t("Ώρα δόσης {n}", { n: index + 1 })}
                     trailing={
                       times.length > 1 ? (
                         <button
@@ -234,7 +238,7 @@ export function EditMedicationForm({
                             playSound("button");
                             setTimes((current) => current.filter((_, i) => i !== index));
                           }}
-                          aria-label={`Αφαίρεση ώρας ${time}`}
+                          aria-label={t("Αφαίρεση ώρας {time}", { time })}
                           className="flex size-12 shrink-0 items-center justify-center rounded-full text-stone-500 active:bg-stone-100"
                         >
                           <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2">
@@ -259,45 +263,45 @@ export function EditMedicationForm({
                 <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2">
                   <path d="M10 4v12M4 10h12" strokeLinecap="round" />
                 </svg>
-                Προσθήκη ώρας
+                <T>Προσθήκη ώρας</T>
               </button>
             )}
           </fieldset>
 
           <div className={FIELD_WRAPPER}>
-            <span className={FIELD_LABEL}>Ημερομηνία έναρξης</span>
-            <DateField value={startDate} onChange={setStartDate} label="Ημερομηνία έναρξης" />
+            <span className={FIELD_LABEL}><T>Ημερομηνία έναρξης</T></span>
+            <DateField value={startDate} onChange={setStartDate} label={t("Ημερομηνία έναρξης")} />
           </div>
         </>
       ) : (
         <div className={FIELD_WRAPPER}>
-          <span className={FIELD_LABEL}>Συχνότητα</span>
-          <p className="text-[17px] text-stone-600">{schedule ? describeSchedule(schedule) : "Χωρίς πρόγραμμα δόσεων"}</p>
+          <span className={FIELD_LABEL}><T>Συχνότητα</T></span>
+          <p className="text-[17px] text-stone-600">{schedule ? describeSchedule(schedule, language) : t("Χωρίς πρόγραμμα δόσεων")}</p>
         </div>
       )}
 
       <label className={FIELD_WRAPPER}>
-        <span className={FIELD_LABEL}>Σημειώσεις</span>
+        <span className={FIELD_LABEL}><T>Σημειώσεις</T></span>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          placeholder="Προαιρετικό"
+          placeholder={t("Προαιρετικό")}
           className={`${FIELD_INPUT} min-h-24 py-3.5 pr-4`}
         />
       </label>
 
-      <h2 className="mt-3 text-[20px] font-bold tracking-tight text-stone-900">Απόθεμα και κατάσταση</h2>
+      <h2 className="mt-3 text-[20px] font-bold tracking-tight text-stone-900"><T>Απόθεμα και κατάσταση</T></h2>
 
-      <SelectField label="Κατάσταση θεραπείας" value={treatmentState} onChange={(e) => setTreatmentState(e.target.value as TreatmentState)}>
+      <SelectField label={t("Κατάσταση θεραπείας")} value={treatmentState} onChange={(e) => setTreatmentState(e.target.value as TreatmentState)}>
         {(Object.entries(TREATMENT_STATE_LABELS) as [TreatmentState, string][]).map(([value, label]) => (
           <option key={value} value={value}>
-            {label}
+            {t(label)}
           </option>
         ))}
       </SelectField>
       {treatmentState !== "active" && medication.treatmentState === "active" && (
-        <p className="-mt-2 text-[15px] text-stone-600">Οι επόμενες δόσεις και οι υπενθυμίσεις του θα ακυρωθούν.</p>
+        <p className="-mt-2 text-[15px] text-stone-600"><T>Οι επόμενες δόσεις και οι υπενθυμίσεις του θα ακυρωθούν.</T></p>
       )}
 
       <StockUnitField
@@ -309,19 +313,19 @@ export function EditMedicationForm({
       />
 
       <label className={FIELD_WRAPPER}>
-        <span className={FIELD_LABEL}>Όριο χαμηλού αποθέματος</span>
+        <span className={FIELD_LABEL}><T>Όριο χαμηλού αποθέματος</T></span>
         <input
           type="text"
           inputMode="decimal"
           value={lowStockThresholdValue}
           onChange={(e) => setLowStockThresholdValue(e.target.value)}
-          placeholder="Προαιρετικό"
+          placeholder={t("Προαιρετικό")}
           className={`${FIELD_INPUT} pr-4`}
         />
       </label>
 
       <label className={FIELD_WRAPPER}>
-        <span className={FIELD_LABEL}>Μέρες προειδοποίησης λήξης</span>
+        <span className={FIELD_LABEL}><T>Μέρες προειδοποίησης λήξης</T></span>
         <input type="text" inputMode="numeric" value={expiryWarningDays} onChange={(e) => setExpiryWarningDays(e.target.value)} className={`${FIELD_INPUT} pr-4`} />
       </label>
 

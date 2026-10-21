@@ -30,6 +30,7 @@ import { usePathId } from "@/lib/navigation/client/use-path-id";
 import { keepIfSame, readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
 import { DoseRowsSkeleton, InventoryCardSkeleton, MedicationDetailSkeleton } from "@/components/shell/ScreenSkeletons";
 import { SkeletonStatus } from "@/components/ui/Skeleton";
+import { useLanguage, useLocale, useT } from "@/lib/i18n/client";
 
 type DetailTab = "overview" | "schedule" | "history";
 const DETAIL_TABS: FilterTab<DetailTab>[] = [
@@ -43,21 +44,22 @@ function localToday(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-/** "2024-01-10" → "10 Ιαν 2024". */
-function formatDay(date: string): string {
-  return new Date(`${date}T00:00:00`).toLocaleDateString("el-GR", { day: "numeric", month: "short", year: "numeric" });
+/** "2024-01-10" → "10 Ιαν 2024" ("10 Jan 2024"). */
+function formatDay(date: string, locale: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 }
 
-function formatHistoryDay(iso: string | null): string {
+function formatHistoryDay(iso: string | null, locale: string): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("el-GR", { weekday: "short", day: "numeric", month: "short" });
+  return new Date(iso).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" });
 }
 
 /** A label/value block (reference: "Dosage / 500 mg (1 tablet)"). */
 function InfoBlock({ label, children }: { label: string; children: React.ReactNode }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-1">
-      <dt className="text-[17px] font-semibold text-stone-900">{label}</dt>
+      <dt className="text-[17px] font-semibold text-stone-900">{t(label)}</dt>
       <dd className="text-[17px] text-stone-600">{children}</dd>
     </div>
   );
@@ -65,18 +67,19 @@ function InfoBlock({ label, children }: { label: string; children: React.ReactNo
 
 /** A scheduled time of day, as the reference's "◦ 08:00" chips. */
 function TimeChips({ times, onCard = false }: { times: string[]; onCard?: boolean }) {
+  const t = useT();
   return (
-    <ul className="mt-2 flex flex-wrap gap-2.5" aria-label="Ώρες δόσεων">
-      {times.map((t) => (
+    <ul className="mt-2 flex flex-wrap gap-2.5" aria-label={t("Ώρες δόσεων")}>
+      {times.map((time) => (
         <li
-          key={t}
+          key={time}
           className={`flex min-h-12 items-center gap-2 px-4 text-[17px] font-medium text-stone-800 tabular-nums ${onCard ? "rounded-xl bg-surface-muted" : "surface-card"}`}
         >
           <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.6" className="text-stone-500">
             <circle cx="8" cy="8" r="6" />
             <path d="M8 5v3.2l2 1.3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          {t.slice(0, 5)}
+          {time.slice(0, 5)}
         </li>
       ))}
     </ul>
@@ -84,6 +87,7 @@ function TimeChips({ times, onCard = false }: { times: string[]; onCard?: boolea
 }
 
 function StatusPill({ medication }: { medication: UserMedicationRecord }) {
+  const t = useT();
   const active = medication.treatmentState === "active";
   return (
     <span
@@ -95,7 +99,7 @@ function StatusPill({ medication }: { medication: UserMedicationRecord }) {
         <circle cx="8" cy="8" r="6.2" />
         {active ? <path d="m5.4 8.2 1.8 1.8 3.4-3.6" strokeLinecap="round" strokeLinejoin="round" /> : <path d="M5.5 8h5" strokeLinecap="round" />}
       </svg>
-      {TREATMENT_STATE_LABELS[medication.treatmentState]}
+      {t(TREATMENT_STATE_LABELS[medication.treatmentState])}
     </span>
   );
 }
@@ -111,17 +115,19 @@ function StarIcon({ filled }: { filled: boolean }) {
 
 /** One schedule's facts — Overview shows the first current one, the Schedule tab lists all of them. */
 function ScheduleFacts({ schedule, strength, onCard = false }: { schedule: MedicationScheduleRecord; strength: string | null; onCard?: boolean }) {
-  const quantity = doseQuantityLabel(schedule.doseQuantityValue, schedule.doseQuantityUnit);
+  const language = useLanguage();
+  const locale = useLocale();
+  const quantity = doseQuantityLabel(schedule.doseQuantityValue, schedule.doseQuantityUnit, language);
   const dose = strength && quantity ? `${strength} (${quantity})` : (quantity ?? strength);
   return (
     <>
       {dose && <InfoBlock label="Δόση">{dose}</InfoBlock>}
       <InfoBlock label="Συχνότητα">
-        {describeSchedule(schedule)}
+        {describeSchedule(schedule, language)}
         {schedule.timesOfDay && schedule.timesOfDay.length > 0 && <TimeChips times={schedule.timesOfDay} onCard={onCard} />}
       </InfoBlock>
-      <InfoBlock label="Έναρξη">{formatDay(schedule.startDate)}</InfoBlock>
-      {schedule.endDate && <InfoBlock label="Λήξη">{formatDay(schedule.endDate)}</InfoBlock>}
+      <InfoBlock label="Έναρξη">{formatDay(schedule.startDate, locale)}</InfoBlock>
+      {schedule.endDate && <InfoBlock label="Λήξη">{formatDay(schedule.endDate, locale)}</InfoBlock>}
     </>
   );
 }
@@ -138,6 +144,8 @@ function ScheduleFacts({ schedule, strength, onCard = false }: { schedule: Medic
 export default function MedicationDetailPage() {
   const profileId = useProfileId();
   const params = { id: usePathId(2) };
+  const t = useT();
+  const locale = useLocale();
   // Opened from a list, the medication is already in memory (`lib/client-cache/snapshot.ts`) — draw it at once, then re-read.
   const [medication, setMedication] = useState<UserMedicationRecord | null | undefined>(() =>
     readSnapshot<UserMedicationRecord[]>(`medications:${profileId}`)?.find((m) => m.id === params.id),
@@ -203,9 +211,9 @@ export default function MedicationDetailPage() {
   if (medication === null) {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <p className="text-stone-600">Το φάρμακο δεν βρέθηκε.</p>
+        <p className="text-stone-600">{t("Το φάρμακο δεν βρέθηκε.")}</p>
         <ButtonLink href="/medications" onClick={() => playSound("button")} variant="tertiary" className="underline">
-          Πίσω στα φάρμακα
+          {t("Πίσω στα φάρμακα")}
         </ButtonLink>
       </div>
     );
@@ -216,18 +224,19 @@ export default function MedicationDetailPage() {
   const displayName = names.get(medication.id) ?? "…";
   const strength = strengths.get(medication.id) ?? null;
   const form = medication.customForm ?? medication.inventoryUnit;
-  const subtitle = [strength, dosageFormLabel(form)].filter(Boolean).join(" • ");
+  const formLabel = dosageFormLabel(form);
+  const subtitle = [strength, formLabel && t(formLabel)].filter(Boolean).join(" • ");
   const isFavorite = favoriteIds.has(medication.id);
   const synced = medication.syncState === "synced";
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-5 px-5 pt-1 pb-6">
-      <section className="surface-card flex items-start gap-4 p-4" aria-label="Φάρμακο">
+      <section className="surface-card flex items-start gap-4 p-4" aria-label={t("Φάρμακο")}>
         {/* The tile opens the photo screen (take, replace or remove a photo)
             once the medication exists on the server — the photo endpoints
             need a real server row. */}
         {synced ? (
-          <Link href={`/medications/${medication.id}/photo`} onClick={() => playSound("button")} aria-label="Φωτογραφία φαρμάκου" className="shrink-0 transition-transform duration-150 active:scale-95">
+          <Link href={`/medications/${medication.id}/photo`} onClick={() => playSound("button")} aria-label={t("Φωτογραφία φαρμάκου")} className="shrink-0 transition-transform duration-150 active:scale-95">
             <MedicationAvatar medicationId={medication.id} form={form} withPhoto />
           </Link>
         ) : (
@@ -247,7 +256,7 @@ export default function MedicationDetailPage() {
             toggleFavorite(medication.id);
           }}
           aria-pressed={isFavorite}
-          aria-label={isFavorite ? "Αφαίρεση από τα αγαπημένα" : "Προσθήκη στα αγαπημένα"}
+          aria-label={isFavorite ? t("Αφαίρεση από τα αγαπημένα") : t("Προσθήκη στα αγαπημένα")}
           className={`-mt-1 -mr-1 flex size-11 shrink-0 items-center justify-center rounded-full transition duration-200 active:scale-90 ${isFavorite ? "text-amber-500" : "text-stone-400"}`}
         >
           <StarIcon filled={isFavorite} />
@@ -261,7 +270,7 @@ export default function MedicationDetailPage() {
           playSound("button");
           setTab(next);
         }}
-        label="Λεπτομέρειες φαρμάκου"
+        label={t("Λεπτομέρειες φαρμάκου")}
       />
 
       {tab === "overview" && (
@@ -270,7 +279,7 @@ export default function MedicationDetailPage() {
             {currentSchedules[0] ? (
               <ScheduleFacts schedule={currentSchedules[0]} strength={strength} />
             ) : (
-              <InfoBlock label="Πρόγραμμα">Χωρίς πρόγραμμα δόσεων</InfoBlock>
+              <InfoBlock label="Πρόγραμμα">{t("Χωρίς πρόγραμμα δόσεων")}</InfoBlock>
             )}
             {medication.notes && <InfoBlock label="Σημειώσεις">{medication.notes}</InfoBlock>}
           </dl>
@@ -278,7 +287,7 @@ export default function MedicationDetailPage() {
           {inventory.status === "loading" ? (
             <InventoryCardSkeleton />
           ) : (
-            <section className="flex flex-col gap-3" aria-label="Απόθεμα">
+            <section className="flex flex-col gap-3" aria-label={t("Απόθεμα")}>
               <InventorySummary
                 currentStock={inventory.currentStock}
                 quantityUnit={medication.inventoryUnit}
@@ -290,7 +299,7 @@ export default function MedicationDetailPage() {
                   action next to the common "add package" one. */}
               <div className="flex flex-col items-center gap-1">
                 <ButtonLink href={`/medications/${medication.id}/packages/add`} onClick={() => playSound("button")} variant="secondary" fullWidth>
-                  Προσθήκη συσκευασίας
+                  {t("Προσθήκη συσκευασίας")}
                 </ButtonLink>
                 <ButtonLink
                   href={`/medications/${medication.id}/inventory/correct`}
@@ -298,12 +307,12 @@ export default function MedicationDetailPage() {
                   variant="tertiary"
                   className="text-accent-700"
                 >
-                  Διόρθωση αποθέματος
+                  {t("Διόρθωση αποθέματος")}
                 </ButtonLink>
               </div>
               {inventory.packages.length > 0 && (
                 <>
-                  <h2 className="mt-1 text-[17px] font-semibold text-stone-900">Συσκευασίες</h2>
+                  <h2 className="mt-1 text-[17px] font-semibold text-stone-900">{t("Συσκευασίες")}</h2>
                   <PackageList profileId={profileId} packages={inventory.packages} transactions={inventory.transactions} onChanged={inventory.refresh} />
                 </>
               )}
@@ -311,14 +320,14 @@ export default function MedicationDetailPage() {
           )}
 
           <ButtonLink href={`/medications/${medication.id}/edit`} onClick={() => playSound("button")} size="lg" fullWidth>
-            Επεξεργασία
+            {t("Επεξεργασία")}
           </ButtonLink>
         </>
       )}
 
       {tab === "schedule" &&
         (currentSchedules.length === 0 ? (
-          <p className="text-[17px] text-stone-600">Χωρίς πρόγραμμα δόσεων.</p>
+          <p className="text-[17px] text-stone-600">{t("Χωρίς πρόγραμμα δόσεων.")}</p>
         ) : (
           currentSchedules.map((schedule) => (
             <dl key={schedule.id} className="surface-card flex flex-col gap-5 p-4">
@@ -333,13 +342,13 @@ export default function MedicationDetailPage() {
             <DoseRowsSkeleton />
           </SkeletonStatus>
         ) : doseHistory.length === 0 ? (
-          <p className="text-[17px] text-stone-600">Δεν υπάρχει ακόμα ιστορικό δόσεων.</p>
+          <p className="text-[17px] text-stone-600">{t("Δεν υπάρχει ακόμα ιστορικό δόσεων.")}</p>
         ) : (
-          <ul className="flex flex-col gap-3" aria-label="Ιστορικό δόσεων">
+          <ul className="flex flex-col gap-3" aria-label={t("Ιστορικό δόσεων")}>
             {doseHistory.map((dose) => {
               const visual = doseVisual(dose.status);
-              const status = doseStatusText(dose) ?? "Εκκρεμεί";
-              const when = `${formatHistoryDay(dose.scheduledAt)} • ${formatDoseTime(dose.scheduledAt)}`;
+              const status = doseStatusText(dose, t) ?? t("Εκκρεμεί");
+              const when = `${formatHistoryDay(dose.scheduledAt, locale)} • ${formatDoseTime(dose.scheduledAt)}`;
               return (
                 <li key={dose.id}>
                   <Link

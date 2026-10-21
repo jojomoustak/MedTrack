@@ -8,6 +8,7 @@ import { DexiePhotoCacheRepository } from "@/lib/medications/client/photo-cache-
 import { ALLOWED_MEDICATION_PHOTO_CONTENT_TYPES, MAX_MEDICATION_PHOTO_BYTES } from "@/lib/validation/medication-photo";
 import { medicationColorClasses } from "@/lib/medications/client/medication-color";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { useT } from "@/lib/i18n/client";
 
 function isAllowedClientSide(file: File): boolean {
   return file.size <= MAX_MEDICATION_PHOTO_BYTES && (ALLOWED_MEDICATION_PHOTO_CONTENT_TYPES as readonly string[]).includes(file.type);
@@ -24,6 +25,7 @@ function isAllowedClientSide(file: File): boolean {
  */
 export function MedicationThumbnail({ userMedicationId }: { userMedicationId: string }) {
   const { status, url } = useMedicationPhotoThumbnail(userMedicationId);
+  const t = useT();
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadFailed, setUploadFailed] = useState(false);
@@ -42,7 +44,7 @@ export function MedicationThumbnail({ userMedicationId }: { userMedicationId: st
       <Link
         href={`/medications/${userMedicationId}/photo`}
         onClick={() => playSound("button")}
-        aria-label="Προβολή φωτογραφίας φαρμάκου"
+        aria-label={t("Προβολή φωτογραφίας φαρμάκου")}
         className="shrink-0 transition-transform duration-150 active:scale-95"
       >
         <img src={displayUrl} alt="" className="h-14 w-14 rounded-full object-cover" />
@@ -82,7 +84,7 @@ export function MedicationThumbnail({ userMedicationId }: { userMedicationId: st
       onClick={() => {
         if (!uploading) playSound("button");
       }}
-      aria-label={uploadFailed ? "Η λήψη φωτογραφίας απέτυχε — πατήστε για να δοκιμάσετε ξανά" : "Λήψη φωτογραφίας φαρμάκου"}
+      aria-label={uploadFailed ? t("Η λήψη φωτογραφίας απέτυχε — πατήστε για να δοκιμάσετε ξανά") : t("Λήψη φωτογραφίας φαρμάκου")}
       className={`flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform duration-150 active:scale-95 ${
         uploadFailed ? "bg-red-100 text-red-500" : `${color.bg} ${color.text}`
       }`}

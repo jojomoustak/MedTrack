@@ -4,6 +4,9 @@ import { useState } from "react";
 import { ChevronIcon } from "@/components/calendar/ChevronIcon";
 import { dateToParam } from "@/components/calendar/date-param";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { useLanguage, useT, T } from "@/lib/i18n/client";
+import { LOCALE_OF } from "@/lib/i18n/language";
+import type { Translator } from "@/lib/i18n/translate";
 
 /** Monday first, as on the Calendar screen. */
 const WEEKDAY_HEADERS = ["Δευ", "Τρί", "Τετ", "Πέμ", "Παρ", "Σάβ", "Κυρ"];
@@ -23,8 +26,8 @@ export function daysBetween(from: Date, to: Date): number {
 }
 
 /** «Τρίτη 20 Οκτωβρίου», with the year only when it isn't this one. */
-export function longDate(date: Date, today = new Date()): string {
-  return date.toLocaleDateString("el-GR", {
+export function longDate(date: Date, today = new Date(), locale = "el-GR"): string {
+  return date.toLocaleDateString(locale, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -32,11 +35,11 @@ export function longDate(date: Date, today = new Date()): string {
   });
 }
 
-function relativeDay(date: Date, today: Date): string | null {
+function relativeDay(date: Date, today: Date, t: Translator): string | null {
   const offset = daysBetween(today, date);
-  if (offset === 0) return "Σήμερα";
-  if (offset === 1) return "Αύριο";
-  if (offset === -1) return "Χθες";
+  if (offset === 0) return t("Σήμερα");
+  if (offset === 1) return t("Αύριο");
+  if (offset === -1) return t("Χθες");
   return null;
 }
 
@@ -89,6 +92,9 @@ export function DateField({
   /** Opens on the month at once, e.g. when the person has just asked to pick an end date. */
   initiallyOpen?: boolean;
 }) {
+  const t = useT();
+  const language = useLanguage();
+  const locale = LOCALE_OF[language];
   const today = new Date();
   const current = parseLocalDate(value);
   const minDate = min ? parseLocalDate(min) : null;
@@ -110,10 +116,10 @@ export function DateField({
   }
 
   const outside = (date: Date) => (minDate !== null && daysBetween(minDate, date) < 0) || (maxDate !== null && daysBetween(date, maxDate) < 0);
-  const monthLabel = month.toLocaleDateString("el-GR", { month: "long", year: "numeric" });
+  const monthLabel = month.toLocaleDateString(locale, { month: "long", year: "numeric" });
   const canGoBack = !minDate || month > new Date(minDate.getFullYear(), minDate.getMonth(), 1);
   const canGoOn = !maxDate || month < new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
-  const relative = current ? relativeDay(current, today) : null;
+  const relative = current ? relativeDay(current, today, t) : null;
 
   return (
     <div className="surface-card overflow-hidden">
@@ -121,19 +127,19 @@ export function DateField({
         type="button"
         onClick={toggle}
         aria-expanded={open}
-        aria-label={`${label}: ${current ? longDate(current, today) : "χωρίς ημερομηνία"}`}
+        aria-label={current ? `${label}: ${longDate(current, today, locale)}` : t("{label}: χωρίς ημερομηνία", { label })}
         className="flex min-h-18 w-full items-center gap-3.5 px-4 text-left"
       >
         <CalendarPage day={current ? current.getDate() : null} />
         {current ? (
           <span className="flex min-w-0 flex-col">
             {relative && <span className="text-[14px] font-semibold leading-tight text-accent-700">{relative}</span>}
-            <span className="text-[19px] font-bold leading-snug tracking-tight text-stone-900 first-letter:uppercase">{longDate(current, today)}</span>
+            <span className="text-[19px] font-bold leading-snug tracking-tight text-stone-900 first-letter:uppercase">{longDate(current, today, locale)}</span>
           </span>
         ) : (
-          <span className="text-[18px] font-semibold text-accent-700">Επιλέξτε ημερομηνία</span>
+          <span className="text-[18px] font-semibold text-accent-700"><T>Επιλέξτε ημερομηνία</T></span>
         )}
-        {current && !open && <span className="ml-auto pl-2 text-[15px] font-semibold text-accent-700">Αλλαγή</span>}
+        {current && !open && <span className="ml-auto pl-2 text-[15px] font-semibold text-accent-700"><T>Αλλαγή</T></span>}
       </button>
 
       {open && (
@@ -146,7 +152,7 @@ export function DateField({
                 setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
               }}
               disabled={!canGoBack}
-              aria-label="Προηγούμενος μήνας"
+              aria-label={t("Προηγούμενος μήνας")}
               className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-stone-700 active:scale-95 disabled:opacity-35"
             >
               <ChevronIcon direction="left" />
@@ -161,7 +167,7 @@ export function DateField({
                 setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
               }}
               disabled={!canGoOn}
-              aria-label="Επόμενος μήνας"
+              aria-label={t("Επόμενος μήνας")}
               className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-stone-700 active:scale-95 disabled:opacity-35"
             >
               <ChevronIcon direction="right" />
@@ -172,7 +178,7 @@ export function DateField({
             <div className="grid grid-cols-7 text-center text-[13px] font-medium text-stone-500" aria-hidden="true">
               {WEEKDAY_HEADERS.map((d) => (
                 <span key={d} className="py-1">
-                  {d}
+                  {t(d)}
                 </span>
               ))}
             </div>
@@ -190,7 +196,7 @@ export function DateField({
                     disabled={disabled}
                     aria-pressed={selected}
                     aria-current={isToday ? "date" : undefined}
-                    aria-label={`${longDate(cell, today)}${isToday ? ", σήμερα" : ""}`}
+                    aria-label={isToday ? t("{date}, σήμερα", { date: longDate(cell, today, locale) }) : longDate(cell, today, locale)}
                     onClick={() => {
                       playSound("button");
                       onChange(dateToParam(cell));
@@ -222,7 +228,7 @@ export function DateField({
             }}
             className="mx-1 min-h-12 rounded-xl bg-accent-700 text-[17px] font-semibold text-white transition-transform active:scale-[0.98]"
           >
-            Έτοιμο
+            <T>Έτοιμο</T>
           </button>
         </div>
       )}

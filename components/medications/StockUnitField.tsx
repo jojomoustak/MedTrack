@@ -6,6 +6,7 @@ import { SelectField } from "@/components/ui/SelectField";
 import { FORM_LABELS, FORM_OPTIONS } from "@/components/medications/form-options";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { useT, T } from "@/lib/i18n/client";
 
 /**
  * «Μονάδα αποθέματος» as one line, not a second question after «Μορφή»
@@ -15,14 +16,15 @@ import { playSound } from "@/lib/sound/client/play-sound";
  * differs (drops counted in ml). `onChoose` is only a choice made here.
  */
 export function StockUnitField({ value, onChoose }: { value: MedicationForm; onChoose: (unit: MedicationForm) => void }) {
+  const t = useT();
   const [changing, setChanging] = useState(false);
 
   if (changing) {
     return (
-      <SelectField label="Μονάδα αποθέματος" value={value} onChange={(e) => onChoose(e.target.value as MedicationForm)}>
+      <SelectField label={t("Μονάδα αποθέματος")} value={value} onChange={(e) => onChoose(e.target.value as MedicationForm)}>
         {FORM_OPTIONS.map((option) => (
           <option key={option} value={option}>
-            {FORM_LABELS[option]}
+            {t(FORM_LABELS[option])}
           </option>
         ))}
       </SelectField>
@@ -32,7 +34,7 @@ export function StockUnitField({ value, onChoose }: { value: MedicationForm; onC
   return (
     <div className="flex items-center justify-between gap-3">
       <p className="text-[15px] text-stone-700">
-        Μονάδα αποθέματος: <span className="font-semibold text-stone-900">{FORM_LABELS[value]}</span>
+        <T>Μονάδα αποθέματος:</T> <span className="font-semibold text-stone-900">{t(FORM_LABELS[value])}</span>
       </p>
       <Button
         variant="tertiary"
@@ -42,7 +44,7 @@ export function StockUnitField({ value, onChoose }: { value: MedicationForm; onC
         }}
         className="min-h-11 px-0 underline"
       >
-        Αλλαγή
+        <T>Αλλαγή</T>
       </Button>
     </div>
   );

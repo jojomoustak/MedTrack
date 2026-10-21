@@ -15,8 +15,10 @@ import { useReturnTo } from "@/lib/navigation/client/use-return-to";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
 import { MedicationFormSkeleton } from "@/components/shell/ScreenSkeletons";
+import { T, useT } from "@/lib/i18n/client";
 
 export default function AddPackagePage() {
+  const t = useT();
   const profileId = useProfileId();
   const params = { id: usePathId(2) };
   const returnTo = useReturnTo();
@@ -76,22 +78,22 @@ export default function AddPackagePage() {
       playSound("success");
       returnTo(`/medications/${params.id}`);
     } catch {
-      setError("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+      setError(t("Κάτι πήγε στραβά. Δοκιμάστε ξανά."));
     } finally {
       setSubmitting(false);
     }
   }
 
   if (medication === undefined) {
-    return <MedicationFormSkeleton title="Νέα συσκευασία" fields={3} />;
+    return <MedicationFormSkeleton title={t("Νέα συσκευασία")} fields={3} />;
   }
 
   if (medication === null) {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <p className="text-stone-600">Το φάρμακο δεν βρέθηκε.</p>
+        <p className="text-stone-600"><T>Το φάρμακο δεν βρέθηκε.</T></p>
         <ButtonLink href="/medications" variant="tertiary" className="px-0 underline">
-          Πίσω στα φάρμακα
+          <T>Πίσω στα φάρμακα</T>
         </ButtonLink>
       </div>
     );
@@ -99,7 +101,7 @@ export default function AddPackagePage() {
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 px-5 pt-1 pb-6">
-      <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Νέα συσκευασία</h1>
+      <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900"><T>Νέα συσκευασία</T></h1>
       <MedicationHeader medication={medication} />
 
       <AddPackageForm defaultUnit={medication.inventoryUnit} onSubmit={(values) => void handleSubmit(values)} submitting={submitting} error={error} />

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
+import { T, useT } from "@/lib/i18n/client";
 
 export interface ManualEntryValues {
   name: string;
@@ -20,6 +21,7 @@ export interface ManualEntryFormProps {
 
 /** Phase 3 §2.4 "Manual entry form" (reference mockup, screen 15) — the primary, fully-functional path for real users at MVP (per the Phase 6 task directive; the catalog/search path exists to prove the architecture, not to imply real market coverage). */
 export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch = null }: ManualEntryFormProps) {
+  const t = useT();
   const [name, setName] = useState("");
   const [expiry, setExpiry] = useState(initialExpiry ?? "");
   const [batch, setBatch] = useState(initialBatch ?? "");
@@ -29,7 +31,7 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
     event.preventDefault();
     const trimmed = name.trim();
     if (trimmed.length === 0) {
-      setError("Το όνομα του φαρμάκου είναι απαραίτητο.");
+      setError(t("Το όνομα του φαρμάκου είναι απαραίτητο."));
       return;
     }
     setError(null);
@@ -43,15 +45,15 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
       <label className={FIELD_WRAPPER}>
-        <span className={FIELD_LABEL}>Όνομα</span>
+        <span className={FIELD_LABEL}><T>Όνομα</T></span>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          aria-label="Όνομα φαρμάκου"
+          aria-label={t("Όνομα φαρμάκου")}
           aria-invalid={error ? "true" : undefined}
           aria-describedby={error ? "manual-name-error" : undefined}
-          placeholder="Γράψτε το όνομα του φαρμάκου"
+          placeholder={t("Γράψτε το όνομα του φαρμάκου")}
           className={`${FIELD_INPUT} pr-4`}
         />
         {error && (
@@ -63,27 +65,27 @@ export function ManualEntryForm({ onSubmit, initialExpiry = null, initialBatch =
 
       {(initialExpiry !== null || initialBatch !== null) && (
         <div className="surface-card flex flex-col gap-4 p-4">
-          <p className="text-[15px] text-stone-600">Αυτά διαβάστηκαν από τη σάρωση — ελέγξτε ή διορθώστε τα.</p>
+          <p className="text-[15px] text-stone-600"><T>Αυτά διαβάστηκαν από τη σάρωση — ελέγξτε ή διορθώστε τα.</T></p>
           <label className={FIELD_WRAPPER}>
-            <span className={FIELD_LABEL}>Ημερομηνία λήξης</span>
+            <span className={FIELD_LABEL}><T>Ημερομηνία λήξης</T></span>
             <input
               type="text"
               value={expiry}
               onChange={(e) => setExpiry(e.target.value)}
-              placeholder="ΕΕΕΕ-ΜΜ-ΗΗ"
-              aria-label="Ημερομηνία λήξης"
+              placeholder={t("ΕΕΕΕ-ΜΜ-ΗΗ")}
+              aria-label={t("Ημερομηνία λήξης")}
               className={`${FIELD_INPUT} pr-4`}
             />
           </label>
           <label className={FIELD_WRAPPER}>
-            <span className={FIELD_LABEL}>Παρτίδα</span>
-            <input type="text" value={batch} onChange={(e) => setBatch(e.target.value)} aria-label="Παρτίδα" className={`${FIELD_INPUT} pr-4`} />
+            <span className={FIELD_LABEL}><T>Παρτίδα</T></span>
+            <input type="text" value={batch} onChange={(e) => setBatch(e.target.value)} aria-label={t("Παρτίδα")} className={`${FIELD_INPUT} pr-4`} />
           </label>
         </div>
       )}
 
       <Button type="submit" size="lg" fullWidth>
-        Συνέχεια
+        <T>Συνέχεια</T>
       </Button>
     </form>
   );

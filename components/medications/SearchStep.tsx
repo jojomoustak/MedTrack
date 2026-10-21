@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { formatQuantity } from "@/lib/domain/quantity";
 import { FIELD_INPUT } from "@/components/ui/field-styles";
+import { useT, T } from "@/lib/i18n/client";
 
 export interface SearchStepProps {
   onConfirmCandidate: (product: CatalogProduct) => void;
@@ -22,6 +23,7 @@ function formatSubtitle(product: CatalogProduct): string {
 
 /** Phase 3 §2.4 "Search catalog" + "Search — candidate confirmation". Accent-insensitive Greek search (server-side `unaccent`/`pg_trgm`, `lib/catalog/server/postgres-provider.ts`); offline falls back to the local cache (`lib/catalog/client/use-catalog-search.ts`). */
 export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchStepProps) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [candidate, setCandidate] = useState<CatalogProduct | null>(null);
   const { status, results } = useCatalogSearch(query);
@@ -43,31 +45,31 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
   return (
     <div className="flex flex-col gap-4">
       <label className="flex flex-col gap-1">
-        <span className="text-[17px] font-semibold text-stone-800">Αναζήτηση φαρμάκου</span>
+        <span className="text-[17px] font-semibold text-stone-800"><T>Αναζήτηση φαρμάκου</T></span>
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="π.χ. Flagyl, Depon, Algofren"
-          aria-label="Αναζήτηση φαρμάκου"
+          placeholder={t("π.χ. Flagyl, Depon, Algofren")}
+          aria-label={t("Αναζήτηση φαρμάκου")}
           className={`${FIELD_INPUT} pr-4`}
         />
       </label>
 
       {status === "loading" && (
         <p role="status" aria-live="polite" className="text-[15px] text-stone-600">
-          Αναζήτηση…
+          <T>Αναζήτηση…</T>
         </p>
       )}
 
       {status === "offline-cache" && results.length > 0 && (
         <p role="status" className="text-sm text-amber-700">
-          Είστε εκτός σύνδεσης — εμφανίζονται μόνο φάρμακα που έχετε ξαναδεί.
+          <T>Είστε εκτός σύνδεσης — εμφανίζονται μόνο φάρμακα που έχετε ξαναδεί.</T>
         </p>
       )}
 
       {(status === "success" || status === "offline-cache") && results.length > 0 && (
-        <ul className="flex flex-col gap-2" aria-label="Αποτελέσματα αναζήτησης">
+        <ul className="flex flex-col gap-2" aria-label={t("Αποτελέσματα αναζήτησης")}>
           {results.map((product) => (
             <li key={product.id}>
               <Card
@@ -87,18 +89,18 @@ export function SearchStep({ onConfirmCandidate, onFallbackToManual }: SearchSte
       {(showNoResults || showOfflineEmpty) && (
         <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center">
           <p className="mb-3 text-sm text-stone-700">
-            Δεν βρέθηκε το φάρμακο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος.
+            <T>Δεν βρέθηκε το φάρμακο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος.</T>
           </p>
           {/* Equally weighted with search results, never a dead end (Phase 3 §2.4/§8). */}
           <Button onClick={() => { playSound("button"); onFallbackToManual(); }}>
-            Συνέχεια με χειροκίνητη καταχώριση
+            <T>Συνέχεια με χειροκίνητη καταχώριση</T>
           </Button>
         </div>
       )}
 
       {status === "idle" && (
         <Button variant="tertiary" onClick={() => { playSound("button"); onFallbackToManual(); }} className="self-start px-0 underline">
-          Προτιμώ χειροκίνητη καταχώριση
+          <T>Προτιμώ χειροκίνητη καταχώριση</T>
         </Button>
       )}
     </div>

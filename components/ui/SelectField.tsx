@@ -1,11 +1,14 @@
 import type { ComponentProps } from "react";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
+import { T } from "@/lib/i18n/client";
 
 /** A labelled native `<select>` in the shared field style, with the reference mockup's trailing chevron. */
 export function SelectField({ label, children, ...props }: { label: string } & ComponentProps<"select">) {
   return (
     <label className={FIELD_WRAPPER}>
-      <span className={FIELD_LABEL}>{label}</span>
+      <span className={FIELD_LABEL}>
+        <T>{label}</T>
+      </span>
       <span className="relative block">
         <select className={`${FIELD_INPUT} appearance-none pr-11`} {...props}>
           {children}

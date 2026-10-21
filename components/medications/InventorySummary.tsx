@@ -1,9 +1,12 @@
+"use client";
+
 import type { RefillProjection } from "@/lib/domain/inventory-consumption";
+import { useLanguage, useLocale, useT } from "@/lib/i18n/client";
 import { Card } from "@/components/ui/Card";
 import { doseQuantityLabel } from "@/lib/medications/dose-quantity-label";
 
-function formatProjectedDate(iso: string): string {
-  return new Date(iso + "T00:00:00").toLocaleDateString("el-GR", { day: "numeric", month: "long" });
+function formatProjectedDate(iso: string, locale: string): string {
+  return new Date(iso + "T00:00:00").toLocaleDateString(locale, { day: "numeric", month: "long" });
 }
 
 /**
@@ -31,27 +34,35 @@ export function InventorySummary({
   runningLowSoon: boolean;
   projection: RefillProjection;
 }) {
+  const t = useT();
+  const language = useLanguage();
+  const locale = useLocale();
   return (
     <Card as="section" className="flex flex-col gap-2">
-      <h2 className="text-[17px] font-semibold text-stone-900">Απόθεμα</h2>
-      <p className="text-[26px] leading-tight font-bold tabular-nums">{doseQuantityLabel(currentStock, quantityUnit) ?? currentStock}</p>
+      <h2 className="text-[17px] font-semibold text-stone-900">{t("Απόθεμα")}</h2>
+      <p className="text-[26px] leading-tight font-bold tabular-nums">{doseQuantityLabel(currentStock, quantityUnit, language) ?? currentStock}</p>
 
       {(belowThreshold || runningLowSoon) && (
         <p role="status" className="flex items-center gap-2 text-[15px] font-semibold text-amber-800">
           <LowStockIcon />
-          Χαμηλό απόθεμα
+          {t("Χαμηλό απόθεμα")}
         </p>
       )}
 
       {projection.basis !== "none" && projection.daysRemaining !== null && projection.projectedOutOfStockDate && (
         <div className="text-[15px] text-stone-600">
           <p>
-            Εκτίμηση εξάντλησης: {formatProjectedDate(projection.projectedOutOfStockDate)} ({projection.daysRemaining}{" "}
-            {projection.daysRemaining === 1 ? "ημέρα" : "ημέρες"})
+            {t(projection.daysRemaining === 1 ? "Εκτίμηση εξάντλησης: {date} (1 ημέρα)" : "Εκτίμηση εξάντλησης: {date} ({days} ημέρες)", {
+              date: formatProjectedDate(projection.projectedOutOfStockDate, locale),
+              days: projection.daysRemaining,
+            })}
           </p>
           <p className="text-sm text-stone-500">
-            {projection.basis === "observed" ? "Βάσει της πρόσφατης χρήσης σας" : "Βάσει του προγράμματός σας"} — εκτίμηση αποθέματος, δεν αποτελεί
-            ιατρική σύσταση.
+            {t(
+              projection.basis === "observed"
+                ? "Βάσει της πρόσφατης χρήσης σας — εκτίμηση αποθέματος, δεν αποτελεί ιατρική σύσταση."
+                : "Βάσει του προγράμματός σας — εκτίμηση αποθέματος, δεν αποτελεί ιατρική σύσταση.",
+            )}
           </p>
         </div>
       )}

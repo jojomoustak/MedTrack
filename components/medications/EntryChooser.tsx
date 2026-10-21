@@ -1,6 +1,7 @@
 "use client";
 
 import { playSound } from "@/lib/sound/client/play-sound";
+import { useT } from "@/lib/i18n/client";
 
 export type EntryChoice = "scan" | "search" | "manual";
 
@@ -91,23 +92,24 @@ function ChoiceCard({
  * scanner is reachable, but never hidden.
  */
 export function EntryChooser({ onChoose, scanAvailable }: EntryChooserProps) {
+  const t = useT();
   function handleChoose(choice: EntryChoice) {
     playSound("button");
     onChoose(choice);
   }
 
   return (
-    <div className="flex flex-col gap-4" role="group" aria-label="Πώς θέλετε να προσθέσετε το φάρμακο;">
+    <div className="flex flex-col gap-4" role="group" aria-label={t("Πώς θέλετε να προσθέσετε το φάρμακο;")}>
       <ChoiceCard
         choice="scan"
-        title="Σάρωση συσκευασίας"
-        description={scanAvailable ? "Σαρώστε το barcode της συσκευασίας και τα στοιχεία συμπληρώνονται." : "Διαθέσιμο μόνο στην εφαρμογή για κινητά."}
+        title={t("Σάρωση συσκευασίας")}
+        description={scanAvailable ? t("Σαρώστε το barcode της συσκευασίας και τα στοιχεία συμπληρώνονται.") : t("Διαθέσιμο μόνο στην εφαρμογή για κινητά.")}
         disabled={!scanAvailable}
-        label={scanAvailable ? "Σάρωση συσκευασίας" : "Σάρωση συσκευασίας — διαθέσιμο μόνο στην εφαρμογή για κινητά"}
+        label={scanAvailable ? t("Σάρωση συσκευασίας") : t("Σάρωση συσκευασίας — διαθέσιμο μόνο στην εφαρμογή για κινητά")}
         onChoose={handleChoose}
       />
-      <ChoiceCard choice="search" title="Αναζήτηση στον κατάλογο" description="Βρείτε το φάρμακό σας στον κατάλογο φαρμάκων." onChoose={handleChoose} />
-      <ChoiceCard choice="manual" title="Χειροκίνητη καταχώριση" description="Συμπληρώστε τα στοιχεία μόνοι σας." onChoose={handleChoose} />
+      <ChoiceCard choice="search" title={t("Αναζήτηση στον κατάλογο")} description={t("Βρείτε το φάρμακό σας στον κατάλογο φαρμάκων.")} onChoose={handleChoose} />
+      <ChoiceCard choice="manual" title={t("Χειροκίνητη καταχώριση")} description={t("Συμπληρώστε τα στοιχεία μόνοι σας.")} onChoose={handleChoose} />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { OfflineBanner } from "@/components/sync/OfflineBanner";
 import { ScreenHeader } from "@/components/shell/ScreenHeader";
 import { useCurrentProfile } from "@/lib/auth/client/use-current-profile";
 import { EntryChoicesSkeleton } from "@/components/shell/ScreenSkeletons";
+import { T } from "@/lib/i18n/client";
 
 /**
  * Real, reachable route for Phase 3 §3 Journey 1's Add Medication flow.
@@ -26,7 +27,7 @@ export default function AddMedicationPage() {
     <main className="min-h-dvh bg-background pb-8">
       <ScreenHeader />
       <OfflineBanner />
-      <h1 className="mx-auto max-w-md px-5 pt-1 pb-5 text-[28px] leading-tight font-bold tracking-tight text-stone-900">Προσθήκη φαρμάκου</h1>
+      <h1 className="mx-auto max-w-md px-5 pt-1 pb-5 text-[28px] leading-tight font-bold tracking-tight text-stone-900"><T>Προσθήκη φαρμάκου</T></h1>
       {session.status === "loading" && <EntryChoicesSkeleton />}
       {session.status === "ready" && (
         // Navigates to the optional photo-attach screen rather than

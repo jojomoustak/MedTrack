@@ -20,6 +20,7 @@ import { ScanDiagnosticsPanel, type ScanDiagnostics } from "@/components/medicat
 import { PackageOcrCandidateFlow } from "@/components/medications/PackageOcrCandidateFlow";
 import { Button } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { T, useT } from "@/lib/i18n/client";
 
 export interface ScanStepProps {
   profileId: string;
@@ -92,6 +93,7 @@ export function ScanStep({
   unresolvedScanRepository,
   learnedMappings,
 }: ScanStepProps) {
+  const t = useT();
   const network = useNetworkStatus();
   const [view, setView] = useState<ViewState>({ phase: "scanning" });
   const startedRef = useRef(false);
@@ -132,7 +134,7 @@ export function ScanStep({
         setView({ phase: "unavailable" });
       } else {
         logger.warn("scan_step.platform_error", { message: (err as Error).message });
-        setView({ phase: "error", message: "Κάτι πήγε στραβά με τη σάρωση. Δοκιμάστε ξανά." });
+        setView({ phase: "error", message: t("Κάτι πήγε στραβά με τη σάρωση. Δοκιμάστε ξανά.") });
       }
       return;
     }
@@ -146,7 +148,7 @@ export function ScanStep({
 
     if (result.status === "error") {
       logger.warn("scan_step.native_error", { errorCode: result.errorCode });
-      setView({ phase: "error", message: "Δεν ήταν δυνατή η ανάγνωση του barcode. Δοκιμάστε ξανά ή συνεχίστε χειροκίνητα." });
+      setView({ phase: "error", message: t("Δεν ήταν δυνατή η ανάγνωση του barcode. Δοκιμάστε ξανά ή συνεχίστε χειροκίνητα.") });
       return;
     }
 
@@ -270,10 +272,10 @@ export function ScanStep({
     return (
       <div className="flex flex-col items-center gap-3 py-8">
         <p role="status" aria-live="polite" className="text-[15px] text-stone-600">
-          {view.phase === "scanning" ? "Άνοιγμα κάμερας…" : "Αναζήτηση φαρμάκου…"}
+          {view.phase === "scanning" ? t("Άνοιγμα κάμερας…") : t("Αναζήτηση φαρμάκου…")}
         </p>
         <Button variant="tertiary" onClick={() => { playSound("button"); onCancel(); }} className="px-0 underline">
-          Ακύρωση
+          <T>Ακύρωση</T>
         </Button>
       </div>
     );
@@ -284,14 +286,14 @@ export function ScanStep({
       <div className="flex flex-col gap-4">
         <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center">
           <p className="text-sm text-stone-700">
-            Η σάρωση barcode διατίθεται μόνο μέσα από την εφαρμογή MedTrack για κινητά.
+            <T>Η σάρωση barcode διατίθεται μόνο μέσα από την εφαρμογή MedTrack για κινητά.</T>
           </p>
         </div>
         <Button onClick={() => { playSound("button"); onFallbackToManual(null); }}>
-          Συνέχεια με χειροκίνητη καταχώριση
+          <T>Συνέχεια με χειροκίνητη καταχώριση</T>
         </Button>
         <Button variant="tertiary" onClick={() => { playSound("button"); onCancel(); }} className="self-start px-0 underline">
-          ← Πίσω
+          <T>← Πίσω</T>
         </Button>
       </div>
     );
@@ -310,13 +312,13 @@ export function ScanStep({
             void runScan();
           }}
         >
-          Δοκιμάστε ξανά
+          <T>Δοκιμάστε ξανά</T>
         </Button>
         <Button variant="tertiary" onClick={() => { playSound("button"); onFallbackToManual(null); }} className="px-0 underline">
-          Συνέχεια με χειροκίνητη καταχώριση
+          <T>Συνέχεια με χειροκίνητη καταχώριση</T>
         </Button>
         <Button variant="tertiary" onClick={() => { playSound("button"); onCancel(); }} className="self-start px-0 underline">
-          ← Πίσω
+          <T>← Πίσω</T>
         </Button>
       </div>
     );
@@ -330,7 +332,7 @@ export function ScanStep({
           parsedExpiry={view.parsed.expiry}
           parsedBatch={view.parsed.batch}
           parsedSerial={view.parsed.serial}
-          note={view.suggested ? "Πρόταση από άλλους χρήστες του MedTrack, όχι από επίσημη πηγή. Ελέγξτε ότι είναι το φάρμακο της συσκευασίας σας." : undefined}
+          note={view.suggested ? t("Πρόταση από άλλους χρήστες του MedTrack, όχι από επίσημη πηγή. Ελέγξτε ότι είναι το φάρμακο της συσκευασίας σας.") : undefined}
           onConfirm={() => {
             // Confirming someone else's identification makes it this
             // person's own: the next scan finds it directly, offline too.
@@ -356,16 +358,16 @@ export function ScanStep({
   // framing that implies this might resolve later. It never will.
   const notFoundMessage =
     view.parsed?.format === "QR_CODE"
-      ? "Αυτό είναι κωδικός QR, όχι barcode προϊόντος — το MedTrack δεν μπορεί να αναγνωρίσει φάρμακα από περιεχόμενο QR."
+      ? t("Αυτό είναι κωδικός QR, όχι barcode προϊόντος — το MedTrack δεν μπορεί να αναγνωρίσει φάρμακα από περιεχόμενο QR.")
       : view.reason === "conflict"
-        ? "Αυτός ο κωδικός αντιστοιχεί σε περισσότερα από ένα προϊόντα στα επίσημα δεδομένα μας — δεν μπορούμε να τον επιλύσουμε αυτόματα με ασφάλεια. Αναζητήστε το φάρμακο χειροκίνητα."
+        ? t("Αυτός ο κωδικός αντιστοιχεί σε περισσότερα από ένα προϊόντα στα επίσημα δεδομένα μας — δεν μπορούμε να τον επιλύσουμε αυτόματα με ασφάλεια. Αναζητήστε το φάρμακο χειροκίνητα.")
         : view.offline
           ? view.reason === "unresolved"
-            ? "Αναγνωρίσαμε τον κωδικό του φαρμάκου, αλλά δεν έχουμε ακόμα στοιχεία για αυτό το προϊόν εκτός σύνδεσης. Το αποθηκεύσαμε και θα προσπαθήσουμε ξανά μόλις συνδεθείτε."
-            : "Είστε εκτός σύνδεσης — δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Το αποθηκεύσαμε και θα προσπαθήσουμε ξανά μόλις συνδεθείτε."
+            ? t("Αναγνωρίσαμε τον κωδικό του φαρμάκου, αλλά δεν έχουμε ακόμα στοιχεία για αυτό το προϊόν εκτός σύνδεσης. Το αποθηκεύσαμε και θα προσπαθήσουμε ξανά μόλις συνδεθείτε.")
+            : t("Είστε εκτός σύνδεσης — δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Το αποθηκεύσαμε και θα προσπαθήσουμε ξανά μόλις συνδεθείτε.")
           : view.reason === "unresolved"
-            ? "Αναγνωρίσαμε τον κωδικό του φαρμάκου, αλλά δεν έχουμε ακόμα στοιχεία για αυτό το προϊόν στον κατάλογό μας."
-            : "Δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος.";
+            ? t("Αναγνωρίσαμε τον κωδικό του φαρμάκου, αλλά δεν έχουμε ακόμα στοιχεία για αυτό το προϊόν στον κατάλογό μας.")
+            : t("Δεν μπορέσαμε να αναγνωρίσουμε αυτόματα αυτό το πακέτο. Αυτό είναι φυσιολογικό — ο κατάλογος είναι ακόμα περιορισμένος.");
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-dashed border-stone-300 p-4 text-center">
@@ -379,9 +381,9 @@ export function ScanStep({
               if (view.parsed) onSearchInstead(view.parsed);
             }}
           >
-            Βρείτε το στον κατάλογο
+            <T>Βρείτε το στον κατάλογο</T>
           </Button>
-          <p className="text-center text-[15px] text-stone-600">Θα το αναγνωρίζουμε αυτόματα την επόμενη φορά που θα σαρώσετε αυτή τη συσκευασία.</p>
+          <p className="text-center text-[15px] text-stone-600"><T>Θα το αναγνωρίζουμε αυτόματα την επόμενη φορά που θα σαρώσετε αυτή τη συσκευασία.</T></p>
         </div>
       )}
       {
@@ -409,10 +411,10 @@ export function ScanStep({
       }
       {view.diagnostics && <ScanDiagnosticsPanel diagnostics={view.diagnostics} />}
       <Button variant="secondary" onClick={() => { playSound("button"); onFallbackToManual(view.parsed); }}>
-        Συνέχεια με χειροκίνητη καταχώριση
+        <T>Συνέχεια με χειροκίνητη καταχώριση</T>
       </Button>
       <Button variant="tertiary" onClick={() => { playSound("button"); onCancel(); }} className="self-start px-0 underline">
-        ← Πίσω
+        <T>← Πίσω</T>
       </Button>
     </div>
   );

@@ -19,6 +19,7 @@ import { dosageFormLabel, TREATMENT_STATE_LABELS } from "@/lib/medications/label
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import { MedicationRowsSkeleton } from "@/components/shell/ScreenSkeletons";
 import { SkeletonStatus } from "@/components/ui/Skeleton";
+import { useT } from "@/lib/i18n/client";
 
 type Segment = "all" | "active" | "inactive";
 
@@ -44,15 +45,16 @@ export default function MedicationsPage() {
   const strengths = useMedicationStrengths(medications);
   const schedules = useScheduleSummaries(profileId, medications);
   const lowStockIds = useLowStockMedicationIds(profileId, medications);
+  const t = useT();
 
   const allCount = medications.length;
   const activeCount = medications.filter((m) => m.treatmentState === "active").length;
   const inactiveCount = allCount - activeCount;
 
   const tabs: FilterTab<Segment>[] = [
-    { value: "all", label: `Όλα (${allCount})` },
-    { value: "active", label: `Ενεργά (${activeCount})` },
-    { value: "inactive", label: `Ανενεργά (${inactiveCount})` },
+    { value: "all", label: t("Όλα ({count})", { count: allCount }) },
+    { value: "active", label: t("Ενεργά ({count})", { count: activeCount }) },
+    { value: "inactive", label: t("Ανενεργά ({count})", { count: inactiveCount }) },
   ];
 
   let visible: UserMedicationRecord[];
@@ -72,21 +74,21 @@ export default function MedicationsPage() {
   return (
     <div className="flex flex-col gap-5 px-5 pt-1 pb-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Φάρμακα</h1>
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">{t("Φάρμακα")}</h1>
         <ButtonLink href="/medications/add" onClick={() => playSound("button")}>
           <PlusIcon />
-          Προσθήκη
+          {t("Προσθήκη")}
         </ButtonLink>
       </div>
 
       <label className="relative block">
-        <span className="sr-only">Αναζήτηση φαρμάκων</span>
+        <span className="sr-only">{t("Αναζήτηση φαρμάκων")}</span>
         <SearchIcon className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-stone-500" />
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Αναζήτηση φαρμάκων…"
+          placeholder={t("Αναζήτηση φαρμάκων…")}
           className="min-h-12 w-full rounded-xl bg-surface-muted py-2 pr-4 pl-11 text-base text-stone-900 placeholder:text-stone-500 focus:ring-2 focus:ring-accent-600/25 focus:outline-none"
         />
       </label>
@@ -98,7 +100,7 @@ export default function MedicationsPage() {
           playSound("button");
           setSegment(next);
         }}
-        label="Φίλτρο φαρμάκων"
+        label={t("Φίλτρο φαρμάκων")}
       />
 
       {status === "loading" && (
@@ -108,15 +110,16 @@ export default function MedicationsPage() {
       )}
 
       {status === "ready" && visible.length === 0 && (
-        <EmptyState icon={<EmptyMedIcon />} title={normalizedQuery ? "Δεν βρέθηκαν φάρμακα." : EMPTY_SEGMENT_MESSAGE[segment]} />
+        <EmptyState icon={<EmptyMedIcon />} title={t(normalizedQuery ? "Δεν βρέθηκαν φάρμακα." : EMPTY_SEGMENT_MESSAGE[segment])} />
       )}
 
       {status === "ready" && visible.length > 0 && (
-        <ul className="flex flex-col gap-3" aria-label="Λίστα φαρμάκων">
+        <ul className="flex flex-col gap-3" aria-label={t("Λίστα φαρμάκων")}>
           {visible.map((med) => {
             const name = names.get(med.id) ?? "…";
-            const detail = [strengths.get(med.id), dosageFormLabel(med.customForm ?? med.inventoryUnit)].filter(Boolean).join(" • ");
-            const frequency = med.treatmentState === "active" ? schedules.get(med.id) : TREATMENT_STATE_LABELS[med.treatmentState];
+            const form = dosageFormLabel(med.customForm ?? med.inventoryUnit);
+            const detail = [strengths.get(med.id), form && t(form)].filter(Boolean).join(" • ");
+            const frequency = med.treatmentState === "active" ? schedules.get(med.id) : t(TREATMENT_STATE_LABELS[med.treatmentState]);
             const lowStock = lowStockIds.has(med.id);
             return (
               <li key={med.id}>
@@ -137,7 +140,7 @@ export default function MedicationsPage() {
                     {lowStock && (
                       <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-amber-700">
                         <LowStockGlyph />
-                        Χαμηλό απόθεμα
+                        {t("Χαμηλό απόθεμα")}
                       </p>
                     )}
                   </div>

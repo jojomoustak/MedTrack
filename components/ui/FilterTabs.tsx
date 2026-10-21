@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n/client";
+
 export interface FilterTab<T extends string> {
   value: T;
   label: string;
@@ -23,8 +25,10 @@ export function FilterTabs<T extends string>({
   onChange: (value: T) => void;
   label: string;
 }) {
+  // Labels arrive in Greek (or already translated) and are shown in the chosen language.
+  const t = useT();
   return (
-    <div role="tablist" aria-label={label} className="flex gap-2">
+    <div role="tablist" aria-label={t(label)} className="flex gap-2">
       {tabs.map((tab) => {
         const active = tab.value === value;
         return (
@@ -40,7 +44,7 @@ export function FilterTabs<T extends string>({
                 : "bg-surface-muted font-medium text-stone-700 active:bg-stone-200"
             }`}
           >
-            {tab.label}
+            {t(tab.label)}
           </button>
         );
       })}

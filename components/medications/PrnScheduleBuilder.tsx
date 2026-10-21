@@ -6,6 +6,7 @@ import type { MedicationForm } from "@/lib/domain/user-medication";
 import { Button } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { FIELD_INPUT } from "@/components/ui/field-styles";
+import { T, useT } from "@/lib/i18n/client";
 
 export interface PrnScheduleValues {
   doseQuantityValue: string;
@@ -20,6 +21,7 @@ export interface PrnScheduleBuilderProps {
 
 /** Phase 3 §2.5's "PRN setup" — no fixed times, dose quantity only. There's no reminder/threshold column on `MedicationSchedule` to hold anything further here. */
 export function PrnScheduleBuilder({ onSubmit, onBack, initial }: PrnScheduleBuilderProps) {
+  const t = useT();
   const [value, setValue] = useState(initial?.doseQuantityValue ?? "1");
   const [unit, setUnit] = useState<MedicationForm>(initial?.doseQuantityUnit ?? "tablet");
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export function PrnScheduleBuilder({ onSubmit, onBack, initial }: PrnScheduleBui
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!value.trim()) {
-      setError("Συμπληρώστε την ποσότητα δόσης.");
+      setError(t("Συμπληρώστε την ποσότητα δόσης."));
       return;
     }
     setError(null);
@@ -37,32 +39,32 @@ export function PrnScheduleBuilder({ onSubmit, onBack, initial }: PrnScheduleBui
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="text-[22px] font-bold tracking-tight text-stone-900">Όποτε χρειάζεται</h2>
-      <p className="text-[15px] text-stone-600">Χωρίς σταθερό πρόγραμμα — καταγράφετε τη δόση όποτε τη χρειάζεστε.</p>
+      <h2 className="text-[22px] font-bold tracking-tight text-stone-900"><T>Όποτε χρειάζεται</T></h2>
+      <p className="text-[15px] text-stone-600"><T>Χωρίς σταθερό πρόγραμμα — καταγράφετε τη δόση όποτε τη χρειάζεστε.</T></p>
 
       <div className="flex gap-3">
         <label className="flex flex-1 flex-col gap-2">
-          <span className="text-[17px] font-semibold text-stone-800">Ποσότητα δόσης</span>
+          <span className="text-[17px] font-semibold text-stone-800"><T>Ποσότητα δόσης</T></span>
           <input
             type="text"
             inputMode="decimal"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            aria-label="Ποσότητα δόσης"
+            aria-label={t("Ποσότητα δόσης")}
             className={`${FIELD_INPUT} pr-4`}
           />
         </label>
         <label className="flex flex-1 flex-col gap-2">
-          <span className="text-[17px] font-semibold text-stone-800">Μονάδα</span>
+          <span className="text-[17px] font-semibold text-stone-800"><T>Μονάδα</T></span>
           <select
             value={unit}
             onChange={(e) => setUnit(e.target.value as MedicationForm)}
-            aria-label="Μονάδα δόσης"
+            aria-label={t("Μονάδα δόσης")}
             className={`${FIELD_INPUT} pr-4`}
           >
             {FORM_OPTIONS.map((option) => (
               <option key={option} value={option}>
-                {FORM_LABELS[option]}
+                {t(FORM_LABELS[option])}
               </option>
             ))}
           </select>
@@ -85,10 +87,10 @@ export function PrnScheduleBuilder({ onSubmit, onBack, initial }: PrnScheduleBui
           size="lg"
           className="flex-1"
         >
-          Πίσω
+          <T>Πίσω</T>
         </Button>
         <Button type="submit" size="lg" className="flex-1">
-          Συνέχεια
+          <T>Συνέχεια</T>
         </Button>
       </div>
     </form>

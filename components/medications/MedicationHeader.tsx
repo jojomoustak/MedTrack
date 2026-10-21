@@ -6,15 +6,18 @@ import { useDisplayNames } from "@/lib/medications/client/use-display-names";
 import { useMedicationStrengths } from "@/lib/medications/client/use-medication-strengths";
 import { dosageFormLabel } from "@/lib/medications/labels";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
+import { useT } from "@/lib/i18n/client";
 
 /** Which medication a task screen is about (reference mockup, Adjust Stock): its tile, name, and "strength • form". */
 export function MedicationHeader({ medication }: { medication: UserMedicationRecord }) {
+  const t = useT();
   // Memoized: the name/strength hooks re-resolve whenever this array's identity changes.
   const list = useMemo(() => [medication], [medication]);
   const name = useDisplayNames(list).get(medication.id) ?? "…";
   const strength = useMedicationStrengths(list).get(medication.id) ?? null;
   const form = medication.customForm ?? medication.inventoryUnit;
-  const subtitle = [strength, dosageFormLabel(form)].filter(Boolean).join(" • ");
+  const formLabel = dosageFormLabel(form);
+  const subtitle = [strength, formLabel && t(formLabel)].filter(Boolean).join(" • ");
 
   return (
     <div className="flex items-center gap-4">

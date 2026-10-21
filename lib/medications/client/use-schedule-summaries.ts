@@ -5,6 +5,7 @@ import { DexieMedicationScheduleRepository } from "@/lib/db-client/medication-sc
 import { onLocalDataHydrated } from "@/lib/sync/client/local-data-signal";
 import { readSnapshot, refreshSnapshot } from "@/lib/client-cache/snapshot";
 import { summarizeSchedules } from "@/lib/medications/schedule-summary";
+import { useLanguage } from "@/lib/i18n/client";
 import type { MedicationScheduleRecord } from "@/lib/domain/medication-schedule";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 
@@ -16,7 +17,9 @@ function localToday(): string {
 /** Each medication's schedule summary ("2 φορές την ημέρα"), read from local storage — works offline. */
 export function useScheduleSummaries(profileId: string, medications: UserMedicationRecord[]): Map<string, string | null> {
   // Starts from what it showed last time (`lib/client-cache/snapshot.ts`) — entries, not a Map, so an unchanged re-read compares equal.
-  const snapshotKey = `schedule-summaries:${profileId}`;
+  // In the screen's language ("2 φορές την ημέρα" / "Twice a day"), each kept apart.
+  const language = useLanguage();
+  const snapshotKey = `schedule-summaries:${profileId}:${language}`;
   const [entries, setEntries] = useState<[string, string | null][]>(() => readSnapshot<[string, string | null][]>(snapshotKey) ?? []);
   const [nonce, setNonce] = useState(0);
 
@@ -34,7 +37,7 @@ export function useScheduleSummaries(profileId: string, medications: UserMedicat
       }
       const today = localToday();
       const map = new Map<string, string | null>();
-      for (const med of medications) map.set(med.id, summarizeSchedules(byMedication.get(med.id) ?? [], today));
+      for (const med of medications) map.set(med.id, summarizeSchedules(byMedication.get(med.id) ?? [], today, language));
       const settled = refreshSnapshot(snapshotKey, [...map.entries()]);
       if (!cancelled) setEntries(settled);
     }
@@ -42,7 +45,7 @@ export function useScheduleSummaries(profileId: string, medications: UserMedicat
     return () => {
       cancelled = true;
     };
-  }, [profileId, medications, nonce, snapshotKey]);
+  }, [profileId, medications, nonce, snapshotKey, language]);
 
   return useMemo(() => new Map(entries), [entries]);
 }

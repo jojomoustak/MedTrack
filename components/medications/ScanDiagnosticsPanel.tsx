@@ -1,6 +1,7 @@
 "use client";
 
 import type { BarcodeFormat } from "@/lib/domain/gs1";
+import { T } from "@/lib/i18n/client";
 
 export interface ScanDiagnostics {
   format: BarcodeFormat;
@@ -43,7 +44,7 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: ScanDiagnos
 
   return (
     <div className="rounded-xl border border-dashed border-amber-400 bg-amber-50 p-3 text-xs">
-      <p className="mb-2 font-semibold text-amber-800">Διαγνωστικά σάρωσης (μόνο development)</p>
+      <p className="mb-2 font-semibold text-amber-800"><T>Διαγνωστικά σάρωσης (μόνο development)</T></p>
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-amber-900">
         <dt>Format:</dt>
         <dd>{diagnostics.format}</dd>

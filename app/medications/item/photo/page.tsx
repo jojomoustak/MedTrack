@@ -10,6 +10,7 @@ import { useReturnTo } from "@/lib/navigation/client/use-return-to";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { usePathId } from "@/lib/navigation/client/use-path-id";
 import { useCameraSystemBars } from "@/lib/platform/system-bars";
+import { useT, T } from "@/lib/i18n/client";
 
 /**
  * A medication's photo (reference mockup, screen 13): a full-screen camera
@@ -26,6 +27,7 @@ import { useCameraSystemBars } from "@/lib/platform/system-bars";
  *   2. From the medication's detail screen, to take, replace or remove it.
  */
 function PhotoScreen() {
+  const t = useT();
   const session = useCurrentProfile();
   const router = useRouter();
   const returnTo = useReturnTo();
@@ -52,14 +54,14 @@ function PhotoScreen() {
         <button
           type="button"
           onClick={leave}
-          aria-label="Κλείσιμο"
+          aria-label={t("Κλείσιμο")}
           className="flex size-12 items-center justify-center justify-self-start rounded-full bg-black/35 active:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round">
             <path d="m6 6 12 12M18 6 6 18" />
           </svg>
         </button>
-        <h1 className="text-[17px] font-semibold">Φωτογραφία φαρμάκου</h1>
+        <h1 className="text-[17px] font-semibold"><T>Φωτογραφία φαρμάκου</T></h1>
         <span aria-hidden="true" />
       </div>
     </>
@@ -71,7 +73,7 @@ function PhotoScreen() {
       <main>
         <CameraViewfinder top={top}>
           <span role="status" className="block size-full bg-white/5 motion-safe:animate-pulse">
-            <span className="sr-only">Φόρτωση…</span>
+            <span className="sr-only"><T>Φόρτωση…</T></span>
           </span>
         </CameraViewfinder>
       </main>
@@ -83,7 +85,7 @@ function PhotoScreen() {
       <MedicationPhotoAttach
         userMedicationId={params.id}
         top={top}
-        intro={isNew ? "Το φάρμακο προστέθηκε. Αν θέλετε, φωτογραφίστε τη συσκευασία του." : undefined}
+        intro={isNew ? t("Το φάρμακο προστέθηκε. Αν θέλετε, φωτογραφίστε τη συσκευασία του.") : undefined}
       />
     </main>
   );

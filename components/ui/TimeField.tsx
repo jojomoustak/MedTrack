@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { T, useT } from "@/lib/i18n/client";
 
 const ROW_PX = 48;
 /** Rows above and below the chosen one: five visible in all. */
@@ -216,6 +217,7 @@ export function TimeField({
   trailing?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   const current = parse(value);
 
   function set(hour: number, minute: number) {
@@ -241,7 +243,7 @@ export function TimeField({
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          aria-label={`${label}: ${current ? value : "χωρίς ώρα"}`}
+          aria-label={current ? `${label}: ${value}` : t("{label}: χωρίς ώρα", { label })}
           className="flex min-h-18 flex-1 items-center gap-3.5 px-4 text-left"
         >
           <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent-50 text-accent-700">
@@ -250,12 +252,12 @@ export function TimeField({
           {current ? (
             <span className="flex items-baseline gap-2.5">
               <span className="text-[28px] font-bold leading-none tracking-tight text-stone-900 tabular-nums">{value}</span>
-              {part && <span className="text-[15px] font-medium text-stone-500">{DAY_PART_LABEL[part]}</span>}
+              {part && <span className="text-[15px] font-medium text-stone-500">{t(DAY_PART_LABEL[part])}</span>}
             </span>
           ) : (
-            <span className="text-[18px] font-semibold text-accent-700">Επιλέξτε ώρα</span>
+            <span className="text-[18px] font-semibold text-accent-700"><T>Επιλέξτε ώρα</T></span>
           )}
-          {current && !open && <span className="ml-auto text-[15px] font-semibold text-accent-700">Αλλαγή</span>}
+          {current && !open && <span className="ml-auto text-[15px] font-semibold text-accent-700"><T>Αλλαγή</T></span>}
         </button>
         {trailing}
       </div>
@@ -263,11 +265,11 @@ export function TimeField({
         <div className="flex flex-col gap-4 border-t border-stone-100 px-4 pt-3 pb-4">
           <div className="relative flex items-center justify-center gap-3">
             <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 rounded-xl bg-accent-50" style={{ top: PAD_ROWS * ROW_PX, height: ROW_PX }} />
-            <Wheel values={HOURS} selected={shown.hour} onSelect={(hour) => set(hour, shown.minute)} label={`${label}, ώρα`} />
+            <Wheel values={HOURS} selected={shown.hour} onSelect={(hour) => set(hour, shown.minute)} label={t("{label}, ώρα", { label })} />
             <span aria-hidden="true" className="relative pb-1 text-[28px] font-bold text-accent-800">
               :
             </span>
-            <Wheel values={MINUTES} selected={shown.minute} onSelect={(minute) => set(shown.hour, minute)} label={`${label}, λεπτά`} />
+            <Wheel values={MINUTES} selected={shown.minute} onSelect={(minute) => set(shown.hour, minute)} label={t("{label}, λεπτά", { label })} />
           </div>
           <button
             type="button"
@@ -277,7 +279,7 @@ export function TimeField({
             }}
             className="min-h-12 w-full rounded-xl bg-accent-700 text-[17px] font-semibold text-white transition-transform active:scale-[0.98]"
           >
-            Έτοιμο
+            <T>Έτοιμο</T>
           </button>
         </div>
       )}

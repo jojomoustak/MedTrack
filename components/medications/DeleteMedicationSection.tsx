@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { useT } from "@/lib/i18n/client";
 
 /**
  * "Danger zone" delete action for `/medications/[id]/edit` — a two-tap
@@ -21,6 +22,7 @@ export function DeleteMedicationSection({
   error: string | null;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const t = useT();
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
   // Moves focus into the newly-revealed confirm block so a screen-reader
@@ -34,7 +36,7 @@ export function DeleteMedicationSection({
   }, [confirming]);
 
   return (
-    <section className={confirming ? "surface-card flex flex-col gap-3 p-4" : "flex flex-col"} aria-label="Διαγραφή φαρμάκου">
+    <section className={confirming ? "surface-card flex flex-col gap-3 p-4" : "flex flex-col"} aria-label={t("Διαγραφή φαρμάκου")}>
 
       {!confirming ? (
         <Button
@@ -47,17 +49,17 @@ export function DeleteMedicationSection({
           size="lg"
           fullWidth
         >
-          Διαγραφή φαρμάκου
+          {t("Διαγραφή φαρμάκου")}
         </Button>
       ) : (
         <div className="flex flex-col gap-3">
-          <p className="text-[17px] font-semibold text-red-800">Διαγραφή αυτού του φαρμάκου;</p>
+          <p className="text-[17px] font-semibold text-red-800">{t("Διαγραφή αυτού του φαρμάκου;")}</p>
           <p className="text-[15px] text-stone-600">
-            Το φάρμακο θα σταματήσει να εμφανίζεται και οι υπενθυμίσεις του θα ακυρωθούν. Το ιστορικό δόσεων και αποθέματος διατηρείται.
+            {t("Το φάρμακο θα σταματήσει να εμφανίζεται και οι υπενθυμίσεις του θα ακυρωθούν. Το ιστορικό δόσεων και αποθέματος διατηρείται.")}
           </p>
           {error && (
             <p role="alert" className="text-sm text-red-700">
-              {error}
+              {t(error)}
             </p>
           )}
           <div className="flex gap-2">
@@ -72,10 +74,10 @@ export function DeleteMedicationSection({
               size="lg"
               className="flex-1"
             >
-              Άκυρο
+              {t("Άκυρο")}
             </Button>
             <Button variant="danger" onClick={onConfirmDelete} disabled={deleting} aria-busy={deleting} size="lg" className="flex-1">
-              {deleting ? "Διαγραφή…" : "Διαγραφή"}
+              {deleting ? t("Διαγραφή…") : t("Διαγραφή")}
             </Button>
           </div>
         </div>

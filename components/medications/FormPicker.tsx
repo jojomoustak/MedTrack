@@ -5,6 +5,7 @@ import { FORM_LABELS } from "@/components/medications/form-options";
 import { MedicationFormGlyph } from "@/components/medications/MedicationAvatar";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { useT, T } from "@/lib/i18n/client";
 
 /**
  * The forms a medicine comes in, as tiles with the same glyphs its row
@@ -33,6 +34,7 @@ const MORE: MedicationForm[] = ["dose", "mg", "mcg", "other"];
  * when one of them is the current choice.
  */
 export function FormPicker({ value, onChange }: { value: MedicationForm | null; onChange: (form: MedicationForm) => void }) {
+  const t = useT();
   const [showMore, setShowMore] = useState(value !== null && MORE.includes(value));
 
   function choose(form: MedicationForm) {
@@ -42,7 +44,7 @@ export function FormPicker({ value, onChange }: { value: MedicationForm | null; 
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-3 gap-2.5" role="radiogroup" aria-label="Μορφή φαρμάκου">
+      <div className="grid grid-cols-3 gap-2.5" role="radiogroup" aria-label={t("Μορφή φαρμάκου")}>
         {TILES.map(({ form, label, unit }) => {
           const checked = value === form;
           return (
@@ -51,7 +53,7 @@ export function FormPicker({ value, onChange }: { value: MedicationForm | null; 
               type="button"
               role="radio"
               aria-checked={checked}
-              aria-label={unit ? `${label} (${unit})` : label}
+              aria-label={unit ? `${t(label)} (${unit})` : t(label)}
               onClick={() => choose(form)}
               className={`flex min-h-24 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 py-3 transition duration-150 active:scale-95 ${
                 checked
@@ -61,7 +63,7 @@ export function FormPicker({ value, onChange }: { value: MedicationForm | null; 
             >
               <MedicationFormGlyph form={form} size={34} />
               <span className={`text-[15px] font-semibold leading-tight ${checked ? "text-white" : "text-stone-800"}`}>
-                {label}
+                {t(label)}
                 {unit && <span className={`font-medium ${checked ? "text-accent-100" : "text-stone-500"}`}> {unit}</span>}
               </span>
             </button>
@@ -78,7 +80,7 @@ export function FormPicker({ value, onChange }: { value: MedicationForm | null; 
         }}
         className="inline-flex min-h-11 items-center gap-1 self-start text-[16px] font-semibold text-accent-700"
       >
-        Άλλη μορφή
+        <T>Άλλη μορφή</T>
         <svg
           viewBox="0 0 20 20"
           width="18"
@@ -97,7 +99,7 @@ export function FormPicker({ value, onChange }: { value: MedicationForm | null; 
       </button>
 
       {showMore && (
-        <div className="-mt-1 grid grid-cols-4 gap-2" role="radiogroup" aria-label="Άλλη μορφή">
+        <div className="-mt-1 grid grid-cols-4 gap-2" role="radiogroup" aria-label={t("Άλλη μορφή")}>
           {MORE.map((form) => {
             const checked = value === form;
             return (
@@ -111,7 +113,7 @@ export function FormPicker({ value, onChange }: { value: MedicationForm | null; 
                   checked ? "bg-accent-700 text-white" : "bg-surface-muted text-stone-700"
                 }`}
               >
-                {FORM_LABELS[form]}
+                {t(FORM_LABELS[form])}
               </button>
             );
           })}

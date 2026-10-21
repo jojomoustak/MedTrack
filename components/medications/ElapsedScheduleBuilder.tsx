@@ -8,6 +8,7 @@ import { FIELD_INPUT } from "@/components/ui/field-styles";
 import { TimeField } from "@/components/ui/TimeField";
 import { DateField } from "@/components/ui/DateField";
 import { dateToParam } from "@/components/calendar/date-param";
+import { T, useT } from "@/lib/i18n/client";
 
 export interface ElapsedScheduleValues {
   intervalHours: number;
@@ -22,6 +23,7 @@ export interface ElapsedScheduleBuilderProps {
 
 /** Phase 3 §2.5's "Elapsed builder" — every_n_hours: interval + first-dose anchor. */
 export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedScheduleBuilderProps) {
+  const t = useT();
   const [intervalHours, setIntervalHours] = useState(initial?.intervalHours ? String(initial.intervalHours) : "8");
   const [anchorDate, setAnchorDate] = useState(initial?.anchorDate ?? dateToParam(new Date())); // the phone's own date, not UTC's
   const [anchorTime, setAnchorTime] = useState(initial?.anchorTime ?? "");
@@ -31,11 +33,11 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
     event.preventDefault();
     const hours = Number(intervalHours);
     if (!Number.isInteger(hours) || hours < 1 || hours > 24) {
-      setError("Το διάστημα πρέπει να είναι από 1 έως 24 ώρες.");
+      setError(t("Το διάστημα πρέπει να είναι από 1 έως 24 ώρες."));
       return;
     }
     if (!anchorDate || !anchorTime) {
-      setError("Συμπληρώστε την ημερομηνία και ώρα της πρώτης δόσης.");
+      setError(t("Συμπληρώστε την ημερομηνία και ώρα της πρώτης δόσης."));
       return;
     }
     setError(null);
@@ -47,10 +49,10 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="text-[22px] font-bold tracking-tight text-stone-900">Κάθε πόσες ώρες</h2>
+      <h2 className="text-[22px] font-bold tracking-tight text-stone-900"><T>Κάθε πόσες ώρες</T></h2>
 
       <label className="flex flex-col gap-1">
-        <span className="text-[17px] font-semibold text-stone-800">Κάθε πόσες ώρες;</span>
+        <span className="text-[17px] font-semibold text-stone-800"><T>Κάθε πόσες ώρες;</T></span>
         <input
           type="number"
           inputMode="numeric"
@@ -58,17 +60,17 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
           max={24}
           value={intervalHours}
           onChange={(e) => setIntervalHours(e.target.value)}
-          aria-label="Διάστημα σε ώρες"
+          aria-label={t("Διάστημα σε ώρες")}
           className={`${FIELD_INPUT} pr-4`}
         />
       </label>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-[17px] font-semibold text-stone-800">Πρώτη δόση</legend>
-        <DateField value={anchorDate} onChange={setAnchorDate} label="Ημερομηνία πρώτης δόσης" />
-        <TimeField value={anchorTime} onChange={setAnchorTime} label="Ώρα πρώτης δόσης" />
+        <legend className="text-[17px] font-semibold text-stone-800"><T>Πρώτη δόση</T></legend>
+        <DateField value={anchorDate} onChange={setAnchorDate} label={t("Ημερομηνία πρώτης δόσης")} />
+        <TimeField value={anchorTime} onChange={setAnchorTime} label={t("Ώρα πρώτης δόσης")} />
         <p className="text-[15px] text-stone-600">
-          Το διάστημα υπολογίζεται από την πρώτη δόση και δεν αλλάζει με την αλλαγή ώρας (π.χ. καλοκαιρινή/χειμερινή ώρα).
+          <T>Το διάστημα υπολογίζεται από την πρώτη δόση και δεν αλλάζει με την αλλαγή ώρας (π.χ. καλοκαιρινή/χειμερινή ώρα).</T>
         </p>
       </fieldset>
 
@@ -88,10 +90,10 @@ export function ElapsedScheduleBuilder({ onSubmit, onBack, initial }: ElapsedSch
           size="lg"
           className="flex-1"
         >
-          Πίσω
+          <T>Πίσω</T>
         </Button>
         <Button type="submit" size="lg" className="flex-1">
-          Συνέχεια
+          <T>Συνέχεια</T>
         </Button>
       </div>
     </form>

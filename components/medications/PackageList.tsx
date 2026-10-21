@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { formatQuantity } from "@/lib/domain/quantity";
 import type { MedicationForm } from "@/lib/domain/user-medication";
+import { useLocale, useT } from "@/lib/i18n/client";
 
 const STATUS_LABELS: Record<MedicationPackageStatus, string> = {
   unopened: "Κλειστό",
@@ -26,8 +27,8 @@ function unitLabel(unit: string): string {
   return FORM_LABELS[unit as MedicationForm] ?? unit;
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso + "T00:00:00").toLocaleDateString("el-GR", { day: "numeric", month: "short", year: "numeric" });
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso + "T00:00:00").toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 }
 
 /**
@@ -53,6 +54,8 @@ export function PackageList({
   onChanged: () => void;
 }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const t = useT();
+  const locale = useLocale();
 
   const sorted = [...packages].sort((a, b) => {
     const expiryA = a.expiryDate ?? "9999-99-99";
@@ -107,31 +110,32 @@ export function PackageList({
   }
 
   if (sorted.length === 0) {
-    return <p className="text-sm text-stone-600">Δεν έχετε προσθέσει ακόμα κάποια συσκευασία.</p>;
+    return <p className="text-sm text-stone-600">{t("Δεν έχετε προσθέσει ακόμα κάποια συσκευασία.")}</p>;
   }
 
   return (
-    <ul className="flex flex-col gap-2" aria-label="Συσκευασίες">
+    <ul className="flex flex-col gap-2" aria-label={t("Συσκευασίες")}>
       {sorted.map((pkg) => (
         <Card as="li" key={pkg.id} className="flex flex-col gap-1 p-3">
           <div className="flex items-center justify-between">
             <p className="font-medium">
-              {computePackageRemainingStock(transactions, pkg.id)} / {formatQuantity(pkg.initialQuantityValue)} {unitLabel(pkg.quantityUnit)}
+              {computePackageRemainingStock(transactions, pkg.id)} / {formatQuantity(pkg.initialQuantityValue)} {t(unitLabel(pkg.quantityUnit))}
             </p>
-            <span className="text-sm font-medium text-stone-500">{STATUS_LABELS[pkg.status]}</span>
+            <span className="text-sm font-medium text-stone-500">{t(STATUS_LABELS[pkg.status])}</span>
           </div>
           <p className="text-sm text-stone-600">
-            {pkg.batchNumber ? `Παρτίδα ${pkg.batchNumber}` : "Χωρίς αριθμό παρτίδας"}
-            {pkg.expiryDate ? ` · Λήξη ${formatDate(pkg.expiryDate)}` : " · Χωρίς ημερομηνία λήξης"}
+            {pkg.batchNumber ? t("Παρτίδα {batch}", { batch: pkg.batchNumber }) : t("Χωρίς αριθμό παρτίδας")}
+            {" · "}
+            {pkg.expiryDate ? t("Λήξη {date}", { date: formatDate(pkg.expiryDate, locale) }) : t("Χωρίς ημερομηνία λήξης")}
           </p>
           {pkg.status === "unopened" && (
             <Button variant="secondary" size="sm" onClick={() => void handleOpen(pkg)} disabled={pendingId === pkg.id} className="self-start">
-              Άνοιγμα
+              {t("Άνοιγμα")}
             </Button>
           )}
           {pkg.status === "opened" && (
             <Button variant="secondary" size="sm" onClick={() => void handleDiscard(pkg)} disabled={pendingId === pkg.id} className="self-start">
-              Απόρριψη
+              {t("Απόρριψη")}
             </Button>
           )}
         </Card>

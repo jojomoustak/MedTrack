@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { FORM_LABELS } from "@/components/medications/DetailsStep";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
+import { T, useT } from "@/lib/i18n/client";
 
 export interface AddPackageValues {
   batchNumber: string | null;
@@ -50,6 +51,7 @@ export function AddPackageForm({
   submitting: boolean;
   error: string | null;
 }) {
+  const t = useT();
   const [batchNumber, setBatchNumber] = useState(initialBatch ?? "");
   const [expiryDate, setExpiryDate] = useState(initialExpiry ?? "");
   const [quantityValue, setQuantityValue] = useState("30");
@@ -61,7 +63,7 @@ export function AddPackageForm({
     event.preventDefault();
     const parsed = Number(quantityValue.replace(",", "."));
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      setValidationError("Η ποσότητα πρέπει να είναι θετικός αριθμός.");
+      setValidationError(t("Η ποσότητα πρέπει να είναι θετικός αριθμός."));
       return;
     }
     setValidationError(null);
@@ -78,21 +80,21 @@ export function AddPackageForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
       <fieldset className={FIELD_WRAPPER}>
-        <legend className={`${FIELD_LABEL} mb-2`}>Ποσότητα</legend>
+        <legend className={`${FIELD_LABEL} mb-2`}><T>Ποσότητα</T></legend>
         <div className="flex gap-3">
           <input
             type="text"
             inputMode="decimal"
             value={quantityValue}
             onChange={(e) => setQuantityValue(e.target.value)}
-            aria-label="Ποσότητα συσκευασίας"
+            aria-label={t("Ποσότητα συσκευασίας")}
             className={`${FIELD_INPUT} max-w-28 pr-4 tabular-nums`}
           />
           <span className="relative block flex-1">
-            <select value={quantityUnit} onChange={(e) => setQuantityUnit(e.target.value)} aria-label="Μονάδα" className={`${FIELD_INPUT} appearance-none pr-11`}>
+            <select value={quantityUnit} onChange={(e) => setQuantityUnit(e.target.value)} aria-label={t("Μονάδα")} className={`${FIELD_INPUT} appearance-none pr-11`}>
               {Object.entries(FORM_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
-                  {label}
+                  {t(label)}
                 </option>
               ))}
             </select>
@@ -114,18 +116,18 @@ export function AddPackageForm({
       </fieldset>
 
       <label className={FIELD_WRAPPER}>
-        <span className={FIELD_LABEL}>Αριθμός παρτίδας</span>
-        <input type="text" value={batchNumber} onChange={(e) => setBatchNumber(e.target.value)} placeholder="Προαιρετικό" className={`${FIELD_INPUT} pr-4`} />
+        <span className={FIELD_LABEL}><T>Αριθμός παρτίδας</T></span>
+        <input type="text" value={batchNumber} onChange={(e) => setBatchNumber(e.target.value)} placeholder={t("Προαιρετικό")} className={`${FIELD_INPUT} pr-4`} />
       </label>
 
       <label className={FIELD_WRAPPER}>
-        <span className={FIELD_LABEL}>Ημερομηνία λήξης</span>
+        <span className={FIELD_LABEL}><T>Ημερομηνία λήξης</T></span>
         <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className={`${FIELD_INPUT} pr-4`} />
       </label>
 
       <label className="surface-card flex min-h-16 items-center gap-3 px-4 py-3">
         <input type="checkbox" checked={openNow} onChange={(e) => setOpenNow(e.target.checked)} className="size-5 shrink-0 accent-accent-700" />
-        <span className="text-[17px] text-stone-800">Άνοιγμα τώρα (μετράει στο τρέχον απόθεμα)</span>
+        <span className="text-[17px] text-stone-800"><T>Άνοιγμα τώρα (μετράει στο τρέχον απόθεμα)</T></span>
       </label>
 
       {(validationError ?? error) && (
@@ -135,7 +137,7 @@ export function AddPackageForm({
       )}
 
       <Button type="submit" size="lg" fullWidth disabled={submitting} aria-busy={submitting}>
-        {submitting ? "Αποθήκευση…" : "Προσθήκη συσκευασίας"}
+        {submitting ? t("Αποθήκευση…") : t("Προσθήκη συσκευασίας")}
       </Button>
     </form>
   );

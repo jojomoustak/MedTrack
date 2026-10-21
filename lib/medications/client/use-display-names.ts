@@ -8,6 +8,7 @@ import { cacheMissingCatalogProducts, isCatalogProductRequestPending } from "@/l
 import type { CatalogCacheRepository, OfflineIndexRepository } from "@/lib/domain/repositories";
 import type { UserMedicationRecord } from "@/lib/domain/user-medication";
 import { shortCatalogName } from "@/lib/domain/catalog-short-name";
+import { useT } from "@/lib/i18n/client";
 
 /**
  * The name-resolution rule itself, extracted so a non-React caller (e.g.
@@ -91,6 +92,7 @@ export function __clearResolvedNamesForTests(): void {
  * it rather than a second, drifting copy.
  */
 export function useDisplayNames(medications: UserMedicationRecord[], { full = false }: { full?: boolean } = {}): Map<string, string> {
+  const t = useT();
   const [version, setVersion] = useState(0);
 
   // Real bug (2026-08-28, see offline-index-signal.ts's doc): re-resolves
@@ -151,10 +153,11 @@ export function useDisplayNames(medications: UserMedicationRecord[], { full = fa
     const names = new Map<string, string>();
     for (const med of medications) {
       const entry = resolvedNames.get(nameKey(med, full));
-      if (entry) names.set(med.id, entry.name);
+      // The placeholder is cached in Greek and read out in the screen's language.
+      if (entry) names.set(med.id, entry.name === PLACEHOLDER_NAME && !med.customName ? t(PLACEHOLDER_NAME) : entry.name);
     }
     return names;
     // `version` is how this hears that the module-level cache gained names.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [medications, full, version]);
+  }, [medications, full, version, t]);
 }

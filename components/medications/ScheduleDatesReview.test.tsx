@@ -28,6 +28,13 @@ describe("describeSpan — the end date read back in words", () => {
   it("says nothing for an end before the start", () => {
     expect(describeSpan("2026-10-20", "2026-10-19")).toBeNull();
   });
+
+  it("reads it back in English too", () => {
+    const today = new Date(2026, 9, 20);
+    expect(describeSpan("2026-10-20", "2026-10-29", today, "en")).toBe("For 10 days, up to and including Thursday 29 October.");
+    expect(describeSpan("2026-10-20", "2026-10-24", today, "en")).toBe("For 5 days, up to and including Saturday 24 October.");
+    expect(describeSpan("2026-10-20", "2026-10-20", today, "en")).toBe("For 1 day, up to and including Tuesday 20 October.");
+  });
 });
 
 describe("ScheduleDatesReview", () => {
