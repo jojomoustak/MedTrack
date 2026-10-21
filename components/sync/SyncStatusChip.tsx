@@ -5,6 +5,7 @@ import { SyncStateIcon } from "@/components/sync/SyncStateIcon";
 import { useReducedMotion } from "@/lib/sync/client/use-reduced-motion";
 import type { SyncState } from "@/lib/domain/sync";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { useT } from "@/lib/i18n/client";
 
 export interface SyncStatusChipProps {
   state: SyncState;
@@ -24,6 +25,7 @@ export interface SyncStatusChipProps {
  */
 export function SyncStatusChip({ state, onRetry, className, compact = false }: SyncStatusChipProps) {
   const reducedMotion = useReducedMotion();
+  const t = useT();
   const config = SYNC_STATE_CHIP_CONFIG[state];
 
   // `synced` (and any future state without a config entry) → no persistent chip.
@@ -39,7 +41,7 @@ export function SyncStatusChip({ state, onRetry, className, compact = false }: S
   const content = (
     <>
       <SyncStateIcon shape={config.icon} reducedMotion={reducedMotion} />
-      {config.label && !compact ? <span aria-hidden="true">{config.label}</span> : null}
+      {config.label && !compact ? <span aria-hidden="true">{t(config.label)}</span> : null}
     </>
   );
 
@@ -52,7 +54,7 @@ export function SyncStatusChip({ state, onRetry, className, compact = false }: S
           onRetry?.();
         }}
         className={classes}
-        aria-label={config.srLabel}
+        aria-label={t(config.srLabel)}
         data-sync-state={state}
       >
         {content}
@@ -61,7 +63,7 @@ export function SyncStatusChip({ state, onRetry, className, compact = false }: S
   }
 
   return (
-    <span className={classes} role="status" aria-label={config.srLabel} data-sync-state={state}>
+    <span className={classes} role="status" aria-label={t(config.srLabel)} data-sync-state={state}>
       {content}
     </span>
   );

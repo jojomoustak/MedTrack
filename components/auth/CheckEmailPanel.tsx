@@ -8,6 +8,7 @@ import { playSound } from "@/lib/sound/client/play-sound";
 import { ForgotPasswordIllustration } from "@/components/auth/AuthIllustrations";
 import { ResendVerificationButton } from "@/components/auth/ResendVerificationButton";
 import { Button } from "@/components/ui/Button";
+import { T } from "@/lib/i18n/client";
 
 type Message = "pending" | "sign-in-elsewhere" | "offline";
 
@@ -73,31 +74,35 @@ export function CheckEmailPanel({ email, password, onChangeEmail }: { email: str
   return (
     <div className="flex w-full flex-col">
       <ForgotPasswordIllustration className="size-40 self-center" />
-      <h1 className="mt-6 text-[29px] font-bold leading-tight tracking-tight text-stone-900">Ελέγξτε το email σας</h1>
+      <h1 className="mt-6 text-[29px] font-bold leading-tight tracking-tight text-stone-900">
+        <T>Ελέγξτε το email σας</T>
+      </h1>
       <p className="mt-3 text-lg leading-snug text-stone-600">
-        Στείλαμε έναν σύνδεσμο στο
+        <T>Στείλαμε έναν σύνδεσμο στο</T>
         <span className="block font-semibold text-stone-900 wrap-anywhere">{email}</span>
       </p>
-      <p className="mt-2 text-lg leading-snug text-stone-600">Πατήστε τον για να ενεργοποιηθεί ο λογαριασμός σας και μετά γυρίστε εδώ.</p>
+      <p className="mt-2 text-lg leading-snug text-stone-600">
+        <T>Πατήστε τον για να ενεργοποιηθεί ο λογαριασμός σας και μετά γυρίστε εδώ.</T>
+      </p>
 
       <div className="mt-7 flex flex-col gap-3">
         {message === "pending" && (
           <p role="status" className="text-[15px] leading-snug text-stone-700">
-            Δεν έχει επιβεβαιωθεί ακόμα. Πατήστε τον σύνδεσμο στο email και δοκιμάστε ξανά.
+            <T>Δεν έχει επιβεβαιωθεί ακόμα. Πατήστε τον σύνδεσμο στο email και δοκιμάστε ξανά.</T>
           </p>
         )}
         {message === "sign-in-elsewhere" && (
           <p role="alert" className="text-sm leading-snug text-red-700">
-            Δεν ήταν δυνατή η σύνδεση από εδώ.{" "}
+            <T>Δεν ήταν δυνατή η σύνδεση από εδώ.</T>{" "}
             <Link href="/login" onClick={() => playSound("button")} className="font-semibold text-accent-700 underline">
-              Συνδεθείτε από την οθόνη σύνδεσης
+              <T>Συνδεθείτε από την οθόνη σύνδεσης</T>
             </Link>
             .
           </p>
         )}
         {message === "offline" && (
           <p role="alert" className="text-sm leading-snug text-red-700">
-            Δεν ήταν δυνατή η σύνδεση με το διαδίκτυο. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.
+            <T>Δεν ήταν δυνατή η σύνδεση με το διαδίκτυο. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.</T>
           </p>
         )}
 
@@ -111,12 +116,14 @@ export function CheckEmailPanel({ email, password, onChangeEmail }: { email: str
             void trySignIn(true);
           }}
         >
-          {checking ? "Έλεγχος…" : "Συνέχεια"}
+          <T>{checking ? "Έλεγχος…" : "Συνέχεια"}</T>
         </Button>
         <ResendVerificationButton email={email} />
       </div>
 
-      <p className="mt-5 text-center text-[15px] leading-relaxed text-stone-500">Δεν το βλέπετε; Κοιτάξτε και στα ανεπιθύμητα (spam).</p>
+      <p className="mt-5 text-center text-[15px] leading-relaxed text-stone-500">
+        <T>Δεν το βλέπετε; Κοιτάξτε και στα ανεπιθύμητα (spam).</T>
+      </p>
 
       <button
         type="button"
@@ -126,7 +133,7 @@ export function CheckEmailPanel({ email, password, onChangeEmail }: { email: str
         }}
         className="mt-3 min-h-12 self-center text-[15px] font-semibold text-accent-700"
       >
-        Λάθος email; Διορθώστε το
+        <T>Λάθος email; Διορθώστε το</T>
       </button>
     </div>
   );

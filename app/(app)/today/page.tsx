@@ -20,6 +20,8 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { logger } from "@/lib/logging/logger";
 import { TodayDosesSkeleton } from "@/components/shell/ScreenSkeletons";
+import { useLanguage, useT } from "@/lib/i18n/client";
+import type { Language } from "@/lib/i18n/language";
 
 function LowStockIcon() {
   return (
@@ -40,9 +42,10 @@ function LowStockIcon() {
  * suppressed forever, only de-prioritized for the rest of today's visits.
  */
 function LowStockBanner({ names, onDismiss }: { names: string[]; onDismiss: () => void }) {
-  const label = names.length === 1 ? `${names[0]} — χαμηλό απόθεμα.` : `${names.length} φάρμακα με χαμηλό απόθεμα: ${names.join(", ")}.`;
+  const t = useT();
+  const label = names.length === 1 ? t("{name} — χαμηλό απόθεμα.", { name: names[0] }) : t("{count} φάρμακα με χαμηλό απόθεμα: {names}.", { count: names.length, names: names.join(", ") });
   return (
-    <AlertBanner tone="warn" icon={<LowStockIcon />} onDismiss={onDismiss} dismissLabel="Απόκρυψη ειδοποίησης χαμηλού αποθέματος για τώρα">
+    <AlertBanner tone="warn" icon={<LowStockIcon />} onDismiss={onDismiss} dismissLabel={t("Απόκρυψη ειδοποίησης χαμηλού αποθέματος για τώρα")}>
       <Link href="/medications" onClick={() => playSound("button")} className="block min-h-11 py-1.5">
         {label}
       </Link>
@@ -50,22 +53,29 @@ function LowStockBanner({ names, onDismiss }: { names: string[]; onDismiss: () =
   );
 }
 
-/** Greek has no distinct "good afternoon" — Καλημέρα until noon, Καλησπέρα after (common convention). */
-function greeting(now: Date): string {
-  return now.getHours() < 12 ? "Καλημέρα" : "Καλησπέρα";
+/**
+ * Greek has no distinct "good afternoon" — Καλημέρα until noon, Καλησπέρα
+ * after (common convention). English has three, so it gets its own.
+ */
+function greeting(now: Date, language: Language): string {
+  const hour = now.getHours();
+  if (language === "en") return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  return hour < 12 ? "Καλημέρα" : "Καλησπέρα";
 }
 
 /** Today's greeting (reference mockup, screen 1) — the wordmark and sync indicator above it come from the shared `AppBar`. */
 function TodayGreeting({ today }: { today: Date }) {
   const firstName = useFirstName();
+  const language = useLanguage();
+  const t = useT();
 
   return (
     <div>
       <h1 className="text-[30px] leading-tight font-bold tracking-tight text-stone-900">
-        {greeting(today)}
+        {greeting(today, language)}
         {firstName ? `, ${firstName}` : ""}
       </h1>
-      <p className="mt-1 text-[16px] text-stone-600">Μείνετε συνεπείς. Τα πάτε καλά!</p>
+      <p className="mt-1 text-[16px] text-stone-600">{t("Μείνετε συνεπείς. Τα πάτε καλά!")}</p>
     </div>
   );
 }
@@ -78,6 +88,7 @@ function TodayGreeting({ today }: { today: Date }) {
  */
 export default function TodayPage() {
   const profileId = useProfileId();
+  const t = useT();
   const today = useMemo(() => new Date(), []);
   const { status: medsStatus, medications } = useMedicationsList(profileId);
   const names = useDisplayNames(medications);
@@ -146,10 +157,10 @@ export default function TodayPage() {
       <div className="flex flex-col gap-6 px-5 pt-1 pb-6">
         <TodayGreeting today={today} />
         <div className="surface-card flex flex-col items-center gap-4 px-6 py-8 text-center">
-          <p className="text-[17px] font-semibold">Δεν έχετε προσθέσει ακόμα κανένα φάρμακο.</p>
-          <p className="text-[15px] text-stone-600">Προσθέστε το πρώτο σας φάρμακο και το πρόγραμμά του, για να εμφανίζονται εδώ οι δόσεις της ημέρας.</p>
+          <p className="text-[17px] font-semibold">{t("Δεν έχετε προσθέσει ακόμα κανένα φάρμακο.")}</p>
+          <p className="text-[15px] text-stone-600">{t("Προσθέστε το πρώτο σας φάρμακο και το πρόγραμμά του, για να εμφανίζονται εδώ οι δόσεις της ημέρας.")}</p>
           <ButtonLink href="/medications/add" onClick={() => playSound("button")} size="lg" fullWidth>
-            Προσθήκη φαρμάκου
+            {t("Προσθήκη φαρμάκου")}
           </ButtonLink>
         </div>
       </div>
@@ -175,14 +186,14 @@ export default function TodayPage() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 id="today-doses-heading" className="text-[24px] font-bold tracking-tight text-stone-900">
-              Σημερινές δόσεις
+              {t("Σημερινές δόσεις")}
             </h2>
             <p role="status" className="mt-0.5 text-[15px] text-stone-600">
               {total === 0
-                ? "Καμία προγραμματισμένη δόση σήμερα."
+                ? t("Καμία προγραμματισμένη δόση σήμερα.")
                 : allResolved
-                  ? "Όλες οι δόσεις καταγράφηκαν."
-                  : `${takenCount} από ${total} ελήφθησαν`}
+                  ? t("Όλες οι δόσεις καταγράφηκαν.")
+                  : t("{taken} από {total} ελήφθησαν", { taken: takenCount, total })}
             </p>
           </div>
           {total > 0 && (
@@ -194,7 +205,7 @@ export default function TodayPage() {
 
         {total === 0 ? (
           <Link href="/medications" onClick={() => playSound("button")} className="inline-flex min-h-12 items-center text-[15px] font-semibold text-accent-700">
-            Δείτε τα φάρμακά σας
+            {t("Δείτε τα φάρμακά σας")}
           </Link>
         ) : (
           <div className="flex flex-col gap-3">
@@ -217,13 +228,15 @@ export default function TodayPage() {
       {dueCount >= 2 &&
         (confirmingMarkAll ? (
           <div className="flex flex-col gap-2">
-            <p className="text-center text-[15px] text-stone-700">Να καταγραφούν ως ελήφθησαν οι {dueCount} δόσεις που είναι για τώρα; Οι επόμενες δόσεις της ημέρας δεν αλλάζουν.</p>
+            <p className="text-center text-[15px] text-stone-700">
+              {t("Να καταγραφούν ως ελήφθησαν οι {count} δόσεις που είναι για τώρα; Οι επόμενες δόσεις της ημέρας δεν αλλάζουν.", { count: dueCount })}
+            </p>
             <div className="flex items-center gap-2">
               <Button variant="secondary" size="lg" onClick={() => setConfirmingMarkAll(false)} fullWidth>
-                Ακύρωση
+                {t("Ακύρωση")}
               </Button>
               <Button size="lg" onClick={() => void handleMarkAllTaken()} disabled={markingAll} aria-busy={markingAll} fullWidth>
-                {markingAll ? "Καταγραφή…" : "Ελήφθησαν"}
+                {markingAll ? t("Καταγραφή…") : t("Ελήφθησαν")}
               </Button>
             </div>
           </div>
@@ -236,7 +249,7 @@ export default function TodayPage() {
             }}
             fullWidth
           >
-            Καταγραφή {dueCount} δόσεων ως ελήφθησαν
+            {t("Καταγραφή {count} δόσεων ως ελήφθησαν", { count: dueCount })}
           </Button>
         ))}
     </div>

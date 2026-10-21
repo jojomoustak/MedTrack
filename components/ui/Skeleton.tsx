@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { T } from "@/lib/i18n/client";
 
 /**
  * Skeleton loading (owner's request, 2026-10-14: "skeleton loading, not
@@ -18,7 +19,9 @@ export function Skeleton({ className = "", tone = "light" }: { className?: strin
 export function SkeletonStatus({ label = "Φόρτωση…", className = "", children }: { label?: string; className?: string; children: ReactNode }) {
   return (
     <div role="status" aria-busy="true" className={className}>
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">
+        <T>{label}</T>
+      </span>
       {children}
     </div>
   );

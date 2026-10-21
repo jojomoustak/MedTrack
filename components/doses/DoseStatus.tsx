@@ -1,4 +1,7 @@
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
+import { translatorFor, type Translator } from "@/lib/i18n/translate";
+
+const GREEK = translatorFor("el");
 
 /**
  * How a dose's status looks wherever doses are listed (Today, a
@@ -30,20 +33,21 @@ export function doseVisual(status: DoseEventRecord["status"]): DoseVisual {
   }
 }
 
-export function doseStatusText(dose: DoseEventRecord): string | null {
+/** In the screen's language when given its `t` (`useT()`); Greek otherwise. */
+export function doseStatusText(dose: DoseEventRecord, t: Translator = GREEK): string | null {
   switch (dose.status) {
     case "taken":
-      return `Ελήφθη ${formatDoseTime(dose.takenAt)}`;
+      return t("Ελήφθη {time}", { time: formatDoseTime(dose.takenAt) });
     case "taken_late":
-      return `Ελήφθη αργότερα, ${formatDoseTime(dose.takenAt)}`;
+      return t("Ελήφθη αργότερα, {time}", { time: formatDoseTime(dose.takenAt) });
     case "snoozed":
-      return `Αναβολή έως ${formatDoseTime(dose.reminderAt)}`;
+      return t("Αναβολή έως {time}", { time: formatDoseTime(dose.reminderAt) });
     case "skipped":
-      return "Παραλείφθηκε";
+      return t("Παραλείφθηκε");
     case "missed":
-      return "Χάθηκε";
+      return t("Χάθηκε");
     case "cancelled":
-      return "Ακυρώθηκε";
+      return t("Ακυρώθηκε");
     default:
       return null;
   }

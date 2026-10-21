@@ -1,6 +1,8 @@
 import { AuthBackLink } from "@/components/auth/AuthBackLink";
 import { ForgotPasswordIllustration } from "@/components/auth/AuthIllustrations";
 import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
+import { LanguageToggle } from "@/components/shell/LanguageToggle";
+import { T } from "@/lib/i18n/client";
 
 /**
  * Matched to the reference mockup's "Forgot password?" screen (compared
@@ -10,11 +12,14 @@ import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
  */
 export default function ForgotPasswordPage() {
   return (
-    <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-6 pt-4">
+    <main className="relative min-h-dvh bg-[#F8F5EE] px-7 pb-6 pt-4">
+      <LanguageToggle className="absolute top-3 right-3" />
       <div className="mx-auto flex w-full max-w-sm flex-col">
         <AuthBackLink href="/login" />
         <ForgotPasswordIllustration className="mt-2 size-47 self-center" />
-        <h1 className="mb-2 mt-8 text-[29px] font-bold leading-tight tracking-tight text-stone-900">Ξεχάσατε τον κωδικό;</h1>
+        <h1 className="mb-2 mt-8 text-[29px] font-bold leading-tight tracking-tight text-stone-900">
+          <T>Ξεχάσατε τον κωδικό;</T>
+        </h1>
         <ForgotPasswordForm />
       </div>
     </main>

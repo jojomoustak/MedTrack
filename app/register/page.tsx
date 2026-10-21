@@ -1,5 +1,6 @@
 import { AuthBackLink } from "@/components/auth/AuthBackLink";
 import { RegisterScreen } from "@/components/auth/RegisterScreen";
+import { LanguageToggle } from "@/components/shell/LanguageToggle";
 
 /**
  * Layout matched to the reference mockup's Register, compared bezel-free
@@ -17,7 +18,8 @@ import { RegisterScreen } from "@/components/auth/RegisterScreen";
  */
 export default function RegisterPage() {
   return (
-    <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-6 pt-4">
+    <main className="relative min-h-dvh bg-[#F8F5EE] px-7 pb-6 pt-4">
+      <LanguageToggle className="absolute top-3 right-3" />
       <div className="mx-auto flex w-full max-w-sm flex-col">
         <AuthBackLink href="/welcome" />
         <RegisterScreen />

@@ -4,6 +4,7 @@ import "./globals.css";
 import { SyncManagerBootstrap } from "@/components/shell/SyncManagerBootstrap";
 import { NavigationTracker } from "@/components/shell/NavigationTracker";
 import { SerwistProvider } from "@serwist/turbopack/react";
+import { DocumentLanguage } from "@/lib/i18n/client";
 
 // Design pass (2026-09-26): was Inter — itself a fix for an earlier font
 // (Geist Sans) that turned out to ship no Greek glyphs at all. Inter
@@ -76,6 +77,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SerwistProvider swUrl="/serwist/sw.js" reloadOnOnline={false} options={{ type: "classic" }}>
           <SyncManagerBootstrap />
           <NavigationTracker />
+          <DocumentLanguage />
           {children}
         </SerwistProvider>
       </body>

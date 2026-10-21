@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n/client";
 
 /**
  * Back arrow for screens reachable from more than one place (e.g. Privacy,
@@ -10,10 +11,11 @@ import { useRouter } from "next/navigation";
  */
 export function BackButton({ fallback, className = "" }: { fallback: string; className?: string }) {
   const router = useRouter();
+  const t = useT();
   return (
     <button
       type="button"
-      aria-label="Πίσω"
+      aria-label={t("Πίσω")}
       onClick={() => (window.history.length > 1 ? router.back() : router.push(fallback))}
       className={`flex size-11 items-center justify-center rounded-full text-stone-800 ${className}`}
     >

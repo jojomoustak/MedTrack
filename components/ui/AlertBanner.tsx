@@ -1,4 +1,7 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { useT } from "@/lib/i18n/client";
 
 export type AlertTone = "warn" | "danger";
 
@@ -28,6 +31,7 @@ export function AlertBanner({
   onDismiss?: () => void;
   dismissLabel?: string;
 }) {
+  const t = useT();
   return (
     <div role={tone === "danger" ? "alert" : "status"} className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium ${TONE_CLASSES[tone]}`}>
       <span className="shrink-0" aria-hidden="true">
@@ -38,7 +42,7 @@ export function AlertBanner({
         <button
           type="button"
           onClick={onDismiss}
-          aria-label={dismissLabel ?? "Απόκρυψη"}
+          aria-label={t(dismissLabel ?? "Απόκρυψη")}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">

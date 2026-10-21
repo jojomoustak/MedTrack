@@ -8,6 +8,7 @@ import { useAppAutofill } from "@/components/auth/use-app-autofill";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { ResendVerificationButton } from "@/components/auth/ResendVerificationButton";
+import { T } from "@/lib/i18n/client";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import { Button } from "@/components/ui/Button";
 
@@ -86,27 +87,27 @@ export function LoginForm() {
         onClick={() => playSound("button")}
         className="-mt-1 self-end text-[15px] font-semibold text-accent-700"
       >
-        Ξεχάσατε τον κωδικό;
+        <T>Ξεχάσατε τον κωδικό;</T>
       </Link>
 
       {error && (
         <p role="alert" className="text-sm text-red-700">
-          {error}
+          <T>{error}</T>
         </p>
       )}
 
       {unconfirmed && (
         <div className="surface-card flex flex-col gap-3 p-4">
           <p role="alert" className="text-[15px] leading-snug text-stone-700">
-            Το email σας δεν έχει επιβεβαιωθεί ακόμα. Πατήστε τον σύνδεσμο που σας στείλαμε στο{" "}
-            <span className="font-semibold text-stone-900 wrap-anywhere">{unconfirmed}</span> και δοκιμάστε ξανά.
+            <T>Το email σας δεν έχει επιβεβαιωθεί ακόμα. Πατήστε τον σύνδεσμο που σας στείλαμε στο</T>{" "}
+            <span className="font-semibold text-stone-900 wrap-anywhere">{unconfirmed}</span> <T>και δοκιμάστε ξανά.</T>
           </p>
           <ResendVerificationButton email={unconfirmed} />
         </div>
       )}
 
       <Button type="submit" size="lg" fullWidth disabled={submitting} aria-busy={submitting} className="mt-2">
-        {submitting ? "Σύνδεση…" : "Σύνδεση"}
+        <T>{submitting ? "Σύνδεση…" : "Σύνδεση"}</T>
       </Button>
     </form>
   );

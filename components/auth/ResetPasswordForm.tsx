@@ -9,6 +9,7 @@ import { playSound } from "@/lib/sound/client/play-sound";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PasswordRule } from "@/components/auth/PasswordRule";
 import { Button } from "@/components/ui/Button";
+import { T } from "@/lib/i18n/client";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -79,7 +80,7 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
   if (done) {
     return (
       <p role="status" className="text-lg leading-snug text-stone-700">
-        Ο κωδικός σας άλλαξε. Μεταφορά στη σύνδεση…
+        <T>Ο κωδικός σας άλλαξε. Μεταφορά στη σύνδεση…</T>
       </p>
     );
   }
@@ -107,23 +108,23 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
       />
 
       <div className="flex flex-col gap-2.5">
-        <PasswordRule met={newPassword.length >= MIN_PASSWORD_LENGTH} label={`Τουλάχιστον ${MIN_PASSWORD_LENGTH} χαρακτήρες`} />
+        <PasswordRule met={newPassword.length >= MIN_PASSWORD_LENGTH} label="Τουλάχιστον {count} χαρακτήρες" vars={{ count: MIN_PASSWORD_LENGTH }} />
         <PasswordRule met={confirmPassword.length > 0 && confirmPassword === newPassword} label="Οι δύο κωδικοί ταιριάζουν" />
       </div>
 
       {error && (
         <p role="alert" className="text-sm text-red-700">
-          {error}{" "}
+          <T>{error}</T>{" "}
           {linkInvalid && (
             <Link href="/forgot-password" onClick={() => playSound("button")} className="font-semibold text-accent-700 underline">
-              Ζητήστε νέο σύνδεσμο
+              <T>Ζητήστε νέο σύνδεσμο</T>
             </Link>
           )}
         </p>
       )}
 
       <Button type="submit" size="lg" fullWidth disabled={submitting} aria-busy={submitting} className="mt-2">
-        {submitting ? "Αποθήκευση…" : "Επαναφορά κωδικού"}
+        <T>{submitting ? "Αποθήκευση…" : "Επαναφορά κωδικού"}</T>
       </Button>
 
       <Link
@@ -131,7 +132,7 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
         onClick={() => playSound("button")}
         className="self-center py-2 text-[17px] font-semibold text-accent-700"
       >
-        Επιστροφή στη σύνδεση
+        <T>Επιστροφή στη σύνδεση</T>
       </Link>
     </form>
   );

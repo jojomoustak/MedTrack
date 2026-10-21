@@ -6,6 +6,7 @@ import { authClient } from "@/lib/auth/client/auth-client";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import { Button } from "@/components/ui/Button";
+import { T } from "@/lib/i18n/client";
 
 function BackToSignIn() {
   return (
@@ -14,7 +15,7 @@ function BackToSignIn() {
       onClick={() => playSound("button")}
       className="self-center py-2 text-[17px] font-semibold text-accent-700"
     >
-      Επιστροφή στη σύνδεση
+      <T>Επιστροφή στη σύνδεση</T>
     </Link>
   );
 }
@@ -69,7 +70,7 @@ export function ForgotPasswordForm() {
     return (
       <div role="status" className="flex w-full flex-col gap-6">
         <p className="text-lg leading-snug text-stone-600">
-          Αν υπάρχει λογαριασμός με αυτό το email, θα λάβετε σύνδεσμο επαναφοράς κωδικού σε λίγα λεπτά.
+          <T>Αν υπάρχει λογαριασμός με αυτό το email, θα λάβετε σύνδεσμο επαναφοράς κωδικού σε λίγα λεπτά.</T>
         </p>
         <BackToSignIn />
       </div>
@@ -79,7 +80,7 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4" noValidate>
       <p className="mb-4 text-lg leading-snug text-stone-600">
-        Πληκτρολογήστε το email σας και θα σας στείλουμε σύνδεσμο για επαναφορά του κωδικού σας.
+        <T>Πληκτρολογήστε το email σας και θα σας στείλουμε σύνδεσμο για επαναφορά του κωδικού σας.</T>
       </p>
 
       <label className={FIELD_WRAPPER}>
@@ -98,12 +99,12 @@ export function ForgotPasswordForm() {
 
       {status === "offline" && (
         <p role="alert" className="text-sm text-red-700">
-          Δεν ήταν δυνατή η σύνδεση με το διαδίκτυο. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.
+          <T>Δεν ήταν δυνατή η σύνδεση με το διαδίκτυο. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.</T>
         </p>
       )}
 
       <Button type="submit" size="lg" fullWidth disabled={submitting} aria-busy={submitting} className="mt-4">
-        {submitting ? "Αποστολή…" : "Αποστολή συνδέσμου"}
+        <T>{submitting ? "Αποστολή…" : "Αποστολή συνδέσμου"}</T>
       </Button>
 
       <BackToSignIn />

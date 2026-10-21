@@ -6,6 +6,7 @@ import { CheckEmailPanel } from "@/components/auth/CheckEmailPanel";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { RegisterForm, type RegisterValues } from "@/components/auth/RegisterForm";
 import { BrandLockup } from "@/components/shell/BrandMark";
+import { T } from "@/lib/i18n/client";
 
 /**
  * The Register page's content, then "check your email" in its place once
@@ -35,8 +36,12 @@ export function RegisterScreen() {
     <>
       <BrandLockup iconSize={72} textClassName="text-[30px] leading-none" className="self-center" />
 
-      <h1 className="mt-7 text-[27px] font-bold leading-tight tracking-tight text-stone-900">Δημιουργία λογαριασμού</h1>
-      <p className="mt-2 text-lg leading-snug text-stone-600">Λίγα στοιχεία μόνο, και θα σας βοηθάμε να θυμάστε τα φάρμακά σας.</p>
+      <h1 className="mt-7 text-[27px] font-bold leading-tight tracking-tight text-stone-900">
+        <T>Δημιουργία λογαριασμού</T>
+      </h1>
+      <p className="mt-2 text-lg leading-snug text-stone-600">
+        <T>Λίγα στοιχεία μόνο, και θα σας βοηθάμε να θυμάστε τα φάρμακά σας.</T>
+      </p>
 
       <div className="mt-6">
         <RegisterForm initial={editing} onRegistered={setRegistered} />
@@ -44,7 +49,9 @@ export function RegisterScreen() {
 
       {/* Owner's request 2026-10-21. A Google account arrives confirmed, so no email step;
           one that already exists just signs in. Its errors are shown on Login (`mapGoogleAuthError`). */}
-      <p className="mt-6 text-center text-base text-stone-500">ή</p>
+      <p className="mt-6 text-center text-base text-stone-500">
+        <T>ή</T>
+      </p>
       <div className="mt-4">
         <GoogleAuthButton
           mode="sign-in"
@@ -58,17 +65,17 @@ export function RegisterScreen() {
       </div>
 
       <p className="mt-5 text-center text-sm leading-relaxed text-stone-500">
-        Δημιουργώντας λογαριασμό, συμφωνείτε με την{" "}
+        <T>Δημιουργώντας λογαριασμό, συμφωνείτε με την</T>{" "}
         <Link href="/privacy" className="font-semibold text-accent-700">
-          Πολιτική Απορρήτου
+          <T>Πολιτική Απορρήτου</T>
         </Link>
         .
       </p>
 
       <p className="mt-6 text-center text-[15px] text-stone-600">
-        Έχετε ήδη λογαριασμό;{" "}
+        <T>Έχετε ήδη λογαριασμό;</T>{" "}
         <Link href="/login" className="font-semibold text-accent-700">
-          Σύνδεση
+          <T>Σύνδεση</T>
         </Link>
       </p>
     </>

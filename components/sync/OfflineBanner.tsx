@@ -3,6 +3,7 @@
 import { useNetworkStatus } from "@/lib/sync/client/use-network-status";
 import type { NetworkState } from "@/lib/sync/client/network";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { useT } from "@/lib/i18n/client";
 
 export interface OfflineBannerProps {
   /** Overrides the live network status — for tests/storybook-style usage; real callers should omit this and let the component read `useNetworkStatus()` itself. */
@@ -34,6 +35,7 @@ export function OfflineBanner({ state, onRetry, className }: OfflineBannerProps)
   const liveState = useNetworkStatus();
   const effectiveState = state ?? liveState;
   const copy = COPY[effectiveState];
+  const t = useT();
 
   if (!copy) return null;
 
@@ -46,7 +48,7 @@ export function OfflineBanner({ state, onRetry, className }: OfflineBannerProps)
         .filter(Boolean)
         .join(" ")}
     >
-      <span>{copy.message}</span>
+      <span>{t(copy.message)}</span>
       {copy.tone === "backend" && onRetry ? (
         <button
           type="button"
@@ -56,7 +58,7 @@ export function OfflineBanner({ state, onRetry, className }: OfflineBannerProps)
           }}
           className="shrink-0 rounded-full border border-current px-3 py-1 text-xs font-medium"
         >
-          Δοκιμάστε ξανά
+          {t("Δοκιμάστε ξανά")}
         </button>
       ) : null}
     </div>

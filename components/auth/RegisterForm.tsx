@@ -8,6 +8,7 @@ import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PasswordRule } from "@/components/auth/PasswordRule";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 import { Button } from "@/components/ui/Button";
+import { T, useT } from "@/lib/i18n/client";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -32,6 +33,7 @@ export function RegisterForm({ initial, onRegistered }: { initial?: RegisterValu
   useAppAutofill(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const t = useT();
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -56,14 +58,16 @@ export function RegisterForm({ initial, onRegistered }: { initial?: RegisterValu
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4" noValidate>
       <label className={FIELD_WRAPPER}>
-        <span className={FIELD_LABEL}>Ονοματεπώνυμο</span>
+        <span className={FIELD_LABEL}>
+          <T>Ονοματεπώνυμο</T>
+        </span>
         <input
           type="text"
           autoComplete="name"
           placeholder=""
           value={name}
           onChange={(e) => setName(e.target.value)}
-          aria-label="Ονοματεπώνυμο"
+          aria-label={t("Ονοματεπώνυμο")}
           className={`${FIELD_INPUT} pr-4`}
         />
       </label>
@@ -94,16 +98,16 @@ export function RegisterForm({ initial, onRegistered }: { initial?: RegisterValu
 
       {/* The reference lists three live password rules; this app only
           enforces one (length — Better Auth's server-side minimum). */}
-      <PasswordRule met={password.length >= MIN_PASSWORD_LENGTH} label={`Τουλάχιστον ${MIN_PASSWORD_LENGTH} χαρακτήρες`} />
+      <PasswordRule met={password.length >= MIN_PASSWORD_LENGTH} label="Τουλάχιστον {count} χαρακτήρες" vars={{ count: MIN_PASSWORD_LENGTH }} />
 
       {error && (
         <p role="alert" className="text-sm text-red-700">
-          {error}
+          <T>{error}</T>
         </p>
       )}
 
       <Button type="submit" size="lg" fullWidth disabled={submitting} aria-busy={submitting} className="mt-2">
-        {submitting ? "Δημιουργία λογαριασμού…" : "Δημιουργία λογαριασμού"}
+        <T>{submitting ? "Δημιουργία λογαριασμού…" : "Δημιουργία λογαριασμού"}</T>
       </Button>
     </form>
   );

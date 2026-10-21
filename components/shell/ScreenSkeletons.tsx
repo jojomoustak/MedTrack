@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { T } from "@/lib/i18n/client";
 import { Skeleton, SkeletonCardRows, SkeletonField, SkeletonMedicationHeader, SkeletonStatus } from "@/components/ui/Skeleton";
 
 /**
@@ -32,7 +33,9 @@ export function TodayDosesSkeleton() {
     <SkeletonStatus className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h2 className="text-[24px] font-bold tracking-tight text-stone-900">Σημερινές δόσεις</h2>
+          <h2 className="text-[24px] font-bold tracking-tight text-stone-900">
+            <T>Σημερινές δόσεις</T>
+          </h2>
           <Skeleton className="h-4 w-36 rounded-md" />
         </div>
         <RingSkeleton />
@@ -168,7 +171,9 @@ export function DoseDetailSkeleton() {
   return (
     <SkeletonStatus className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">Λεπτομέρειες δόσης</h1>
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-stone-900">
+          <T>Λεπτομέρειες δόσης</T>
+        </h1>
         <Skeleton className="h-5 w-2/5 rounded-md" />
       </div>
       <div className="surface-card divide-y divide-stone-100 px-4 py-1">

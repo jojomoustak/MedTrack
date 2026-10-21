@@ -5,6 +5,7 @@ import { authClient } from "@/lib/auth/client/auth-client";
 import { EMAIL_VERIFIED_PATH, RESEND_COOLDOWN_MS } from "@/lib/auth/client/email-verification";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { Button } from "@/components/ui/Button";
+import { T } from "@/lib/i18n/client";
 
 type ResendState = "idle" | "sending" | "sent" | "error" | "offline";
 
@@ -49,21 +50,21 @@ export function ResendVerificationButton({ email }: { email: string }) {
   return (
     <div className="flex flex-col gap-2">
       <Button variant="secondary" size="lg" fullWidth onClick={send} disabled={state === "sending" || onCooldown} aria-busy={state === "sending"}>
-        {state === "sending" ? "Αποστολή…" : onCooldown ? "Στάλθηκε ξανά" : "Στείλτε νέο σύνδεσμο"}
+        <T>{state === "sending" ? "Αποστολή…" : onCooldown ? "Στάλθηκε ξανά" : "Στείλτε νέο σύνδεσμο"}</T>
       </Button>
       {state === "sent" && (
         <p role="status" className="text-center text-[15px] text-stone-600">
-          Στείλαμε νέο σύνδεσμο. Ελέγξτε το email σας.
+          <T>Στείλαμε νέο σύνδεσμο. Ελέγξτε το email σας.</T>
         </p>
       )}
       {state === "error" && (
         <p role="alert" className="text-center text-sm text-red-700">
-          Η αποστολή δεν έγινε. Δοκιμάστε ξανά σε λίγα λεπτά.
+          <T>Η αποστολή δεν έγινε. Δοκιμάστε ξανά σε λίγα λεπτά.</T>
         </p>
       )}
       {state === "offline" && (
         <p role="alert" className="text-center text-sm text-red-700">
-          Δεν ήταν δυνατή η σύνδεση με το διαδίκτυο. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.
+          <T>Δεν ήταν δυνατή η σύνδεση με το διαδίκτυο. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.</T>
         </p>
       )}
     </div>

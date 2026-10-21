@@ -5,6 +5,8 @@ import { BrandMark } from "@/components/shell/BrandMark";
 import { backTarget } from "@/lib/navigation/back-target";
 import { getPreviousPathname } from "@/lib/navigation/client/previous-path";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { useT } from "@/lib/i18n/client";
+import { LanguageToggle } from "@/components/shell/LanguageToggle";
 
 /**
  * The top bar every signed-in screen shares (reference mockup): a back
@@ -16,6 +18,7 @@ export function ScreenHeader({ trailing }: { trailing?: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const target = backTarget(pathname);
+  const t = useT();
 
   function goBack() {
     playSound("button");
@@ -36,7 +39,7 @@ export function ScreenHeader({ trailing }: { trailing?: React.ReactNode }) {
         <button
           type="button"
           onClick={goBack}
-          aria-label="Πίσω"
+          aria-label={t("Πίσω")}
           className="absolute left-2 flex size-11 items-center justify-center rounded-full text-stone-800 active:bg-stone-200/60"
         >
           <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -48,7 +51,11 @@ export function ScreenHeader({ trailing }: { trailing?: React.ReactNode }) {
         <BrandMark size={25} />
         MedTrack
       </span>
-      {trailing && <div className="absolute right-3">{trailing}</div>}
+      {/* The language switch, top right on every screen (2026-10-21), with the sync status beside it when there is one. */}
+      <div className="absolute right-1.5 flex items-center gap-0.5">
+        {trailing}
+        <LanguageToggle />
+      </div>
     </header>
   );
 }

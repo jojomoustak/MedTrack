@@ -6,6 +6,7 @@ import { SyncStatusChip } from "@/components/sync/SyncStatusChip";
 import { ScreenHeader } from "@/components/shell/ScreenHeader";
 import { useGlobalSyncSummary } from "@/lib/sync/client/use-global-sync-summary";
 import { createSyncManager } from "@/lib/sync/client/sync-manager";
+import { useT } from "@/lib/i18n/client";
 
 /**
  * Phase 3 §1's app bar, on every signed-in screen: the shared
@@ -23,6 +24,7 @@ import { createSyncManager } from "@/lib/sync/client/sync-manager";
  */
 export function AppBar() {
   const summary = useGlobalSyncSummary();
+  const t = useT();
   const [retrying, setRetrying] = useState(false);
 
   async function handleRetry() {
@@ -39,7 +41,7 @@ export function AppBar() {
     summary === "failed" ? (
       <SyncStatusChip state={summary} onRetry={retrying ? undefined : handleRetry} compact />
     ) : summary ? (
-      <Link href="/profile" aria-label="Κατάσταση συγχρονισμού">
+      <Link href="/profile" aria-label={t("Κατάσταση συγχρονισμού")}>
         <SyncStatusChip state={summary} compact />
       </Link>
     ) : undefined;

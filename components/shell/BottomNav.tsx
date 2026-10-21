@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { playSound } from "@/lib/sound/client/play-sound";
 import { NavIcon, type NavIconKind } from "@/components/shell/NavIcon";
+import { useT } from "@/lib/i18n/client";
 
 const TABS: { href: string; label: string; icon: NavIconKind }[] = [
   { href: "/today", label: "Σήμερα", icon: "today" },
@@ -24,10 +25,11 @@ const TABS: { href: string; label: string; icon: NavIconKind }[] = [
  */
 export function BottomNav() {
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <nav
-      aria-label="Κύρια πλοήγηση"
+      aria-label={t("Κύρια πλοήγηση")}
       className="grid grid-cols-5 border-t border-stone-200 bg-background"
     >
       {TABS.map((tab) => {
@@ -43,7 +45,7 @@ export function BottomNav() {
             }`}
           >
             <NavIcon kind={tab.icon} active={active} />
-            {tab.label}
+            {t(tab.label)}
           </Link>
         );
       })}

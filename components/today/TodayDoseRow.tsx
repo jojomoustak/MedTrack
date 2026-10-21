@@ -9,6 +9,7 @@ import { playSound } from "@/lib/sound/client/play-sound";
 import type { DoseEventRecord } from "@/lib/domain/dose-event";
 import { DOSE_TILE_CLASSES, DoseStatusMark, doseStatusText, doseVisual, formatDoseTime, type DoseVisual } from "@/components/doses/DoseStatus";
 import { MedicationAvatar } from "@/components/medications/MedicationAvatar";
+import { useLanguage, useT } from "@/lib/i18n/client";
 import type { MedicationForm } from "@/lib/domain/user-medication";
 
 export const UNDO_WINDOW_MS = 5000;
@@ -45,6 +46,8 @@ export interface TodayDoseRowProps {
  * dropped: the user meant it and never pressed Undo.
  */
 export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake, allowTakenLate = false, readOnly = false, medication }: TodayDoseRowProps) {
+  const t = useT();
+  const language = useLanguage();
   const [pending, setPending] = useState<"taken" | "taken_late" | null>(null);
   const [pendingAt, setPendingAt] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -87,9 +90,9 @@ export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake,
 
   const visual: DoseVisual = pending ? "done" : doseVisual(dose.status);
   const time = formatDoseTime(dose.scheduledAt);
-  const quantity = doseQuantityLabel(dose.quantityValue, dose.quantityUnit);
+  const quantity = doseQuantityLabel(dose.quantityValue, dose.quantityUnit, language);
   const detail = [quantity, time].filter(Boolean).join(" • ");
-  const status = pending ? `Ελήφθη${pending === "taken_late" ? " αργότερα" : ""} ${formatDoseTime(pendingAt)}` : doseStatusText(dose);
+  const status = pending ? t(pending === "taken_late" ? "Ελήφθη αργότερα, {time}" : "Ελήφθη {time}", { time: formatDoseTime(pendingAt) }) : doseStatusText(dose, t);
   const title = medicationStrength ? `${medicationName} ${medicationStrength}` : medicationName;
   const muted = visual === "skipped" || visual === "cancelled";
 
@@ -112,7 +115,7 @@ export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake,
         href={`/calendar/dose/${dose.id}`}
         onClick={() => playSound("button")}
         className="flex min-h-14 min-w-0 flex-1 items-center gap-2"
-        aria-label={[title, detail, status ?? "προγραμματισμένη"].join(", ")}
+        aria-label={[title, detail, status ?? t("προγραμματισμένη")].join(", ")}
       >
         <div className="min-w-0 flex-1">
           <p className={`truncate text-[17px] font-bold ${muted ? "text-stone-500" : "text-stone-900"}`}>{title}</p>
@@ -132,7 +135,7 @@ export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake,
           onClick={undo}
           className="min-h-11 shrink-0 rounded-full px-3 text-[15px] font-semibold text-accent-700 underline-offset-2 active:bg-accent-50"
         >
-          Αναίρεση
+          {t("Αναίρεση")}
         </button>
       )}
 
@@ -140,7 +143,7 @@ export function TodayDoseRow({ dose, medicationName, medicationStrength, onTake,
         <button
           type="button"
           onClick={start}
-          aria-label={canTake ? `Σήμανση ως ελήφθη: ${title}, ${time}` : `Το πήρα αργότερα: ${title}, ${time}`}
+          aria-label={canTake ? t("Σήμανση ως ελήφθη: {title}, {time}", { title, time }) : t("Το πήρα αργότερα: {title}, {time}", { title, time })}
           className={`${markBox} transition-transform duration-150 active:scale-95`}
         >
           {mark}

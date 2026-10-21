@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { playSound } from "@/lib/sound/client/play-sound";
+import { useT } from "@/lib/i18n/client";
 import { FIELD_INPUT, FIELD_LABEL, FIELD_WRAPPER } from "@/components/ui/field-styles";
 
 /**
@@ -27,10 +28,12 @@ export function PasswordInput({
   ariaLabel: string;
 }) {
   const [visible, setVisible] = useState(false);
+  // `label`/`ariaLabel` arrive in Greek and are shown in the chosen language.
+  const t = useT();
 
   return (
     <label className={FIELD_WRAPPER}>
-      <span className={FIELD_LABEL}>{label}</span>
+      <span className={FIELD_LABEL}>{t(label)}</span>
       <div className="relative">
         <input
           type={visible ? "text" : "password"}
@@ -39,7 +42,7 @@ export function PasswordInput({
           autoComplete={autoComplete}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          aria-label={ariaLabel}
+          aria-label={t(ariaLabel)}
           className={`${FIELD_INPUT} pr-12`}
         />
         <button
@@ -48,7 +51,7 @@ export function PasswordInput({
             playSound("button");
             setVisible((v) => !v);
           }}
-          aria-label={visible ? "Απόκρυψη κωδικού πρόσβασης" : "Εμφάνιση κωδικού πρόσβασης"}
+          aria-label={visible ? t("Απόκρυψη κωδικού πρόσβασης") : t("Εμφάνιση κωδικού πρόσβασης")}
           aria-pressed={visible}
           className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-stone-500"
         >

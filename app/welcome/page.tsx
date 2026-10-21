@@ -2,6 +2,8 @@ import Link from "next/link";
 import { BrandLockup } from "@/components/shell/BrandMark";
 import { WelcomeIllustration } from "@/components/shell/WelcomeIllustration";
 import { ButtonLink } from "@/components/ui/Button";
+import { LanguageToggle } from "@/components/shell/LanguageToggle";
+import { T } from "@/lib/i18n/client";
 
 /**
  * Phase 3 §2.1 "Welcome / intro" — value proposition, states Greek-only UI
@@ -30,35 +32,34 @@ import { ButtonLink } from "@/components/ui/Button";
  */
 export default function WelcomePage() {
   return (
-    <main className="flex min-h-dvh flex-col bg-[#F8F5EE] px-7 pb-4 pt-6">
+    <main className="relative flex min-h-dvh flex-col bg-[#F8F5EE] px-7 pb-4 pt-6">
+      <LanguageToggle className="absolute top-3 right-3" />
       <BrandLockup iconSize={84} textClassName="text-[32px] leading-none" className="self-center" />
 
       <div className="mt-5 px-4">
         <h1 className="text-[40px] font-bold leading-[1.15] tracking-tight text-stone-900">
-          Δίπλα σας,
+          <T>Δίπλα σας,</T>
           <br />
-          κάθε μέρα
+          <T>κάθε μέρα</T>
         </h1>
         <p className="mt-4 text-[19px] leading-[1.6] text-stone-700">
-          Σας θυμίζουμε πότε είναι η ώρα για κάθε φάρμακο και κρατάμε το πρόγραμμά σας τακτοποιημένο, ώστε να έχετε ένα πράγμα λιγότερο να σκέφτεστε.
+          <T>Σας θυμίζουμε πότε είναι η ώρα για κάθε φάρμακο και κρατάμε το πρόγραμμά σας τακτοποιημένο, ώστε να έχετε ένα πράγμα λιγότερο να σκέφτεστε.</T>
         </p>
       </div>
 
       <WelcomeIllustration className="-mx-7 mt-2 max-h-[420px] min-h-[190px] flex-1" />
 
       <ButtonLink href="/register" size="lg" fullWidth className="mt-6">
-        Ας ξεκινήσουμε
+        <T>Ας ξεκινήσουμε</T>
       </ButtonLink>
 
       <p className="mt-4 text-center text-[15px] text-stone-600">
-        Έχετε ήδη λογαριασμό;
+        <T>Έχετε ήδη λογαριασμό;</T>
         <br />
         <Link href="/login" className="mt-1 inline-block text-[17px] font-semibold text-accent-700">
-          Σύνδεση
+          <T>Σύνδεση</T>
         </Link>
       </p>
-
-      <p className="mt-3 text-center text-xs text-stone-500">Διαθέσιμο προς το παρόν μόνο στα Ελληνικά.</p>
     </main>
   );
 }

@@ -8,6 +8,7 @@ import { MedianMobilePlatform } from "@/lib/platform/median-mobile-platform";
 import { MobilePlatformUnavailableError, type MobilePlatform } from "@/lib/platform/mobile-platform";
 import { mapGoogleAuthErrorFromNativeSignIn } from "@/lib/auth/client/google-auth-errors";
 import { Button, type ButtonSize } from "@/components/ui/Button";
+import { T } from "@/lib/i18n/client";
 
 interface GoogleAuthButtonProps {
   /**
@@ -130,11 +131,12 @@ export function GoogleAuthButton({
         aria-busy={pending}
       >
         <GoogleGlyph />
-        {label ?? (mode === "sign-in" ? "Σύνδεση με Google" : "Σύνδεση λογαριασμού Google")}
+        {/* `label` arrives in Greek, like everything else here. */}
+        <T>{label ?? (mode === "sign-in" ? "Σύνδεση με Google" : "Σύνδεση λογαριασμού Google")}</T>
       </Button>
       {nativeError && (
         <p role="alert" className="text-sm text-red-700">
-          {nativeError}
+          <T>{nativeError}</T>
         </p>
       )}
     </div>

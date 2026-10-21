@@ -2,6 +2,8 @@ import Link from "next/link";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { BrandLockup } from "@/components/shell/BrandMark";
+import { LanguageToggle } from "@/components/shell/LanguageToggle";
+import { T } from "@/lib/i18n/client";
 import { mapGoogleAuthError, mapSessionExpiredReason } from "@/lib/auth/client/google-auth-errors";
 
 interface LoginPageProps {
@@ -33,16 +35,21 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const message = googleError ?? sessionExpiredMessage;
 
   return (
-    <main className="min-h-dvh bg-[#F8F5EE] px-7 pb-5 pt-6">
+    <main className="relative min-h-dvh bg-[#F8F5EE] px-7 pb-5 pt-6">
+      <LanguageToggle className="absolute top-3 right-3" />
       <div className="mx-auto flex w-full max-w-sm flex-col">
         <BrandLockup iconSize={72} textClassName="text-[30px] leading-none" className="self-center" />
 
-        <h1 className="mt-7 text-[34px] font-bold leading-tight tracking-tight text-stone-900">Καλώς ήρθατε ξανά</h1>
-        <p className="mt-2 text-lg leading-snug text-stone-600">Συνδεθείτε για να συνεχίσετε στο MedTrack.</p>
+        <h1 className="mt-7 text-[34px] font-bold leading-tight tracking-tight text-stone-900">
+          <T>Καλώς ήρθατε ξανά</T>
+        </h1>
+        <p className="mt-2 text-lg leading-snug text-stone-600">
+          <T>Συνδεθείτε για να συνεχίσετε στο MedTrack.</T>
+        </p>
 
         {message && (
           <p role="alert" className="mt-4 text-sm text-red-700">
-            {message}
+            <T>{message}</T>
           </p>
         )}
 
@@ -50,7 +57,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <LoginForm />
         </div>
 
-        <p className="mt-6 text-center text-base text-stone-500">ή</p>
+        <p className="mt-6 text-center text-base text-stone-500">
+          <T>ή</T>
+        </p>
 
         <div className="mt-4">
           <GoogleAuthButton
@@ -64,9 +73,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </div>
 
         <p className="mt-6 text-center text-[15px] text-stone-600">
-          Δεν έχετε λογαριασμό;{" "}
+          <T>Δεν έχετε λογαριασμό;</T>{" "}
           <Link href="/register" className="font-semibold text-accent-700">
-            Εγγραφή
+            <T>Εγγραφή</T>
           </Link>
         </p>
       </div>
