@@ -71,6 +71,12 @@ describe("Register — the account waits for its email to be confirmed (2026-10-
     expect(screen.queryByRole("heading", { name: "Ελέγξτε το email σας" })).toBeNull();
   });
 
+  it("offers «Συνέχεια με Google» too (owner's request, 2026-10-21)", async () => {
+    const { RegisterScreen } = await import("@/components/auth/RegisterScreen");
+    render(<RegisterScreen />);
+    expect(screen.getByRole("button", { name: /Συνέχεια με Google/ })).toBeTruthy();
+  });
+
   it("says when there's no connection, rather than failing silently", async () => {
     signUpEmail.mockRejectedValue(new TypeError("Failed to fetch"));
     const { RegisterScreen } = await import("@/components/auth/RegisterScreen");

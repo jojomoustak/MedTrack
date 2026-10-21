@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CheckEmailPanel } from "@/components/auth/CheckEmailPanel";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { RegisterForm, type RegisterValues } from "@/components/auth/RegisterForm";
 import { BrandLockup } from "@/components/shell/BrandMark";
 
@@ -39,6 +40,21 @@ export function RegisterScreen() {
 
       <div className="mt-6">
         <RegisterForm initial={editing} onRegistered={setRegistered} />
+      </div>
+
+      {/* Owner's request 2026-10-21. A Google account arrives confirmed, so no email step;
+          one that already exists just signs in. Its errors are shown on Login (`mapGoogleAuthError`). */}
+      <p className="mt-6 text-center text-base text-stone-500">ή</p>
+      <div className="mt-4">
+        <GoogleAuthButton
+          mode="sign-in"
+          callbackURL="/today"
+          errorCallbackURL="/login"
+          label="Συνέχεια με Google"
+          size="lg"
+          fullWidth
+          className="bg-white shadow-[0_1px_3px_rgba(28,25,23,0.06)]"
+        />
       </div>
 
       <p className="mt-5 text-center text-sm leading-relaxed text-stone-500">

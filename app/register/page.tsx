@@ -5,9 +5,9 @@ import { RegisterScreen } from "@/components/auth/RegisterScreen";
  * Layout matched to the reference mockup's Register, compared bezel-free
  * at the same width (2026-10-04): a back arrow to Welcome, centered logo
  * lockup, LEFT-aligned large heading and subcopy, tall white fields, a
- * large primary button, the consent line, then a single-line sign-in
- * prompt. The reference has no social sign-in here — Google sign-in on
- * Login creates an account too, so nothing is lost by matching that.
+ * large primary button, «Συνέχεια με Google» (added at the owner's
+ * request, 2026-10-21; the reference had none here), the consent line,
+ * then a single-line sign-in prompt.
  *
  * Two deliberate departures: the reference's consent line also links a
  * "Terms of Service" page this app doesn't have (so only Privacy is
